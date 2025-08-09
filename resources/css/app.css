@@ -15,6 +15,8 @@
     --radius-md: calc(var(--radius) - 2px);
     --radius-sm: calc(var(--radius) - 4px);
 
+    /* Container configuration - handled in @layer base */
+
     --color-background: var(--background);
     --color-foreground: var(--foreground);
 
@@ -155,5 +157,46 @@
 
     body {
         @apply bg-background text-foreground;
+    }
+
+    /* Ensure container class is properly centered */
+    .container {
+        margin-left: auto;
+        margin-right: auto;
+        padding-left: 1rem;
+        padding-right: 1rem;
+        width: 100%;
+        max-width: 1280px; /* 7xl breakpoint */
+    }
+
+    /* Responsive container max-widths */
+    @media (min-width: 640px) {
+        .container {
+            max-width: 640px; /* sm */
+        }
+    }
+
+    @media (min-width: 768px) {
+        .container {
+            max-width: 768px; /* md */
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .container {
+            max-width: 1024px; /* lg */
+        }
+    }
+
+    @media (min-width: 1280px) {
+        .container {
+            max-width: 1280px; /* xl */
+        }
+    }
+
+    @media (min-width: 1536px) {
+        .container {
+            max-width: 1536px; /* 2xl */
+        }
     }
 }
