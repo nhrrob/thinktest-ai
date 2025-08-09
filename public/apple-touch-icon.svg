@@ -1,0 +1,50 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .brain-primary { fill: #3B82F6; }
+      .brain-secondary { fill: #F59E0B; }
+      .brain-stroke { stroke: #3B82F6; stroke-width: 4; fill: none; }
+      .connection { stroke: #3B82F6; stroke-width: 2.5; opacity: 0.6; }
+    </style>
+    <!-- Gradient for modern look -->
+    <linearGradient id="brainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1D4ED8;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="sparkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F59E0B;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#D97706;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle for better visibility -->
+  <circle cx="90" cy="90" r="85" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="2"/>
+  
+  <!-- Brain outline - scaled up and centered -->
+  <path d="M90 25C70 25 55 40 55 60C55 63 55.5 66 56 69C53 67 49 66 45 66C40 66 35 71 35 76C35 80 37 83.5 40 85.5C40 86.5 40 87.5 40 88.5C40 100 49 110 61 110C63 110 65 109.5 67 108.5C70 115 77 120 85 120C93 120 100 113 100 105C100 102 99.5 99 98.5 96.5C105 93 110 87 110 80C110 72 104 65.5 96.5 63C98 59 99 55 99 51C99 35 86 25 90 25Z" fill="url(#brainGradient)" stroke="url(#brainGradient)" stroke-width="3"/>
+  
+  <!-- Neural connections - larger and more visible -->
+  <circle cx="68" cy="68" r="4" fill="url(#brainGradient)"/>
+  <circle cx="112" cy="78" r="4" fill="url(#brainGradient)"/>
+  <circle cx="78" cy="102" r="4" fill="url(#brainGradient)"/>
+  <circle cx="102" cy="112" r="4" fill="url(#brainGradient)"/>
+  <circle cx="85" cy="85" r="3" fill="url(#brainGradient)"/>
+  
+  <!-- Connection lines -->
+  <line x1="68" y1="68" x2="112" y2="78" class="connection"/>
+  <line x1="68" y1="68" x2="78" y2="102" class="connection"/>
+  <line x1="112" y1="78" x2="102" y2="112" class="connection"/>
+  <line x1="78" y1="102" x2="102" y2="112" class="connection"/>
+  <line x1="85" y1="85" x2="68" y2="68" class="connection"/>
+  <line x1="85" y1="85" x2="112" y2="78" class="connection"/>
+  
+  <!-- AI sparks - larger and more prominent -->
+  <path d="M135 45L145 35L135 25L125 35L135 45Z" fill="url(#sparkGradient)" opacity="0.9"/>
+  <path d="M145 55L155 45L145 35L135 45L145 55Z" fill="url(#sparkGradient)" opacity="0.7"/>
+  <path d="M125 55L135 45L125 35L115 45L125 55Z" fill="url(#sparkGradient)" opacity="0.5"/>
+  
+  <!-- Additional small sparks for AI effect -->
+  <circle cx="140" cy="60" r="2" fill="url(#sparkGradient)" opacity="0.8"/>
+  <circle cx="150" cy="50" r="1.5" fill="url(#sparkGradient)" opacity="0.6"/>
+  <circle cx="130" cy="65" r="1" fill="url(#sparkGradient)" opacity="0.4"/>
+</svg>
