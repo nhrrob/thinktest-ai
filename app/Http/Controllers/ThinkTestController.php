@@ -27,6 +27,11 @@ class ThinkTestController extends Controller
         $this->aiService = $aiService;
         $this->analysisService = $analysisService;
         $this->fileService = $fileService;
+
+        // Apply permission-based middleware for ThinkTest AI functionality
+        $this->middleware('permission:generate tests|limited test generation')->only(['index', 'generateTests']);
+        $this->middleware('permission:upload files')->only(['upload']);
+        $this->middleware('permission:download test results')->only(['downloadTests']);
     }
 
     /**
