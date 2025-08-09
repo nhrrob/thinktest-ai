@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7b89342add1289fee5a2f1c276cdaf59",
+    "content-hash": "9a9ad6d80b56f90f1661b313ee275e86",
     "packages": [
         {
             "name": "brick/math",
@@ -2430,6 +2430,50 @@
                 "source": "https://github.com/nette/utils/tree/v4.0.7"
             },
             "time": "2025-06-03T04:55:08+00:00"
+        },
+        {
+            "name": "nhrrob/crudgenerator",
+            "version": "v2.3.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/nhrrob/crudgenerator.git",
+                "reference": "a3ec6f53d00f96f0a7b92621542a0179a0d5a1b8"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/nhrrob/crudgenerator/zipball/a3ec6f53d00f96f0a7b92621542a0179a0d5a1b8",
+                "reference": "a3ec6f53d00f96f0a7b92621542a0179a0d5a1b8",
+                "shasum": ""
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Nhrrob\\Crudgenerator\\CrudgeneratorServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Nhrrob\\Crudgenerator\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Nazmul Hasan Robin",
+                    "email": "robin.sust08@gmail.com"
+                }
+            ],
+            "description": "This package provides an artisan command to generate a basic crud",
+            "support": {
+                "issues": "https://github.com/nhrrob/crudgenerator/issues",
+                "source": "https://github.com/nhrrob/crudgenerator/tree/v2.3.1"
+            },
+            "time": "2024-09-18T04:31:10+00:00"
         },
         {
             "name": "nikic/php-parser",
