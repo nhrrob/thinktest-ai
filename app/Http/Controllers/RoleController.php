@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\RoleRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
@@ -16,8 +17,13 @@ class RoleController extends Controller
      */
     public function index()
     {
+        // Check permission using Spatie Laravel Permission
+        if (!Auth::user()->can('view roles')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $roles = Role::with('permissions')->paginate(10);
-        
+
         return Inertia::render('Admin/Roles/Index', [
             'roles' => $roles,
         ]);
@@ -28,8 +34,13 @@ class RoleController extends Controller
      */
     public function create()
     {
+        // Check permission using Spatie Laravel Permission
+        if (!Auth::user()->can('create roles')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $permissions = Permission::all()->groupBy('group_name');
-        
+
         return Inertia::render('Admin/Roles/Create', [
             'permissions' => $permissions,
         ]);
@@ -40,6 +51,11 @@ class RoleController extends Controller
      */
     public function store(RoleRequest $request)
     {
+        // Check permission using Spatie Laravel Permission
+        if (!Auth::user()->can('create roles')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $role = Role::create([
             'name' => $request->validated('name'),
             'guard_name' => 'web',
@@ -59,8 +75,13 @@ class RoleController extends Controller
      */
     public function show(Role $role)
     {
+        // Check permission using Spatie Laravel Permission
+        if (!Auth::user()->can('view roles')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $role->load('permissions');
-        
+
         return Inertia::render('Admin/Roles/Show', [
             'role' => $role,
         ]);
@@ -71,9 +92,14 @@ class RoleController extends Controller
      */
     public function edit(Role $role)
     {
+        // Check permission using Spatie Laravel Permission
+        if (!Auth::user()->can('edit roles')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $role->load('permissions');
         $permissions = Permission::all()->groupBy('group_name');
-        
+
         return Inertia::render('Admin/Roles/Edit', [
             'role' => $role,
             'permissions' => $permissions,
@@ -85,6 +111,11 @@ class RoleController extends Controller
      */
     public function update(RoleRequest $request, Role $role)
     {
+        // Check permission using Spatie Laravel Permission
+        if (!Auth::user()->can('edit roles')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $role->update([
             'name' => $request->validated('name'),
         ]);
@@ -105,6 +136,11 @@ class RoleController extends Controller
      */
     public function destroy(Role $role)
     {
+        // Check permission using Spatie Laravel Permission
+        if (!Auth::user()->can('delete roles')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         // Prevent deletion of super-admin role
         if ($role->name === 'super-admin') {
             return Redirect::route('roles.index')

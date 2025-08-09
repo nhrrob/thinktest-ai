@@ -27,21 +27,21 @@ export function NavAdmin({ items = [] }: { items: NavItem[] }) {
                     let hasPermission = true;
                     
                     if (item.href.includes('/roles')) {
-                        hasPermission = auth.user.permissions?.some(permission => 
-                            permission.name === 'manage roles'
-                        ) || auth.user.roles?.some(role => 
+                        hasPermission = auth.user.permissions?.some(permission =>
+                            ['view roles', 'create roles', 'edit roles', 'delete roles'].includes(permission.name)
+                        ) || auth.user.roles?.some(role =>
                             role.name === 'super-admin' || role.name === 'admin'
                         ) || false;
                     } else if (item.href.includes('/permissions')) {
-                        hasPermission = auth.user.permissions?.some(permission => 
-                            permission.name === 'manage permissions'
-                        ) || auth.user.roles?.some(role => 
+                        hasPermission = auth.user.permissions?.some(permission =>
+                            ['view permissions', 'create permissions', 'edit permissions', 'delete permissions'].includes(permission.name)
+                        ) || auth.user.roles?.some(role =>
                             role.name === 'super-admin' || role.name === 'admin'
                         ) || false;
                     } else if (item.href.includes('/users')) {
-                        hasPermission = auth.user.permissions?.some(permission => 
-                            permission.name === 'manage users'
-                        ) || auth.user.roles?.some(role => 
+                        hasPermission = auth.user.permissions?.some(permission =>
+                            ['view users', 'create users', 'edit users', 'delete users'].includes(permission.name)
+                        ) || auth.user.roles?.some(role =>
                             role.name === 'super-admin' || role.name === 'admin'
                         ) || false;
                     }

@@ -108,12 +108,58 @@ app/
 2. **Model Configuration**:
    ```php
    use Spatie\Permission\Traits\HasRoles;
-   
+
    class User extends Authenticatable
    {
        use HasRoles;
    }
    ```
+
+### Authorization Implementation (Spatie-Based)
+**IMPORTANT**: Use Spatie Laravel Permission's native authorization methods instead of Laravel policies.
+
+1. **Permission Structure**:
+   - Use granular CRUD permissions: `view {resource}`, `create {resource}`, `edit {resource}`, `delete {resource}`
+   - Example: `view users`, `create users`, `edit users`, `delete users`
+   - Avoid broad permissions like `manage users`
+
+2. **Controller Authorization**:
+   ```php
+   use Illuminate\Support\Facades\Auth;
+
+   public function index()
+   {
+       // Check permission using Spatie Laravel Permission
+       if (!Auth::user()->can('view users')) {
+           abort(403, 'Unauthorized action.');
+       }
+
+       // Controller logic...
+   }
+   ```
+
+3. **Route Middleware**:
+   ```php
+   // Use granular permissions with OR operator for resource routes
+   Route::middleware(['permission:view users|create users|edit users|delete users'])->group(function () {
+       Route::resource('users', UserController::class);
+   });
+   ```
+
+4. **Frontend Permission Checks**:
+   ```tsx
+   // Check for any of the granular permissions
+   hasPermission = auth.user.permissions?.some(permission =>
+       ['view users', 'create users', 'edit users', 'delete users'].includes(permission.name)
+   ) || auth.user.roles?.some(role =>
+       role.name === 'super-admin' || role.name === 'admin'
+   ) || false;
+   ```
+
+5. **DO NOT USE**:
+   - Laravel authorization policies
+   - Broad "manage" permissions
+   - Laravel's Gate system for Spatie permissions
 
 ### Default User Seeding
 Create comprehensive user seeding with these specific accounts:

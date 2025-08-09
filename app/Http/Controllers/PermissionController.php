@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\PermissionRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Permission;
 use Illuminate\Support\Facades\Redirect;
@@ -15,10 +16,15 @@ class PermissionController extends Controller
      */
     public function index()
     {
+        // Check permission using Spatie Laravel Permission
+        if (!Auth::user()->can('view permissions')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $permissions = Permission::orderBy('group_name')
             ->orderBy('name')
             ->paginate(15);
-        
+
         return Inertia::render('Admin/Permissions/Index', [
             'permissions' => $permissions,
         ]);
@@ -29,12 +35,17 @@ class PermissionController extends Controller
      */
     public function create()
     {
+        // Check permission using Spatie Laravel Permission
+        if (!Auth::user()->can('create permissions')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $groups = Permission::select('group_name')
             ->distinct()
             ->whereNotNull('group_name')
             ->orderBy('group_name')
             ->pluck('group_name');
-        
+
         return Inertia::render('Admin/Permissions/Create', [
             'groups' => $groups,
         ]);
@@ -45,6 +56,11 @@ class PermissionController extends Controller
      */
     public function store(PermissionRequest $request)
     {
+        // Check permission using Spatie Laravel Permission
+        if (!Auth::user()->can('create permissions')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         Permission::create([
             'name' => $request->validated('name'),
             'group_name' => $request->validated('group_name'),
@@ -60,8 +76,13 @@ class PermissionController extends Controller
      */
     public function show(Permission $permission)
     {
+        // Check permission using Spatie Laravel Permission
+        if (!Auth::user()->can('view permissions')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $permission->load('roles');
-        
+
         return Inertia::render('Admin/Permissions/Show', [
             'permission' => $permission,
         ]);
@@ -72,12 +93,17 @@ class PermissionController extends Controller
      */
     public function edit(Permission $permission)
     {
+        // Check permission using Spatie Laravel Permission
+        if (!Auth::user()->can('edit permissions')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $groups = Permission::select('group_name')
             ->distinct()
             ->whereNotNull('group_name')
             ->orderBy('group_name')
             ->pluck('group_name');
-        
+
         return Inertia::render('Admin/Permissions/Edit', [
             'permission' => $permission,
             'groups' => $groups,
@@ -89,6 +115,11 @@ class PermissionController extends Controller
      */
     public function update(PermissionRequest $request, Permission $permission)
     {
+        // Check permission using Spatie Laravel Permission
+        if (!Auth::user()->can('edit permissions')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $permission->update([
             'name' => $request->validated('name'),
             'group_name' => $request->validated('group_name'),
@@ -103,6 +134,11 @@ class PermissionController extends Controller
      */
     public function destroy(Permission $permission)
     {
+        // Check permission using Spatie Laravel Permission
+        if (!Auth::user()->can('delete permissions')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         // Check if permission is assigned to any roles
         if ($permission->roles()->count() > 0) {
             return Redirect::route('permissions.index')

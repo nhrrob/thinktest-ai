@@ -12,7 +12,12 @@ class UserRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()->can('manage users');
+        // Check for appropriate granular permissions based on HTTP method
+        if ($this->isMethod('POST')) {
+            return $this->user()->hasPermissionTo('create users');
+        } else {
+            return $this->user()->hasPermissionTo('edit users');
+        }
     }
 
     /**

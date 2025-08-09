@@ -19,15 +19,18 @@ class UserControllerTest extends TestCase
         parent::setUp();
         
         // Create permissions
-        Permission::create(['name' => 'manage users', 'guard_name' => 'web']);
+        Permission::create(['name' => 'view users', 'guard_name' => 'web']);
+        Permission::create(['name' => 'create users', 'guard_name' => 'web']);
+        Permission::create(['name' => 'edit users', 'guard_name' => 'web']);
+        Permission::create(['name' => 'delete users', 'guard_name' => 'web']);
         Permission::create(['name' => 'access admin panel', 'guard_name' => 'web']);
-        
+
         // Create roles
         $adminRole = Role::create(['name' => 'admin', 'guard_name' => 'web']);
         $userRole = Role::create(['name' => 'user', 'guard_name' => 'web']);
-        
+
         // Assign permissions to admin role
-        $adminRole->givePermissionTo(['manage users', 'access admin panel']);
+        $adminRole->givePermissionTo(['view users', 'create users', 'edit users', 'delete users', 'access admin panel']);
     }
 
     public function test_index_displays_users_for_authorized_user()

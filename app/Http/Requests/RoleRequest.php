@@ -12,7 +12,12 @@ class RoleRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()->can('manage roles');
+        // Check for appropriate granular permissions based on HTTP method
+        if ($this->isMethod('POST')) {
+            return $this->user()->hasPermissionTo('create roles');
+        } else {
+            return $this->user()->hasPermissionTo('edit roles');
+        }
     }
 
     /**
