@@ -26,15 +26,15 @@ export default function RoleEdit({ role, permissions }: RoleEditProps) {
     const breadcrumbs: BreadcrumbItem[] = [
         {
             title: 'Admin',
-            href: '/roles',
+            href: '/admin/roles',
         },
         {
             title: 'Roles',
-            href: '/roles',
+            href: '/admin/roles',
         },
         {
             title: role.name,
-            href: `/roles/${role.id}/edit`,
+            href: `/admin/roles/${role.id}/edit`,
         },
     ];
 
@@ -92,7 +92,7 @@ export default function RoleEdit({ role, permissions }: RoleEditProps) {
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
-        put(route('roles.update', role.id));
+        put(route('admin.roles.update', role.id));
     };
 
     return (

@@ -10,11 +10,11 @@ import AppLayout from '@/layouts/app-layout';
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Admin',
-        href: '/permissions',
+        href: '/admin/permissions',
     },
     {
         title: 'Permissions',
-        href: '/permissions',
+        href: '/admin/permissions',
     },
 ];
 
@@ -36,7 +36,7 @@ interface PermissionsIndexProps {
 export default function PermissionsIndex({ permissions }: PermissionsIndexProps) {
     const handleDelete = (permission: Permission) => {
         if (confirm(`Are you sure you want to delete the permission "${permission.name}"?`)) {
-            router.delete(route('permissions.destroy', permission.id));
+            router.delete(route('admin.permissions.destroy', permission.id));
         }
     };
 
@@ -62,7 +62,7 @@ export default function PermissionsIndex({ permissions }: PermissionsIndexProps)
                             Manage system permissions and their groups
                         </p>
                     </div>
-                    <Link href={route('permissions.create')}>
+                    <Link href={route('admin.permissions.create')}>
                         <Button>
                             <PlusIcon className="mr-2 h-4 w-4" />
                             Create Permission
@@ -112,12 +112,12 @@ export default function PermissionsIndex({ permissions }: PermissionsIndexProps)
                                                         </p>
                                                     </div>
                                                     <div className="flex items-center gap-2">
-                                                        <Link href={route('permissions.show', permission.id)}>
+                                                        <Link href={route('admin.permissions.show', permission.id)}>
                                                             <Button variant="outline" size="sm">
                                                                 <EyeIcon className="h-4 w-4" />
                                                             </Button>
                                                         </Link>
-                                                        <Link href={route('permissions.edit', permission.id)}>
+                                                        <Link href={route('admin.permissions.edit', permission.id)}>
                                                             <Button variant="outline" size="sm">
                                                                 <PencilIcon className="h-4 w-4" />
                                                             </Button>

@@ -15,15 +15,15 @@ export default function PermissionShow({ permission }: PermissionShowProps) {
     const breadcrumbs: BreadcrumbItem[] = [
         {
             title: 'Admin',
-            href: '/permissions',
+            href: '/admin/permissions',
         },
         {
             title: 'Permissions',
-            href: '/permissions',
+            href: '/admin/permissions',
         },
         {
             title: permission.name,
-            href: `/permissions/${permission.id}`,
+            href: `/admin/permissions/${permission.id}`,
         },
     ];
 
@@ -40,13 +40,13 @@ export default function PermissionShow({ permission }: PermissionShowProps) {
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Link href={route('permissions.index')}>
+                        <Link href={route('admin.permissions.index')}>
                             <Button variant="outline">
                                 <ArrowLeftIcon className="mr-2 h-4 w-4" />
                                 Back to Permissions
                             </Button>
                         </Link>
-                        <Link href={route('permissions.edit', permission.id)}>
+                        <Link href={route('admin.permissions.edit', permission.id)}>
                             <Button>
                                 <PencilIcon className="mr-2 h-4 w-4" />
                                 Edit Permission
@@ -146,7 +146,7 @@ export default function PermissionShow({ permission }: PermissionShowProps) {
                                 {permission.roles.map((role) => (
                                     <Link
                                         key={role.id}
-                                        href={route('roles.show', role.id)}
+                                        href={route('admin.roles.show', role.id)}
                                         className="block"
                                     >
                                         <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">

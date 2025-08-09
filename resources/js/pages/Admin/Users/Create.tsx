@@ -12,15 +12,15 @@ import AppLayout from '@/layouts/app-layout';
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Admin',
-        href: '/users',
+        href: '/admin/users',
     },
     {
         title: 'Users',
-        href: '/users',
+        href: '/admin/users',
     },
     {
         title: 'Create',
-        href: '/users/create',
+        href: '/admin/users/create',
     },
 ];
 
@@ -55,7 +55,7 @@ export default function UserCreate({ roles }: UserCreateProps) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        post(route('users.store'));
+        post(route('admin.users.store'));
     };
 
     return (
@@ -70,7 +70,7 @@ export default function UserCreate({ roles }: UserCreateProps) {
                             Add a new user to the system
                         </p>
                     </div>
-                    <Link href={route('users.index')}>
+                    <Link href={route('admin.users.index')}>
                         <Button variant="outline">
                             <ArrowLeftIcon className="mr-2 h-4 w-4" />
                             Back to Users
@@ -186,7 +186,7 @@ export default function UserCreate({ roles }: UserCreateProps) {
                             <SaveIcon className="mr-2 h-4 w-4" />
                             {processing ? 'Creating...' : 'Create User'}
                         </Button>
-                        <Link href={route('users.index')}>
+                        <Link href={route('admin.users.index')}>
                             <Button type="button" variant="outline">
                                 Cancel
                             </Button>

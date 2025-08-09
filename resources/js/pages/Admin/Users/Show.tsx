@@ -15,15 +15,15 @@ export default function UserShow({ user }: UserShowProps) {
     const breadcrumbs: BreadcrumbItem[] = [
         {
             title: 'Admin',
-            href: '/users',
+            href: '/admin/users',
         },
         {
             title: 'Users',
-            href: '/users',
+            href: '/admin/users',
         },
         {
             title: user.name,
-            href: `/users/${user.id}`,
+            href: `/admin/users/${user.id}`,
         },
     ];
 
@@ -60,13 +60,13 @@ export default function UserShow({ user }: UserShowProps) {
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Link href={route('users.index')}>
+                        <Link href={route('admin.users.index')}>
                             <Button variant="outline">
                                 <ArrowLeftIcon className="mr-2 h-4 w-4" />
                                 Back to Users
                             </Button>
                         </Link>
-                        <Link href={route('users.edit', user.id)}>
+                        <Link href={route('admin.users.edit', user.id)}>
                             <Button>
                                 <PencilIcon className="mr-2 h-4 w-4" />
                                 Edit User

@@ -15,15 +15,15 @@ export default function RoleShow({ role }: RoleShowProps) {
     const breadcrumbs: BreadcrumbItem[] = [
         {
             title: 'Admin',
-            href: '/roles',
+            href: '/admin/roles',
         },
         {
             title: 'Roles',
-            href: '/roles',
+            href: '/admin/roles',
         },
         {
             title: role.name,
-            href: `/roles/${role.id}`,
+            href: `/admin/roles/${role.id}`,
         },
     ];
 
@@ -50,13 +50,13 @@ export default function RoleShow({ role }: RoleShowProps) {
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Link href={route('roles.index')}>
+                        <Link href={route('admin.roles.index')}>
                             <Button variant="outline">
                                 <ArrowLeftIcon className="mr-2 h-4 w-4" />
                                 Back to Roles
                             </Button>
                         </Link>
-                        <Link href={route('roles.edit', role.id)}>
+                        <Link href={route('admin.roles.edit', role.id)}>
                             <Button>
                                 <PencilIcon className="mr-2 h-4 w-4" />
                                 Edit Role

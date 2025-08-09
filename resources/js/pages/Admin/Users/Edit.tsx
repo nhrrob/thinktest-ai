@@ -26,15 +26,15 @@ export default function UserEdit({ user, roles }: UserEditProps) {
     const breadcrumbs: BreadcrumbItem[] = [
         {
             title: 'Admin',
-            href: '/users',
+            href: '/admin/users',
         },
         {
             title: 'Users',
-            href: '/users',
+            href: '/admin/users',
         },
         {
             title: user.name,
-            href: `/users/${user.id}/edit`,
+            href: `/admin/users/${user.id}/edit`,
         },
     ];
 
@@ -56,7 +56,7 @@ export default function UserEdit({ user, roles }: UserEditProps) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        put(route('users.update', user.id));
+        put(route('admin.users.update', user.id));
     };
 
     return (
@@ -71,7 +71,7 @@ export default function UserEdit({ user, roles }: UserEditProps) {
                             Update user information and role assignments
                         </p>
                     </div>
-                    <Link href={route('users.index')}>
+                    <Link href={route('admin.users.index')}>
                         <Button variant="outline">
                             <ArrowLeftIcon className="mr-2 h-4 w-4" />
                             Back to Users
@@ -187,7 +187,7 @@ export default function UserEdit({ user, roles }: UserEditProps) {
                             <SaveIcon className="mr-2 h-4 w-4" />
                             {processing ? 'Updating...' : 'Update User'}
                         </Button>
-                        <Link href={route('users.index')}>
+                        <Link href={route('admin.users.index')}>
                             <Button type="button" variant="outline">
                                 Cancel
                             </Button>

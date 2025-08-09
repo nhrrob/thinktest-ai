@@ -13,15 +13,15 @@ import AppLayout from '@/layouts/app-layout';
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Admin',
-        href: '/permissions',
+        href: '/admin/permissions',
     },
     {
         title: 'Permissions',
-        href: '/permissions',
+        href: '/admin/permissions',
     },
     {
         title: 'Create',
-        href: '/permissions/create',
+        href: '/admin/permissions/create',
     },
 ];
 
@@ -42,7 +42,7 @@ export default function PermissionCreate({ groups }: PermissionCreateProps) {
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
-        post(route('permissions.store'));
+        post(route('admin.permissions.store'));
     };
 
     return (

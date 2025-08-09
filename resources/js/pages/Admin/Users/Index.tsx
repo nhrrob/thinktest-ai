@@ -10,11 +10,11 @@ import AppLayout from '@/layouts/app-layout';
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Admin',
-        href: '/users',
+        href: '/admin/users',
     },
     {
         title: 'Users',
-        href: '/users',
+        href: '/admin/users',
     },
 ];
 
@@ -36,7 +36,7 @@ interface UsersIndexProps {
 export default function UsersIndex({ users }: UsersIndexProps) {
     const handleDelete = (user: User) => {
         if (confirm(`Are you sure you want to delete the user "${user.name}"?`)) {
-            router.delete(route('users.destroy', user.id));
+            router.delete(route('admin.users.destroy', user.id));
         }
     };
 
@@ -52,7 +52,7 @@ export default function UsersIndex({ users }: UsersIndexProps) {
                             Manage users and their role assignments
                         </p>
                     </div>
-                    <Link href={route('users.create')}>
+                    <Link href={route('admin.users.create')}>
                         <Button>
                             <PlusIcon className="mr-2 h-4 w-4" />
                             Create User
@@ -98,12 +98,12 @@ export default function UsersIndex({ users }: UsersIndexProps) {
                                             </p>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <Link href={route('users.show', user.id)}>
+                                            <Link href={route('admin.users.show', user.id)}>
                                                 <Button variant="outline" size="sm">
                                                     <EyeIcon className="h-4 w-4" />
                                                 </Button>
                                             </Link>
-                                            <Link href={route('users.edit', user.id)}>
+                                            <Link href={route('admin.users.edit', user.id)}>
                                                 <Button variant="outline" size="sm">
                                                     <PencilIcon className="h-4 w-4" />
                                                 </Button>

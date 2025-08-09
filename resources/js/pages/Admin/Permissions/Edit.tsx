@@ -24,15 +24,15 @@ export default function PermissionEdit({ permission, groups }: PermissionEditPro
     const breadcrumbs: BreadcrumbItem[] = [
         {
             title: 'Admin',
-            href: '/permissions',
+            href: '/admin/permissions',
         },
         {
             title: 'Permissions',
-            href: '/permissions',
+            href: '/admin/permissions',
         },
         {
             title: permission.name,
-            href: `/permissions/${permission.id}/edit`,
+            href: `/admin/permissions/${permission.id}/edit`,
         },
     ];
 
@@ -43,7 +43,7 @@ export default function PermissionEdit({ permission, groups }: PermissionEditPro
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
-        put(route('permissions.update', permission.id));
+        put(route('admin.permissions.update', permission.id));
     };
 
     return (

@@ -15,15 +15,15 @@ import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Admin',
-        href: '/roles',
+        href: '/admin/roles',
     },
     {
         title: 'Roles',
-        href: '/roles',
+        href: '/admin/roles',
     },
     {
         title: 'Create',
-        href: '/roles/create',
+        href: '/admin/roles/create',
     },
 ];
 
@@ -91,7 +91,7 @@ export default function RoleCreate({ permissions }: RoleCreateProps) {
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
-        post(route('roles.store'));
+        post(route('admin.roles.store'));
     };
 
     return (

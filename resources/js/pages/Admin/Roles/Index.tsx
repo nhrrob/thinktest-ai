@@ -10,11 +10,11 @@ import AppLayout from '@/layouts/app-layout';
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Admin',
-        href: '/roles',
+        href: '/admin/roles',
     },
     {
         title: 'Roles',
-        href: '/roles',
+        href: '/admin/roles',
     },
 ];
 
@@ -36,7 +36,7 @@ interface RolesIndexProps {
 export default function RolesIndex({ roles }: RolesIndexProps) {
     const handleDelete = (role: Role) => {
         if (confirm(`Are you sure you want to delete the role "${role.name}"?`)) {
-            router.delete(route('roles.destroy', role.id));
+            router.delete(route('admin.roles.destroy', role.id));
         }
     };
 
@@ -52,7 +52,7 @@ export default function RolesIndex({ roles }: RolesIndexProps) {
                             Manage user roles and their permissions
                         </p>
                     </div>
-                    <Link href={route('roles.create')}>
+                    <Link href={route('admin.roles.create')}>
                         <Button>
                             <PlusIcon className="mr-2 h-4 w-4" />
                             Create Role
@@ -91,12 +91,12 @@ export default function RolesIndex({ roles }: RolesIndexProps) {
                                             </p>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <Link href={route('roles.show', role.id)}>
+                                            <Link href={route('admin.roles.show', role.id)}>
                                                 <Button variant="outline" size="sm">
                                                     <EyeIcon className="h-4 w-4" />
                                                 </Button>
                                             </Link>
-                                            <Link href={route('roles.edit', role.id)}>
+                                            <Link href={route('admin.roles.edit', role.id)}>
                                                 <Button variant="outline" size="sm">
                                                     <PencilIcon className="h-4 w-4" />
                                                 </Button>
