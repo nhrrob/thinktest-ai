@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Controller;
 use App\Http\Requests\UserRequest;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -13,15 +14,18 @@ use Spatie\Permission\Models\Role;
 class UserController extends Controller
 {
     /**
+     * Constructor with user permission checking
+     */
+    public function __construct()
+    {
+        parent::__construct('user');
+    }
+
+    /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        // Check permission using Spatie Laravel Permission
-        if (!Auth::user()->hasPermissionTo('view users')) {
-            abort(403, 'Unauthorized action.');
-        }
-
         $users = User::with('roles')->paginate(10);
 
         return Inertia::render('Admin/Users/Index', [
@@ -34,11 +38,6 @@ class UserController extends Controller
      */
     public function create()
     {
-        // Check permission using Spatie Laravel Permission
-        if (!Auth::user()->hasPermissionTo('create users')) {
-            abort(403, 'Unauthorized action.');
-        }
-
         $roles = Role::all();
 
         return Inertia::render('Admin/Users/Create', [
@@ -51,11 +50,6 @@ class UserController extends Controller
      */
     public function store(UserRequest $request)
     {
-        // Check permission using Spatie Laravel Permission
-        if (!Auth::user()->hasPermissionTo('create users')) {
-            abort(403, 'Unauthorized action.');
-        }
-
         $user = User::create([
             'name' => $request->validated('name'),
             'email' => $request->validated('email'),
@@ -67,7 +61,7 @@ class UserController extends Controller
             $user->syncRoles($roles);
         }
 
-        return Redirect::route('users.index')
+        return Redirect::route('admin.users.index')
             ->with('success', 'User created successfully.');
     }
 
@@ -76,11 +70,6 @@ class UserController extends Controller
      */
     public function show(User $user)
     {
-        // Check permission using Spatie Laravel Permission
-        if (!Auth::user()->hasPermissionTo('view users')) {
-            abort(403, 'Unauthorized action.');
-        }
-
         $user->load('roles.permissions');
 
         return Inertia::render('Admin/Users/Show', [
@@ -93,11 +82,6 @@ class UserController extends Controller
      */
     public function edit(User $user)
     {
-        // Check permission using Spatie Laravel Permission
-        if (!Auth::user()->hasPermissionTo('edit users')) {
-            abort(403, 'Unauthorized action.');
-        }
-
         $user->load('roles');
         $roles = Role::all();
 
@@ -112,11 +96,6 @@ class UserController extends Controller
      */
     public function update(UserRequest $request, User $user)
     {
-        // Check permission using Spatie Laravel Permission
-        if (!Auth::user()->hasPermissionTo('edit users')) {
-            abort(403, 'Unauthorized action.');
-        }
-
         $updateData = [
             'name' => $request->validated('name'),
             'email' => $request->validated('email'),
@@ -136,7 +115,7 @@ class UserController extends Controller
             $user->syncRoles([]);
         }
 
-        return Redirect::route('users.index')
+        return Redirect::route('admin.users.index')
             ->with('success', 'User updated successfully.');
     }
 
@@ -145,26 +124,21 @@ class UserController extends Controller
      */
     public function destroy(User $user)
     {
-        // Check permission using Spatie Laravel Permission
-        if (!Auth::user()->hasPermissionTo('delete users')) {
-            abort(403, 'Unauthorized action.');
-        }
-
         // Prevent deletion of super-admin users
         if ($user->hasRole('super-admin')) {
-            return Redirect::route('users.index')
+            return Redirect::route('admin.users.index')
                 ->with('error', 'Cannot delete super-admin users.');
         }
 
         // Prevent users from deleting themselves
         if ($user->id === Auth::user()->id) {
-            return Redirect::route('users.index')
+            return Redirect::route('admin.users.index')
                 ->with('error', 'You cannot delete your own account.');
         }
 
         $user->delete();
 
-        return Redirect::route('users.index')
+        return Redirect::route('admin.users.index')
             ->with('success', 'User deleted successfully.');
     }
 }

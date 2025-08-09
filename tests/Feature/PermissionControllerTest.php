@@ -26,7 +26,7 @@ test('admin can view permissions index', function () {
     $admin = User::factory()->create();
     $admin->assignRole('admin');
 
-    $response = $this->actingAs($admin)->get('/permissions');
+    $response = $this->actingAs($admin)->get('/admin/permissions');
 
     $response->assertStatus(200);
     $response->assertInertia(fn ($page) => $page->component('Admin/Permissions/Index'));
@@ -36,7 +36,7 @@ test('admin can create permission', function () {
     $admin = User::factory()->create();
     $admin->assignRole('admin');
 
-    $response = $this->actingAs($admin)->get('/permissions/create');
+    $response = $this->actingAs($admin)->get('/admin/permissions/create');
 
     $response->assertStatus(200);
     $response->assertInertia(fn ($page) => $page->component('Admin/Permissions/Create'));
@@ -46,25 +46,25 @@ test('admin can store permission', function () {
     $admin = User::factory()->create();
     $admin->assignRole('admin');
 
-    $response = $this->actingAs($admin)->post('/permissions', [
+    $response = $this->actingAs($admin)->post('/admin/permissions', [
         'name' => 'test new permission',
         'group_name' => 'testing',
     ]);
 
-    $response->assertRedirect('/permissions');
+    $response->assertRedirect('/admin/permissions');
     expect(Permission::where('name', 'test new permission')->exists())->toBeTrue();
 });
 
 test('unauthorized user cannot access permissions', function () {
     $user = User::factory()->create();
 
-    $response = $this->actingAs($user)->get('/permissions');
+    $response = $this->actingAs($user)->get('/admin/permissions');
 
     $response->assertStatus(403);
 });
 
 test('guest cannot access permissions', function () {
-    $response = $this->get('/permissions');
+    $response = $this->get('/admin/permissions');
 
     $response->assertRedirect('/login');
 });

@@ -17,13 +17,26 @@ class ConsolidatedRequestsTest extends TestCase
         parent::setUp();
         
         // Create permissions
-        Permission::create(['name' => 'manage roles', 'guard_name' => 'web']);
-        Permission::create(['name' => 'manage permissions', 'guard_name' => 'web']);
-        Permission::create(['name' => 'manage users', 'guard_name' => 'web']);
-        
+        Permission::create(['name' => 'view roles', 'guard_name' => 'web']);
+        Permission::create(['name' => 'create roles', 'guard_name' => 'web']);
+        Permission::create(['name' => 'edit roles', 'guard_name' => 'web']);
+        Permission::create(['name' => 'delete roles', 'guard_name' => 'web']);
+        Permission::create(['name' => 'view permissions', 'guard_name' => 'web']);
+        Permission::create(['name' => 'create permissions', 'guard_name' => 'web']);
+        Permission::create(['name' => 'edit permissions', 'guard_name' => 'web']);
+        Permission::create(['name' => 'delete permissions', 'guard_name' => 'web']);
+        Permission::create(['name' => 'view users', 'guard_name' => 'web']);
+        Permission::create(['name' => 'create users', 'guard_name' => 'web']);
+        Permission::create(['name' => 'edit users', 'guard_name' => 'web']);
+        Permission::create(['name' => 'delete users', 'guard_name' => 'web']);
+
         // Create admin role
         $adminRole = Role::create(['name' => 'admin', 'guard_name' => 'web']);
-        $adminRole->givePermissionTo(['manage roles', 'manage permissions', 'manage users']);
+        $adminRole->givePermissionTo([
+            'view roles', 'create roles', 'edit roles', 'delete roles',
+            'view permissions', 'create permissions', 'edit permissions', 'delete permissions',
+            'view users', 'create users', 'edit users', 'delete users'
+        ]);
     }
 
     public function test_role_request_validates_unique_name_on_create()
@@ -33,10 +46,10 @@ class ConsolidatedRequestsTest extends TestCase
         
         Role::create(['name' => 'existing-role', 'guard_name' => 'web']);
         
-        $response = $this->actingAs($admin)->post(route('roles.store'), [
+        $response = $this->actingAs($admin)->post(route('admin.roles.store'), [
             'name' => 'existing-role',
         ]);
-        
+
         $response->assertSessionHasErrors(['name']);
     }
 
@@ -44,14 +57,14 @@ class ConsolidatedRequestsTest extends TestCase
     {
         $admin = User::factory()->create();
         $admin->assignRole('admin');
-        
+
         $role = Role::create(['name' => 'test-role', 'guard_name' => 'web']);
-        
-        $response = $this->actingAs($admin)->put(route('roles.update', $role), [
+
+        $response = $this->actingAs($admin)->put(route('admin.roles.update', $role), [
             'name' => 'test-role', // Same name should be allowed
         ]);
-        
-        $response->assertRedirect(route('roles.index'));
+
+        $response->assertRedirect(route('admin.roles.index'));
         $response->assertSessionDoesntHaveErrors(['name']);
     }
 
@@ -59,13 +72,13 @@ class ConsolidatedRequestsTest extends TestCase
     {
         $admin = User::factory()->create();
         $admin->assignRole('admin');
-        
+
         Permission::create(['name' => 'existing-permission', 'guard_name' => 'web']);
-        
-        $response = $this->actingAs($admin)->post(route('permissions.store'), [
+
+        $response = $this->actingAs($admin)->post(route('admin.permissions.store'), [
             'name' => 'existing-permission',
         ]);
-        
+
         $response->assertSessionHasErrors(['name']);
     }
 
@@ -73,14 +86,14 @@ class ConsolidatedRequestsTest extends TestCase
     {
         $admin = User::factory()->create();
         $admin->assignRole('admin');
-        
+
         $permission = Permission::create(['name' => 'test-permission', 'guard_name' => 'web']);
-        
-        $response = $this->actingAs($admin)->put(route('permissions.update', $permission), [
+
+        $response = $this->actingAs($admin)->put(route('admin.permissions.update', $permission), [
             'name' => 'test-permission', // Same name should be allowed
         ]);
-        
-        $response->assertRedirect(route('permissions.index'));
+
+        $response->assertRedirect(route('admin.permissions.index'));
         $response->assertSessionDoesntHaveErrors(['name']);
     }
 
@@ -88,16 +101,16 @@ class ConsolidatedRequestsTest extends TestCase
     {
         $admin = User::factory()->create();
         $admin->assignRole('admin');
-        
+
         User::factory()->create(['email' => 'existing@example.com']);
-        
-        $response = $this->actingAs($admin)->post(route('users.store'), [
+
+        $response = $this->actingAs($admin)->post(route('admin.users.store'), [
             'name' => 'Test User',
             'email' => 'existing@example.com',
             'password' => 'password123',
             'password_confirmation' => 'password123',
         ]);
-        
+
         $response->assertSessionHasErrors(['email']);
     }
 
@@ -105,15 +118,15 @@ class ConsolidatedRequestsTest extends TestCase
     {
         $admin = User::factory()->create();
         $admin->assignRole('admin');
-        
+
         $user = User::factory()->create(['email' => 'test@example.com']);
-        
-        $response = $this->actingAs($admin)->put(route('users.update', $user), [
+
+        $response = $this->actingAs($admin)->put(route('admin.users.update', $user), [
             'name' => 'Updated Name',
             'email' => 'test@example.com', // Same email should be allowed
         ]);
-        
-        $response->assertRedirect(route('users.index'));
+
+        $response->assertRedirect(route('admin.users.index'));
         $response->assertSessionDoesntHaveErrors(['email']);
     }
 }

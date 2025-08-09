@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Controller;
 use App\Http\Requests\RoleRequest;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
@@ -13,15 +13,18 @@ use Illuminate\Support\Facades\Redirect;
 class RoleController extends Controller
 {
     /**
+     * Constructor with role permission checking
+     */
+    public function __construct()
+    {
+        parent::__construct('role');
+    }
+
+    /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        // Check permission using Spatie Laravel Permission
-        if (!Auth::user()->can('view roles')) {
-            abort(403, 'Unauthorized action.');
-        }
-
         $roles = Role::with('permissions')->paginate(10);
 
         return Inertia::render('Admin/Roles/Index', [
@@ -34,11 +37,6 @@ class RoleController extends Controller
      */
     public function create()
     {
-        // Check permission using Spatie Laravel Permission
-        if (!Auth::user()->can('create roles')) {
-            abort(403, 'Unauthorized action.');
-        }
-
         $permissions = Permission::all()->groupBy('group_name');
 
         return Inertia::render('Admin/Roles/Create', [
@@ -51,11 +49,6 @@ class RoleController extends Controller
      */
     public function store(RoleRequest $request)
     {
-        // Check permission using Spatie Laravel Permission
-        if (!Auth::user()->can('create roles')) {
-            abort(403, 'Unauthorized action.');
-        }
-
         $role = Role::create([
             'name' => $request->validated('name'),
             'guard_name' => 'web',
@@ -66,7 +59,7 @@ class RoleController extends Controller
             $role->syncPermissions($permissions);
         }
 
-        return Redirect::route('roles.index')
+        return Redirect::route('admin.roles.index')
             ->with('success', 'Role created successfully.');
     }
 
@@ -75,11 +68,6 @@ class RoleController extends Controller
      */
     public function show(Role $role)
     {
-        // Check permission using Spatie Laravel Permission
-        if (!Auth::user()->can('view roles')) {
-            abort(403, 'Unauthorized action.');
-        }
-
         $role->load('permissions');
 
         return Inertia::render('Admin/Roles/Show', [
@@ -92,11 +80,6 @@ class RoleController extends Controller
      */
     public function edit(Role $role)
     {
-        // Check permission using Spatie Laravel Permission
-        if (!Auth::user()->can('edit roles')) {
-            abort(403, 'Unauthorized action.');
-        }
-
         $role->load('permissions');
         $permissions = Permission::all()->groupBy('group_name');
 
@@ -111,11 +94,6 @@ class RoleController extends Controller
      */
     public function update(RoleRequest $request, Role $role)
     {
-        // Check permission using Spatie Laravel Permission
-        if (!Auth::user()->can('edit roles')) {
-            abort(403, 'Unauthorized action.');
-        }
-
         $role->update([
             'name' => $request->validated('name'),
         ]);
@@ -127,7 +105,7 @@ class RoleController extends Controller
             $role->syncPermissions([]);
         }
 
-        return Redirect::route('roles.index')
+        return Redirect::route('admin.roles.index')
             ->with('success', 'Role updated successfully.');
     }
 
@@ -136,26 +114,21 @@ class RoleController extends Controller
      */
     public function destroy(Role $role)
     {
-        // Check permission using Spatie Laravel Permission
-        if (!Auth::user()->can('delete roles')) {
-            abort(403, 'Unauthorized action.');
-        }
-
         // Prevent deletion of super-admin role
         if ($role->name === 'super-admin') {
-            return Redirect::route('roles.index')
+            return Redirect::route('admin.roles.index')
                 ->with('error', 'Cannot delete super-admin role.');
         }
 
         // Check if role is assigned to any users
         if ($role->users()->count() > 0) {
-            return Redirect::route('roles.index')
+            return Redirect::route('admin.roles.index')
                 ->with('error', 'Cannot delete role that is assigned to users.');
         }
 
         $role->delete();
 
-        return Redirect::route('roles.index')
+        return Redirect::route('admin.roles.index')
             ->with('success', 'Role deleted successfully.');
     }
 }

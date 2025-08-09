@@ -40,7 +40,7 @@ class UserControllerTest extends TestCase
         
         $users = User::factory()->count(3)->create();
         
-        $response = $this->actingAs($admin)->get(route('users.index'));
+        $response = $this->actingAs($admin)->get(route('admin.users.index'));
         
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => 
@@ -54,8 +54,8 @@ class UserControllerTest extends TestCase
         $user = User::factory()->create();
         $user->assignRole('user');
         
-        $response = $this->actingAs($user)->get(route('users.index'));
-        
+        $response = $this->actingAs($user)->get(route('admin.users.index'));
+
         $response->assertStatus(403);
     }
 
@@ -63,8 +63,8 @@ class UserControllerTest extends TestCase
     {
         $admin = User::factory()->create();
         $admin->assignRole('admin');
-        
-        $response = $this->actingAs($admin)->get(route('users.create'));
+
+        $response = $this->actingAs($admin)->get(route('admin.users.create'));
         
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => 
@@ -88,9 +88,9 @@ class UserControllerTest extends TestCase
             'roles' => [$role->id],
         ];
         
-        $response = $this->actingAs($admin)->post(route('users.store'), $userData);
-        
-        $response->assertRedirect(route('users.index'));
+        $response = $this->actingAs($admin)->post(route('admin.users.store'), $userData);
+
+        $response->assertRedirect(route('admin.users.index'));
         $response->assertSessionHas('success', 'User created successfully.');
         
         $this->assertDatabaseHas('users', [
@@ -107,8 +107,8 @@ class UserControllerTest extends TestCase
         $admin = User::factory()->create();
         $admin->assignRole('admin');
         
-        $response = $this->actingAs($admin)->post(route('users.store'), []);
-        
+        $response = $this->actingAs($admin)->post(route('admin.users.store'), []);
+
         $response->assertSessionHasErrors(['name', 'email', 'password']);
     }
 
@@ -116,17 +116,17 @@ class UserControllerTest extends TestCase
     {
         $admin = User::factory()->create();
         $admin->assignRole('admin');
-        
+
         $existingUser = User::factory()->create(['email' => 'existing@example.com']);
-        
+
         $userData = [
             'name' => 'Test User',
             'email' => 'existing@example.com',
             'password' => 'password123',
             'password_confirmation' => 'password123',
         ];
-        
-        $response = $this->actingAs($admin)->post(route('users.store'), $userData);
+
+        $response = $this->actingAs($admin)->post(route('admin.users.store'), $userData);
         
         $response->assertSessionHasErrors(['email']);
     }
@@ -139,10 +139,10 @@ class UserControllerTest extends TestCase
         $user = User::factory()->create();
         $user->assignRole('user');
         
-        $response = $this->actingAs($admin)->get(route('users.show', $user));
-        
+        $response = $this->actingAs($admin)->get(route('admin.users.show', $user));
+
         $response->assertStatus(200);
-        $response->assertInertia(fn ($page) => 
+        $response->assertInertia(fn ($page) =>
             $page->component('Admin/Users/Show')
                 ->where('user.id', $user->id)
                 ->where('user.name', $user->name)
@@ -153,11 +153,11 @@ class UserControllerTest extends TestCase
     {
         $admin = User::factory()->create();
         $admin->assignRole('admin');
-        
+
         $user = User::factory()->create();
         $user->assignRole('user');
-        
-        $response = $this->actingAs($admin)->get(route('users.edit', $user));
+
+        $response = $this->actingAs($admin)->get(route('admin.users.edit', $user));
         
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => 
@@ -181,9 +181,9 @@ class UserControllerTest extends TestCase
             'roles' => [$user->roles->first()->id],
         ];
         
-        $response = $this->actingAs($admin)->put(route('users.update', $user), $updateData);
-        
-        $response->assertRedirect(route('users.index'));
+        $response = $this->actingAs($admin)->put(route('admin.users.update', $user), $updateData);
+
+        $response->assertRedirect(route('admin.users.index'));
         $response->assertSessionHas('success', 'User updated successfully.');
         
         $this->assertDatabaseHas('users', [
@@ -208,10 +208,10 @@ class UserControllerTest extends TestCase
             'roles' => [],
         ];
         
-        $response = $this->actingAs($admin)->put(route('users.update', $user), $updateData);
-        
-        $response->assertRedirect(route('users.index'));
-        
+        $response = $this->actingAs($admin)->put(route('admin.users.update', $user), $updateData);
+
+        $response->assertRedirect(route('admin.users.index'));
+
         $user->refresh();
         $this->assertNotEquals($originalPassword, $user->password);
         $this->assertTrue(Hash::check('newpassword123', $user->password));
@@ -221,12 +221,12 @@ class UserControllerTest extends TestCase
     {
         $admin = User::factory()->create();
         $admin->assignRole('admin');
-        
+
         $user = User::factory()->create();
-        
-        $response = $this->actingAs($admin)->delete(route('users.destroy', $user));
-        
-        $response->assertRedirect(route('users.index'));
+
+        $response = $this->actingAs($admin)->delete(route('admin.users.destroy', $user));
+
+        $response->assertRedirect(route('admin.users.index'));
         $response->assertSessionHas('success', 'User deleted successfully.');
         
         $this->assertDatabaseMissing('users', ['id' => $user->id]);
@@ -241,11 +241,11 @@ class UserControllerTest extends TestCase
         $superAdminRole = Role::create(['name' => 'super-admin', 'guard_name' => 'web']);
         $superAdmin->assignRole('super-admin');
         
-        $response = $this->actingAs($admin)->delete(route('users.destroy', $superAdmin));
-        
-        $response->assertRedirect(route('users.index'));
+        $response = $this->actingAs($admin)->delete(route('admin.users.destroy', $superAdmin));
+
+        $response->assertRedirect(route('admin.users.index'));
         $response->assertSessionHas('error', 'Cannot delete super-admin users.');
-        
+
         $this->assertDatabaseHas('users', ['id' => $superAdmin->id]);
     }
 
@@ -253,10 +253,10 @@ class UserControllerTest extends TestCase
     {
         $admin = User::factory()->create();
         $admin->assignRole('admin');
-        
-        $response = $this->actingAs($admin)->delete(route('users.destroy', $admin));
-        
-        $response->assertRedirect(route('users.index'));
+
+        $response = $this->actingAs($admin)->delete(route('admin.users.destroy', $admin));
+
+        $response->assertRedirect(route('admin.users.index'));
         $response->assertSessionHas('error', 'You cannot delete your own account.');
         
         $this->assertDatabaseHas('users', ['id' => $admin->id]);

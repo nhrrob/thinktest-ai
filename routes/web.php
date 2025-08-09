@@ -1,9 +1,9 @@
 <?php
 
 use App\Http\Controllers\ThinkTestController;
-use App\Http\Controllers\RoleController;
-use App\Http\Controllers\PermissionController;
-use App\Http\Controllers\UserController;
+use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\PermissionController;
+use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -22,17 +22,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('thinktest/generate', [ThinkTestController::class, 'generateTests'])->name('thinktest.generate');
     Route::get('thinktest/download', [ThinkTestController::class, 'downloadTests'])->name('thinktest.download');
 
-    // Admin routes - Roles and Permissions
-    Route::middleware(['permission:view roles|create roles|edit roles|delete roles'])->group(function () {
-        Route::resource('roles', RoleController::class);
-    });
+    // Admin routes - Organized under admin prefix with proper namespace
+    Route::prefix('admin')->name('admin.')->group(function () {
+        Route::middleware(['permission:view roles|create roles|edit roles|delete roles'])->group(function () {
+            Route::resource('roles', RoleController::class);
+        });
 
-    Route::middleware(['permission:view permissions|create permissions|edit permissions|delete permissions'])->group(function () {
-        Route::resource('permissions', PermissionController::class);
-    });
+        Route::middleware(['permission:view permissions|create permissions|edit permissions|delete permissions'])->group(function () {
+            Route::resource('permissions', PermissionController::class);
+        });
 
-    Route::middleware(['permission:view users|create users|edit users|delete users'])->group(function () {
-        Route::resource('users', UserController::class);
+        Route::middleware(['permission:view users|create users|edit users|delete users'])->group(function () {
+            Route::resource('users', UserController::class);
+        });
     });
 });
 
