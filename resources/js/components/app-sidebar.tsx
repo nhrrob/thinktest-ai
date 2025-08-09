@@ -29,17 +29,17 @@ const mainNavItems: NavItem[] = [
 const adminNavItems: NavItem[] = [
     {
         title: 'Roles',
-        href: '/roles',
+        href: '/admin/roles',
         icon: Shield,
     },
     {
         title: 'Permissions',
-        href: '/permissions',
+        href: '/admin/permissions',
         icon: Key,
     },
     {
         title: 'Users',
-        href: '/users',
+        href: '/admin/users',
         icon: Users,
     },
 ];
