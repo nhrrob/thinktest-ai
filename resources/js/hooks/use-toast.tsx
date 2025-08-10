@@ -96,6 +96,10 @@ export function useToast() {
     ), {
       duration: options?.duration || 5000,
       position: options?.position || 'top-center',
+      // Ensure proper exit animation timing
+      style: {
+        animationDuration: '500ms',
+      },
     });
   };
 
@@ -122,6 +126,10 @@ export function useToast() {
     ), {
       duration: options?.duration || 6000,
       position: options?.position || 'top-center',
+      // Ensure proper exit animation timing
+      style: {
+        animationDuration: '500ms',
+      },
     });
   };
 
@@ -148,6 +156,10 @@ export function useToast() {
     ), {
       duration: options?.duration || 5000,
       position: options?.position || 'top-center',
+      // Ensure proper exit animation timing
+      style: {
+        animationDuration: '500ms',
+      },
     });
   };
 
@@ -174,6 +186,10 @@ export function useToast() {
     ), {
       duration: options?.duration || 5000,
       position: options?.position || 'top-center',
+      // Ensure proper exit animation timing
+      style: {
+        animationDuration: '500ms',
+      },
     });
   };
 
@@ -207,6 +223,10 @@ export function useToast() {
     ), {
       duration: options?.duration || Infinity,
       position: options?.position || 'top-center',
+      // Ensure proper exit animation timing
+      style: {
+        animationDuration: '500ms',
+      },
     });
   };
 

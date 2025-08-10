@@ -1,13 +1,13 @@
 import { type BreadcrumbItem, type Role } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { PlusIcon, PencilIcon, TrashIcon, EyeIcon } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import AppLayout from '@/layouts/app-layout';
 import { useConfirmationDialog } from '@/components/confirmation-dialog';
-import { useToast } from '@/hooks/use-toast';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -36,27 +36,35 @@ interface RolesIndexProps {
 }
 
 export default function RolesIndex({ roles }: RolesIndexProps) {
-    const toast = useToast();
-    const { openDialog, ConfirmationDialog } = useConfirmationDialog();
+    const { openDialog, closeDialog, ConfirmationDialog } = useConfirmationDialog();
 
     const handleDelete = (role: Role) => {
+        let loadingToast: string | undefined;
+
         openDialog({
             title: "Delete Role",
             description: `Are you sure you want to delete the role "${role.name}"? This action cannot be undone.`,
             confirmText: "Delete",
             cancelText: "Cancel",
             variant: "destructive",
+            loading: false,
             onConfirm: () => {
-                const loadingToast = toast.loading('Deleting role...');
+                loadingToast = toast.loading('Deleting role...');
 
                 router.delete(route('admin.roles.destroy', role.id), {
                     onSuccess: () => {
-                        toast.dismiss(loadingToast);
-                        toast.success('Role deleted successfully.');
+                        if (loadingToast) toast.dismiss(loadingToast);
+                        closeDialog();
+                        // Flash message will be handled automatically by useToast hook
                     },
                     onError: () => {
-                        toast.dismiss(loadingToast);
-                        toast.error('Failed to delete role. Please try again.');
+                        if (loadingToast) toast.dismiss(loadingToast);
+                        closeDialog();
+                        // Flash message will be handled automatically by useToast hook
+                    },
+                    onFinish: () => {
+                        // Ensure loading toast is always dismissed
+                        if (loadingToast) toast.dismiss(loadingToast);
                     },
                 });
             },

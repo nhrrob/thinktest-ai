@@ -213,11 +213,11 @@
 
     /* Tailwind animation utilities for manual use */
     .animate-enter {
-        animation: toast-enter 400ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        animation: toast-enter 500ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
     }
 
     .animate-leave {
-        animation: toast-exit 300ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        animation: toast-exit 500ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
     }
 
     /* Override react-hot-toast default animations with smooth custom ones */

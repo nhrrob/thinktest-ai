@@ -1,7 +1,7 @@
 import { type BreadcrumbItem, type User } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { PlusIcon, PencilIcon, TrashIcon, EyeIcon } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import toast from 'react-hot-toast';
 
 import { Button } from '@/components/ui/button';
 import { useConfirmationDialog } from '@/components/confirmation-dialog';
@@ -36,27 +36,35 @@ interface UsersIndexProps {
 }
 
 export default function UsersIndex({ users }: UsersIndexProps) {
-    const toast = useToast();
-    const { openDialog, ConfirmationDialog } = useConfirmationDialog();
+    const { openDialog, closeDialog, ConfirmationDialog } = useConfirmationDialog();
 
     const handleDelete = (user: User) => {
+        let loadingToast: string | undefined;
+
         openDialog({
             title: "Delete User",
             description: `Are you sure you want to delete the user "${user.name}"? This action cannot be undone.`,
             confirmText: "Delete",
             cancelText: "Cancel",
             variant: "destructive",
+            loading: false,
             onConfirm: () => {
-                const loadingToast = toast.loading('Deleting user...');
+                loadingToast = toast.loading('Deleting user...');
 
                 router.delete(route('admin.users.destroy', user.id), {
                     onSuccess: () => {
-                        toast.dismiss(loadingToast);
-                        toast.success('User deleted successfully.');
+                        if (loadingToast) toast.dismiss(loadingToast);
+                        closeDialog();
+                        // Flash message will be handled automatically by useToast hook
                     },
                     onError: () => {
-                        toast.dismiss(loadingToast);
-                        toast.error('Failed to delete user. Please try again.');
+                        if (loadingToast) toast.dismiss(loadingToast);
+                        closeDialog();
+                        // Flash message will be handled automatically by useToast hook
+                    },
+                    onFinish: () => {
+                        // Ensure loading toast is always dismissed
+                        if (loadingToast) toast.dismiss(loadingToast);
                     },
                 });
             },
