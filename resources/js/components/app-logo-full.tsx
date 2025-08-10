@@ -28,31 +28,48 @@ export default function AppLogoFull({
             className={className}
             {...props}
         >
-            {/* Brain Icon */}
+            {/* Code/Testing Icon */}
             <g transform="translate(10, 20)">
-                {/* Brain outline */}
-                <path 
-                    d="M30 8C25 8 20 13 20 20C20 21 20.2 22 20.4 23C19 22.4 17.4 22 16 22C11.6 22 8 25.6 8 30C8 33 9.6 35.6 12 37C12 37.4 12 37.6 12 38C12 44.6 17.4 50 24 50C25 50 26 49.8 27 49.6C28.6 53 32 55 36 55C41 55 45 51 45 46C45 45 44.8 44 44.4 43C47.6 41.6 50 38.4 50 35C50 31 47 27.6 43 26.4C43.6 25 44 23.6 44 22C44 14.2 37.8 8 30 8Z" 
-                    stroke={logoColor} 
-                    strokeWidth="2" 
+                {/* Code brackets */}
+                <path
+                    d="M20 15L8 30L20 45"
+                    stroke={logoColor}
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                     fill="none"
                 />
-                
-                {/* Neural connections */}
-                <circle cx="24" cy="24" r="2" fill={logoColor}/>
-                <circle cx="40" cy="28" r="2" fill={logoColor}/>
-                <circle cx="28" cy="36" r="2" fill={logoColor}/>
-                <circle cx="36" cy="40" r="2" fill={logoColor}/>
-                
-                {/* Connection lines */}
-                <line x1="24" y1="24" x2="40" y2="28" stroke={logoColor} strokeWidth="1" opacity="0.6"/>
-                <line x1="24" y1="24" x2="28" y2="36" stroke={logoColor} strokeWidth="1" opacity="0.6"/>
-                <line x1="40" y1="28" x2="36" y2="40" stroke={logoColor} strokeWidth="1" opacity="0.6"/>
-                <line x1="28" y1="36" x2="36" y2="40" stroke={logoColor} strokeWidth="1" opacity="0.6"/>
-                
-                {/* AI spark */}
-                <path d="M48 16L52 12L48 8L44 12L48 16Z" fill="#F59E0B" opacity="0.8"/>
-                <path d="M52 20L56 16L52 12L48 16L52 20Z" fill="#F59E0B" opacity="0.6"/>
+                <path
+                    d="M40 15L52 30L40 45"
+                    stroke={logoColor}
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    fill="none"
+                />
+
+                {/* Test checkmark in center */}
+                <circle
+                    cx="30"
+                    cy="30"
+                    r="8"
+                    fill="#F59E0B"
+                    opacity="0.9"
+                />
+                <path
+                    d="M26 30L29 33L34 28"
+                    stroke="white"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    fill="none"
+                />
+
+                {/* AI spark elements */}
+                <circle cx="15" cy="20" r="2" fill="#F59E0B" opacity="0.6" />
+                <circle cx="45" cy="20" r="2" fill="#F59E0B" opacity="0.6" />
+                <circle cx="15" cy="40" r="2" fill="#F59E0B" opacity="0.4" />
+                <circle cx="45" cy="40" r="2" fill="#F59E0B" opacity="0.4" />
             </g>
             
             {/* Text */}

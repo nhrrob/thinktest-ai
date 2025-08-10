@@ -18,6 +18,11 @@ class BrandingController extends Controller
      */
     public function edit(Request $request): Response
     {
+        // Ensure code-themed logo is set as default if no preference exists
+        if (!session()->has('app_logo_type')) {
+            session(['app_logo_type' => 'custom', 'app_logo_path' => 'thinktest_code']);
+        }
+
         $currentLogo = $this->getCurrentLogo();
         $availableLogos = $this->getAvailableLogos();
 
@@ -69,12 +74,22 @@ class BrandingController extends Controller
     }
 
     /**
+     * Set the logo to the code-themed version.
+     */
+    public function setCodeLogo(): RedirectResponse
+    {
+        session(['app_logo_type' => 'custom', 'app_logo_path' => 'thinktest_code']);
+
+        return back()->with('success', 'Logo updated to code-themed version successfully.');
+    }
+
+    /**
      * Get the current logo configuration.
      */
     private function getCurrentLogo(): array
     {
-        $logoType = session('app_logo_type', 'default');
-        $logoPath = session('app_logo_path', null);
+        $logoType = session('app_logo_type', 'custom');
+        $logoPath = session('app_logo_path', 'thinktest_code');
 
         return [
             'type' => $logoType,
@@ -90,10 +105,10 @@ class BrandingController extends Controller
     {
         return [
             [
-                'id' => 'thinktest_brain',
-                'name' => 'ThinkTest AI (Brain)',
-                'description' => 'Default ThinkTest AI logo with brain icon',
-                'preview' => '/images/logos/thinktest-brain-preview.png',
+                'id' => 'thinktest_code',
+                'name' => 'ThinkTest AI (Code)',
+                'description' => 'Code/testing themed logo with brackets and checkmark',
+                'preview' => '/images/logos/thinktest-code-preview.png',
             ],
             [
                 'id' => 'thinktest_minimal',

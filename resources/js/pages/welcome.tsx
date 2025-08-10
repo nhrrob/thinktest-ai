@@ -3,7 +3,7 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Brain, Code, Zap, Shield, Download, Upload, Cpu, CheckCircle } from 'lucide-react';
+import { Code, Zap, Shield, Download, Upload, Cpu, CheckCircle } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import AppLogoIcon from '@/components/app-logo-icon';
 import AppearanceToggleDropdown from '@/components/appearance-dropdown';
@@ -68,14 +68,14 @@ export default function Welcome() {
                                 {auth.user ? (
                                     <Link href={route('thinktest.index')}>
                                         <Button size="lg" className="w-full sm:w-auto">
-                                            <Brain className="mr-2 size-4" />
+                                            <Code className="mr-2 size-4" />
                                             Start Testing
                                         </Button>
                                     </Link>
                                 ) : (
                                     <Link href={route('register')}>
                                         <Button size="lg" className="w-full sm:w-auto">
-                                            <Brain className="mr-2 size-4" />
+                                            <Code className="mr-2 size-4" />
                                             Get Started Free
                                         </Button>
                                     </Link>
@@ -103,7 +103,7 @@ export default function Welcome() {
                         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
                             <Card>
                                 <CardHeader>
-                                    <Brain className="size-10 text-primary mb-2" />
+                                    <Code className="size-10 text-primary mb-2" />
                                     <CardTitle>AI-Powered Analysis</CardTitle>
                                     <CardDescription>
                                         Advanced code analysis using OpenAI GPT-4 and Anthropic Claude to understand your plugin structure
@@ -258,7 +258,7 @@ export default function Welcome() {
                             </div>
                             <div className="text-center">
                                 <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                                    <Brain className="size-8" />
+                                    <Code className="size-8" />
                                 </div>
                                 <h3 className="mb-2 text-xl font-semibold">2. AI Analysis</h3>
                                 <p className="text-muted-foreground">
@@ -292,14 +292,14 @@ export default function Welcome() {
                                 {auth.user ? (
                                     <Link href={route('thinktest.index')}>
                                         <Button size="lg" className="w-full sm:w-auto">
-                                            <Brain className="mr-2 size-4" />
+                                            <Code className="mr-2 size-4" />
                                             Start Testing Now
                                         </Button>
                                     </Link>
                                 ) : (
                                     <Link href={route('register')}>
                                         <Button size="lg" className="w-full sm:w-auto">
-                                            <Brain className="mr-2 size-4" />
+                                            <Code className="mr-2 size-4" />
                                             Get Started Free
                                         </Button>
                                     </Link>

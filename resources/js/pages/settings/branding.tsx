@@ -124,9 +124,9 @@ export default function Branding({ currentLogo, availableLogos }: BrandingProps)
                                         >
                                             <div className="flex items-start space-x-3">
                                                 <div className="flex-1">
-                                                    <h4 className="text-sm font-medium">Default ThinkTest AI Logo</h4>
+                                                    <h4 className="text-sm font-medium">ThinkTest AI Code Logo</h4>
                                                     <p className="text-sm text-muted-foreground">
-                                                        Use the standard ThinkTest AI branding
+                                                        Code/testing themed logo with brackets and checkmark
                                                     </p>
                                                 </div>
                                                 {selectedLogoType === 'default' && (
