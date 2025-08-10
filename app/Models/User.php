@@ -24,6 +24,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'google_id',
+        'avatar',
     ];
 
     /**
@@ -141,5 +143,36 @@ class User extends Authenticatable
             }
         }
         return $hasPermission;
+    }
+
+    /**
+     * Create or update user from OAuth provider data.
+     */
+    public static function createOrUpdateFromOAuth($providerUser, $provider = 'google')
+    {
+        $user = static::where('email', $providerUser->getEmail())->first();
+
+        if ($user) {
+            // Update existing user with OAuth data
+            $user->update([
+                'google_id' => $providerUser->getId(),
+                'avatar' => $providerUser->getAvatar(),
+            ]);
+        } else {
+            // Create new user from OAuth data
+            $user = static::create([
+                'name' => $providerUser->getName(),
+                'email' => $providerUser->getEmail(),
+                'google_id' => $providerUser->getId(),
+                'avatar' => $providerUser->getAvatar(),
+                'email_verified_at' => now(),
+                'password' => bcrypt(str()->random(32)), // Generate random password for OAuth users
+            ]);
+
+            // Assign default role to new OAuth users
+            $user->assignRole('user');
+        }
+
+        return $user;
     }
 }
