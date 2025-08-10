@@ -54,14 +54,19 @@ class PermissionController extends Controller
      */
     public function store(PermissionRequest $request)
     {
-        Permission::create([
-            'name' => $request->validated('name'),
-            'group_name' => $request->validated('group_name'),
-            'guard_name' => 'web',
-        ]);
+        try {
+            Permission::create([
+                'name' => $request->validated('name'),
+                'group_name' => $request->validated('group_name'),
+                'guard_name' => 'web',
+            ]);
 
-        return Redirect::route('admin.permissions.index')
-            ->with('success', 'Permission created successfully.');
+            return Redirect::route('admin.permissions.index')
+                ->with('success', 'Permission created successfully.');
+        } catch (\Exception $e) {
+            return Redirect::route('admin.permissions.index')
+                ->with('error', 'Failed to create permission: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -98,13 +103,18 @@ class PermissionController extends Controller
      */
     public function update(PermissionRequest $request, Permission $permission)
     {
-        $permission->update([
-            'name' => $request->validated('name'),
-            'group_name' => $request->validated('group_name'),
-        ]);
+        try {
+            $permission->update([
+                'name' => $request->validated('name'),
+                'group_name' => $request->validated('group_name'),
+            ]);
 
-        return Redirect::route('admin.permissions.index')
-            ->with('success', 'Permission updated successfully.');
+            return Redirect::route('admin.permissions.index')
+                ->with('success', 'Permission updated successfully.');
+        } catch (\Exception $e) {
+            return Redirect::route('admin.permissions.index')
+                ->with('error', 'Failed to update permission: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -112,15 +122,20 @@ class PermissionController extends Controller
      */
     public function destroy(Permission $permission)
     {
-        // Check if permission is assigned to any roles
-        if ($permission->roles()->count() > 0) {
+        try {
+            // Check if permission is assigned to any roles
+            if ($permission->roles()->count() > 0) {
+                return Redirect::route('admin.permissions.index')
+                    ->with('error', 'Cannot delete permission that is assigned to roles.');
+            }
+
+            $permission->delete();
+
             return Redirect::route('admin.permissions.index')
-                ->with('error', 'Cannot delete permission that is assigned to roles.');
+                ->with('success', 'Permission deleted successfully.');
+        } catch (\Exception $e) {
+            return Redirect::route('admin.permissions.index')
+                ->with('error', 'Failed to delete permission: ' . $e->getMessage());
         }
-
-        $permission->delete();
-
-        return Redirect::route('admin.permissions.index')
-            ->with('success', 'Permission deleted successfully.');
     }
 }

@@ -1,6 +1,7 @@
 import { type BreadcrumbItem, type User } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { PlusIcon, PencilIcon, TrashIcon, EyeIcon } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,9 +35,21 @@ interface UsersIndexProps {
 }
 
 export default function UsersIndex({ users }: UsersIndexProps) {
+    const toast = useToast();
+
     const handleDelete = (user: User) => {
         if (confirm(`Are you sure you want to delete the user "${user.name}"?`)) {
-            router.delete(route('admin.users.destroy', user.id));
+            const loadingToast = toast.loading('Deleting user...');
+
+            router.delete(route('admin.users.destroy', user.id), {
+                onSuccess: () => {
+                    toast.dismiss(loadingToast);
+                },
+                onError: () => {
+                    toast.dismiss(loadingToast);
+                    toast.error('Failed to delete user. Please try again.');
+                },
+            });
         }
     };
 

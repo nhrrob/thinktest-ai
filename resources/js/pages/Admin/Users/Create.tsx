@@ -1,6 +1,7 @@
 import { type BreadcrumbItem, type Role } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { ArrowLeftIcon, SaveIcon } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,6 +46,8 @@ export default function UserCreate({ roles }: UserCreateProps) {
         roles: [],
     });
 
+    const toast = useToast();
+
     const handleRoleChange = (roleId: number, checked: boolean) => {
         if (checked) {
             setData('roles', [...data.roles, roleId]);
@@ -55,7 +58,19 @@ export default function UserCreate({ roles }: UserCreateProps) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        post(route('admin.users.store'));
+
+        // Show loading toast
+        const loadingToast = toast.loading('Creating user...');
+
+        post(route('admin.users.store'), {
+            onSuccess: () => {
+                toast.dismiss(loadingToast);
+            },
+            onError: () => {
+                toast.dismiss(loadingToast);
+                toast.error('Please check the form for errors and try again.');
+            },
+        });
     };
 
     return (

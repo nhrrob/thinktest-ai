@@ -16,6 +16,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('dashboard');
     })->name('dashboard');
 
+    // Test route for toast notifications
+    Route::get('test-toast', function () {
+        $flashData = [];
+
+        if (request('success')) {
+            $flashData['success'] = request('success');
+        }
+
+        if (request('error')) {
+            $flashData['error'] = request('error');
+        }
+
+        return Inertia::render('test-toast')->with($flashData);
+    })->name('test-toast');
+
     // ThinkTest AI routes
     Route::get('thinktest', [ThinkTestController::class, 'index'])->name('thinktest.index');
     Route::post('thinktest/upload', [ThinkTestController::class, 'upload'])->name('thinktest.upload');

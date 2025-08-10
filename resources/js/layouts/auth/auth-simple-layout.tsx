@@ -1,4 +1,5 @@
 import AppLogo from '@/components/app-logo';
+import { useToast } from '@/hooks/use-toast';
 import { Link } from '@inertiajs/react';
 import { type PropsWithChildren } from 'react';
 
@@ -9,6 +10,9 @@ interface AuthLayoutProps {
 }
 
 export default function AuthSimpleLayout({ children, title, description }: PropsWithChildren<AuthLayoutProps>) {
+    // Initialize toast notifications for flash messages
+    useToast();
+
     return (
         <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 md:p-10">
             <div className="w-full max-w-sm">

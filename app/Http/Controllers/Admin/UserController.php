@@ -50,19 +50,24 @@ class UserController extends Controller
      */
     public function store(UserRequest $request)
     {
-        $user = User::create([
-            'name' => $request->validated('name'),
-            'email' => $request->validated('email'),
-            'password' => Hash::make($request->validated('password')),
-        ]);
+        try {
+            $user = User::create([
+                'name' => $request->validated('name'),
+                'email' => $request->validated('email'),
+                'password' => Hash::make($request->validated('password')),
+            ]);
 
-        if ($request->has('roles')) {
-            $roles = Role::whereIn('id', $request->validated('roles', []))->get();
-            $user->syncRoles($roles);
+            if ($request->has('roles')) {
+                $roles = Role::whereIn('id', $request->validated('roles', []))->get();
+                $user->syncRoles($roles);
+            }
+
+            return Redirect::route('admin.users.index')
+                ->with('success', 'User created successfully.');
+        } catch (\Exception $e) {
+            return Redirect::route('admin.users.index')
+                ->with('error', 'Failed to create user: ' . $e->getMessage());
         }
-
-        return Redirect::route('admin.users.index')
-            ->with('success', 'User created successfully.');
     }
 
     /**
@@ -96,27 +101,32 @@ class UserController extends Controller
      */
     public function update(UserRequest $request, User $user)
     {
-        $updateData = [
-            'name' => $request->validated('name'),
-            'email' => $request->validated('email'),
-        ];
+        try {
+            $updateData = [
+                'name' => $request->validated('name'),
+                'email' => $request->validated('email'),
+            ];
 
-        // Only update password if provided
-        if ($request->filled('password')) {
-            $updateData['password'] = Hash::make($request->validated('password'));
+            // Only update password if provided
+            if ($request->filled('password')) {
+                $updateData['password'] = Hash::make($request->validated('password'));
+            }
+
+            $user->update($updateData);
+
+            if ($request->has('roles')) {
+                $roles = Role::whereIn('id', $request->validated('roles', []))->get();
+                $user->syncRoles($roles);
+            } else {
+                $user->syncRoles([]);
+            }
+
+            return Redirect::route('admin.users.index')
+                ->with('success', 'User updated successfully.');
+        } catch (\Exception $e) {
+            return Redirect::route('admin.users.index')
+                ->with('error', 'Failed to update user: ' . $e->getMessage());
         }
-
-        $user->update($updateData);
-
-        if ($request->has('roles')) {
-            $roles = Role::whereIn('id', $request->validated('roles', []))->get();
-            $user->syncRoles($roles);
-        } else {
-            $user->syncRoles([]);
-        }
-
-        return Redirect::route('admin.users.index')
-            ->with('success', 'User updated successfully.');
     }
 
     /**
@@ -124,21 +134,26 @@ class UserController extends Controller
      */
     public function destroy(User $user)
     {
-        // Prevent deletion of super-admin users
-        if ($user->hasRole('super-admin')) {
+        try {
+            // Prevent deletion of super-admin users
+            if ($user->hasRole('super-admin')) {
+                return Redirect::route('admin.users.index')
+                    ->with('error', 'Cannot delete super-admin users.');
+            }
+
+            // Prevent users from deleting themselves
+            if ($user->id === Auth::user()->id) {
+                return Redirect::route('admin.users.index')
+                    ->with('error', 'You cannot delete your own account.');
+            }
+
+            $user->delete();
+
             return Redirect::route('admin.users.index')
-                ->with('error', 'Cannot delete super-admin users.');
-        }
-
-        // Prevent users from deleting themselves
-        if ($user->id === Auth::user()->id) {
+                ->with('success', 'User deleted successfully.');
+        } catch (\Exception $e) {
             return Redirect::route('admin.users.index')
-                ->with('error', 'You cannot delete your own account.');
+                ->with('error', 'Failed to delete user: ' . $e->getMessage());
         }
-
-        $user->delete();
-
-        return Redirect::route('admin.users.index')
-            ->with('success', 'User deleted successfully.');
     }
 }

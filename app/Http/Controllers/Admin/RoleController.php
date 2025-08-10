@@ -49,18 +49,23 @@ class RoleController extends Controller
      */
     public function store(RoleRequest $request)
     {
-        $role = Role::create([
-            'name' => $request->validated('name'),
-            'guard_name' => 'web',
-        ]);
+        try {
+            $role = Role::create([
+                'name' => $request->validated('name'),
+                'guard_name' => 'web',
+            ]);
 
-        if ($request->has('permissions')) {
-            $permissions = Permission::whereIn('id', $request->validated('permissions', []))->get();
-            $role->syncPermissions($permissions);
+            if ($request->has('permissions')) {
+                $permissions = Permission::whereIn('id', $request->validated('permissions', []))->get();
+                $role->syncPermissions($permissions);
+            }
+
+            return Redirect::route('admin.roles.index')
+                ->with('success', 'Role created successfully.');
+        } catch (\Exception $e) {
+            return Redirect::route('admin.roles.index')
+                ->with('error', 'Failed to create role: ' . $e->getMessage());
         }
-
-        return Redirect::route('admin.roles.index')
-            ->with('success', 'Role created successfully.');
     }
 
     /**
@@ -94,19 +99,24 @@ class RoleController extends Controller
      */
     public function update(RoleRequest $request, Role $role)
     {
-        $role->update([
-            'name' => $request->validated('name'),
-        ]);
+        try {
+            $role->update([
+                'name' => $request->validated('name'),
+            ]);
 
-        if ($request->has('permissions')) {
-            $permissions = Permission::whereIn('id', $request->validated('permissions', []))->get();
-            $role->syncPermissions($permissions);
-        } else {
-            $role->syncPermissions([]);
+            if ($request->has('permissions')) {
+                $permissions = Permission::whereIn('id', $request->validated('permissions', []))->get();
+                $role->syncPermissions($permissions);
+            } else {
+                $role->syncPermissions([]);
+            }
+
+            return Redirect::route('admin.roles.index')
+                ->with('success', 'Role updated successfully.');
+        } catch (\Exception $e) {
+            return Redirect::route('admin.roles.index')
+                ->with('error', 'Failed to update role: ' . $e->getMessage());
         }
-
-        return Redirect::route('admin.roles.index')
-            ->with('success', 'Role updated successfully.');
     }
 
     /**
@@ -114,21 +124,26 @@ class RoleController extends Controller
      */
     public function destroy(Role $role)
     {
-        // Prevent deletion of super-admin role
-        if ($role->name === 'super-admin') {
+        try {
+            // Prevent deletion of super-admin role
+            if ($role->name === 'super-admin') {
+                return Redirect::route('admin.roles.index')
+                    ->with('error', 'Cannot delete super-admin role.');
+            }
+
+            // Check if role is assigned to any users
+            if ($role->users()->count() > 0) {
+                return Redirect::route('admin.roles.index')
+                    ->with('error', 'Cannot delete role that is assigned to users.');
+            }
+
+            $role->delete();
+
             return Redirect::route('admin.roles.index')
-                ->with('error', 'Cannot delete super-admin role.');
-        }
-
-        // Check if role is assigned to any users
-        if ($role->users()->count() > 0) {
+                ->with('success', 'Role deleted successfully.');
+        } catch (\Exception $e) {
             return Redirect::route('admin.roles.index')
-                ->with('error', 'Cannot delete role that is assigned to users.');
+                ->with('error', 'Failed to delete role: ' . $e->getMessage());
         }
-
-        $role->delete();
-
-        return Redirect::route('admin.roles.index')
-            ->with('success', 'Role deleted successfully.');
     }
 }
