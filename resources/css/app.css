@@ -235,18 +235,18 @@
 
     /* Custom toast styling to ensure proper background and visibility */
     .bg-background {
-        background-color: hsl(var(--background)) !important;
+        background-color: var(--background) !important;
     }
 
     /* Ensure proper opacity for light theme */
     :root .bg-background {
-        background-color: hsl(var(--background)) !important;
+        background-color: var(--background) !important;
         opacity: 1 !important;
     }
 
     /* Ensure proper opacity for dark theme */
     .dark .bg-background {
-        background-color: hsl(var(--background)) !important;
+        background-color: var(--background) !important;
         opacity: 1 !important;
     }
 
@@ -270,5 +270,21 @@
 
     .dark .ring-black {
         --tw-ring-color: rgb(255 255 255 / 0.1);
+    }
+
+    /* Dialog specific styling to ensure proper background and visibility */
+    [data-slot="dialog-content"] {
+        background-color: var(--background) !important;
+        color: var(--foreground) !important;
+        border-color: var(--border) !important;
+    }
+
+    /* Ensure dialog overlay has proper opacity */
+    [data-slot="dialog-overlay"] {
+        background-color: rgba(0, 0, 0, 0.8) !important;
+    }
+
+    .dark [data-slot="dialog-overlay"] {
+        background-color: rgba(0, 0, 0, 0.9) !important;
     }
 }

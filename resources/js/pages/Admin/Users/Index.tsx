@@ -4,6 +4,7 @@ import { PlusIcon, PencilIcon, TrashIcon, EyeIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 import { Button } from '@/components/ui/button';
+import { useConfirmationDialog } from '@/components/confirmation-dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import AppLayout from '@/layouts/app-layout';
@@ -36,21 +37,30 @@ interface UsersIndexProps {
 
 export default function UsersIndex({ users }: UsersIndexProps) {
     const toast = useToast();
+    const { openDialog, ConfirmationDialog } = useConfirmationDialog();
 
     const handleDelete = (user: User) => {
-        if (confirm(`Are you sure you want to delete the user "${user.name}"?`)) {
-            const loadingToast = toast.loading('Deleting user...');
+        openDialog({
+            title: "Delete User",
+            description: `Are you sure you want to delete the user "${user.name}"? This action cannot be undone.`,
+            confirmText: "Delete",
+            cancelText: "Cancel",
+            variant: "destructive",
+            onConfirm: () => {
+                const loadingToast = toast.loading('Deleting user...');
 
-            router.delete(route('admin.users.destroy', user.id), {
-                onSuccess: () => {
-                    toast.dismiss(loadingToast);
-                },
-                onError: () => {
-                    toast.dismiss(loadingToast);
-                    toast.error('Failed to delete user. Please try again.');
-                },
-            });
-        }
+                router.delete(route('admin.users.destroy', user.id), {
+                    onSuccess: () => {
+                        toast.dismiss(loadingToast);
+                        toast.success('User deleted successfully.');
+                    },
+                    onError: () => {
+                        toast.dismiss(loadingToast);
+                        toast.error('Failed to delete user. Please try again.');
+                    },
+                });
+            },
+        });
     };
 
     return (
@@ -162,6 +172,8 @@ export default function UsersIndex({ users }: UsersIndexProps) {
                     </CardContent>
                 </Card>
             </div>
+
+            <ConfirmationDialog />
         </AppLayout>
     );
 }
