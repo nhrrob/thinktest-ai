@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { usePage } from '@inertiajs/react';
 import toast from 'react-hot-toast';
-import { CheckCircle, XCircle, AlertCircle, Info } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, Info, X } from 'lucide-react';
 import { type SharedData } from '@/types';
 
 interface FlashMessages {
@@ -16,6 +16,33 @@ interface ToastOptions {
   duration?: number;
   position?: 'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right';
 }
+
+// Custom toast component with close button
+const CustomToast = ({
+  message,
+  icon,
+  onClose,
+  borderColor
+}: {
+  message: string;
+  icon: React.ReactNode;
+  onClose: () => void;
+  borderColor: string;
+}) => (
+  <div className="flex items-center justify-between w-full">
+    <div className="flex items-center space-x-3">
+      {icon}
+      <span className="text-sm font-medium">{message}</span>
+    </div>
+    <button
+      onClick={onClose}
+      className="ml-4 flex-shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-md text-foreground/70 hover:text-foreground hover:bg-muted/50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+      aria-label="Close notification"
+    >
+      <X className="h-4 w-4" />
+    </button>
+  </div>
+);
 
 export function useToast() {
   const { props } = usePage<SharedData & FlashMessages>();
@@ -47,111 +74,139 @@ export function useToast() {
   }, [props.success, props.error, props.warning, props.info, props.message]);
 
   const showSuccess = (message: string, options?: ToastOptions) => {
-    return toast.success(message, {
+    return toast.custom((t) => (
+      <div
+        className={`${
+          t.visible ? 'animate-enter' : 'animate-leave'
+        } max-w-md w-full bg-background shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border border-border`}
+        style={{
+          borderLeftColor: 'hsl(142 76% 36%)', // green-600
+          borderLeftWidth: '4px',
+        }}
+      >
+        <div className="flex-1 w-0 p-4">
+          <CustomToast
+            message={message}
+            icon={<CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />}
+            onClose={() => toast.dismiss(t.id)}
+            borderColor="hsl(142 76% 36%)"
+          />
+        </div>
+      </div>
+    ), {
       duration: options?.duration || 5000,
       position: options?.position || 'top-center',
-      icon: <CheckCircle className="h-5 w-5 text-green-600" />,
-      style: {
-        background: 'hsl(var(--background))',
-        color: 'hsl(var(--foreground))',
-        border: '1px solid hsl(var(--border))',
-        borderLeftColor: 'hsl(142 76% 36%)', // green-600
-        borderLeftWidth: '4px',
-        borderRadius: '8px',
-        padding: '16px',
-        fontSize: '14px',
-        fontWeight: '500',
-        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-        maxWidth: '420px',
-        minWidth: '300px',
-      },
     });
   };
 
   const showError = (message: string, options?: ToastOptions) => {
-    return toast.error(message, {
+    return toast.custom((t) => (
+      <div
+        className={`${
+          t.visible ? 'animate-enter' : 'animate-leave'
+        } max-w-md w-full bg-background shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border border-border`}
+        style={{
+          borderLeftColor: 'hsl(0 84% 60%)', // red-600
+          borderLeftWidth: '4px',
+        }}
+      >
+        <div className="flex-1 w-0 p-4">
+          <CustomToast
+            message={message}
+            icon={<XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />}
+            onClose={() => toast.dismiss(t.id)}
+            borderColor="hsl(0 84% 60%)"
+          />
+        </div>
+      </div>
+    ), {
       duration: options?.duration || 6000,
       position: options?.position || 'top-center',
-      icon: <XCircle className="h-5 w-5 text-red-600" />,
-      style: {
-        background: 'hsl(var(--background))',
-        color: 'hsl(var(--foreground))',
-        border: '1px solid hsl(var(--border))',
-        borderLeftColor: 'hsl(0 84% 60%)', // red-600
-        borderLeftWidth: '4px',
-        borderRadius: '8px',
-        padding: '16px',
-        fontSize: '14px',
-        fontWeight: '500',
-        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-        maxWidth: '420px',
-        minWidth: '300px',
-      },
     });
   };
 
   const showWarning = (message: string, options?: ToastOptions) => {
-    return toast(message, {
+    return toast.custom((t) => (
+      <div
+        className={`${
+          t.visible ? 'animate-enter' : 'animate-leave'
+        } max-w-md w-full bg-background shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border border-border`}
+        style={{
+          borderLeftColor: 'hsl(45 93% 47%)', // yellow-600
+          borderLeftWidth: '4px',
+        }}
+      >
+        <div className="flex-1 w-0 p-4">
+          <CustomToast
+            message={message}
+            icon={<AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />}
+            onClose={() => toast.dismiss(t.id)}
+            borderColor="hsl(45 93% 47%)"
+          />
+        </div>
+      </div>
+    ), {
       duration: options?.duration || 5000,
       position: options?.position || 'top-center',
-      icon: <AlertCircle className="h-5 w-5 text-yellow-600" />,
-      style: {
-        background: 'hsl(var(--background))',
-        color: 'hsl(var(--foreground))',
-        border: '1px solid hsl(var(--border))',
-        borderLeftColor: 'hsl(45 93% 47%)', // yellow-600
-        borderLeftWidth: '4px',
-        borderRadius: '8px',
-        padding: '16px',
-        fontSize: '14px',
-        fontWeight: '500',
-        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-        maxWidth: '420px',
-        minWidth: '300px',
-      },
     });
   };
 
   const showInfo = (message: string, options?: ToastOptions) => {
-    return toast(message, {
+    return toast.custom((t) => (
+      <div
+        className={`${
+          t.visible ? 'animate-enter' : 'animate-leave'
+        } max-w-md w-full bg-background shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border border-border`}
+        style={{
+          borderLeftColor: 'hsl(221 83% 53%)', // blue-600
+          borderLeftWidth: '4px',
+        }}
+      >
+        <div className="flex-1 w-0 p-4">
+          <CustomToast
+            message={message}
+            icon={<Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />}
+            onClose={() => toast.dismiss(t.id)}
+            borderColor="hsl(221 83% 53%)"
+          />
+        </div>
+      </div>
+    ), {
       duration: options?.duration || 5000,
       position: options?.position || 'top-center',
-      icon: <Info className="h-5 w-5 text-blue-600" />,
-      style: {
-        background: 'hsl(var(--background))',
-        color: 'hsl(var(--foreground))',
-        border: '1px solid hsl(var(--border))',
-        borderLeftColor: 'hsl(221 83% 53%)', // blue-600
-        borderLeftWidth: '4px',
-        borderRadius: '8px',
-        padding: '16px',
-        fontSize: '14px',
-        fontWeight: '500',
-        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-        maxWidth: '420px',
-        minWidth: '300px',
-      },
     });
   };
 
   const showLoading = (message: string, options?: ToastOptions) => {
-    return toast.loading(message, {
+    return toast.custom((t) => (
+      <div
+        className={`${
+          t.visible ? 'animate-enter' : 'animate-leave'
+        } max-w-md w-full bg-background shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border border-border`}
+        style={{
+          borderLeftColor: 'hsl(var(--primary))',
+          borderLeftWidth: '4px',
+        }}
+      >
+        <div className="flex-1 w-0 p-4">
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center space-x-3">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+              <span className="text-sm font-medium">{message}</span>
+            </div>
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="ml-4 flex-shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-md text-foreground/70 hover:text-foreground hover:bg-muted/50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              aria-label="Close notification"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    ), {
       duration: options?.duration || Infinity,
       position: options?.position || 'top-center',
-      style: {
-        background: 'hsl(var(--background))',
-        color: 'hsl(var(--foreground))',
-        border: '1px solid hsl(var(--border))',
-        borderLeftColor: 'hsl(var(--primary))',
-        borderLeftWidth: '4px',
-        borderRadius: '8px',
-        padding: '16px',
-        fontSize: '14px',
-        fontWeight: '500',
-        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-        maxWidth: '420px',
-        minWidth: '300px',
-      },
     });
   };
 
@@ -172,44 +227,26 @@ export function useToast() {
     },
     options?: ToastOptions
   ) => {
-    return toast.promise(promise, messages, {
-      position: options?.position || 'top-center',
-      style: {
-        background: 'hsl(var(--background))',
-        color: 'hsl(var(--foreground))',
-        border: '1px solid hsl(var(--border))',
-        borderRadius: '8px',
-        padding: '16px',
-        fontSize: '14px',
-        fontWeight: '500',
-        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-        maxWidth: '420px',
-        minWidth: '300px',
-      },
-      success: {
-        duration: 5000,
-        icon: <CheckCircle className="h-5 w-5 text-green-600" />,
-        style: {
-          borderLeftColor: 'hsl(142 76% 36%)',
-          borderLeftWidth: '4px',
-        },
-      },
-      error: {
-        duration: 6000,
-        icon: <XCircle className="h-5 w-5 text-red-600" />,
-        style: {
-          borderLeftColor: 'hsl(0 84% 60%)',
-          borderLeftWidth: '4px',
-        },
-      },
-      loading: {
-        duration: Infinity,
-        style: {
-          borderLeftColor: 'hsl(var(--primary))',
-          borderLeftWidth: '4px',
-        },
-      },
-    });
+    // Use our custom toast functions for promise handling
+    const loadingToast = showLoading(messages.loading, options);
+
+    return promise
+      .then((result) => {
+        toast.dismiss(loadingToast);
+        const successMessage = typeof messages.success === 'function'
+          ? messages.success(result)
+          : messages.success;
+        showSuccess(successMessage, options);
+        return result;
+      })
+      .catch((error) => {
+        toast.dismiss(loadingToast);
+        const errorMessage = typeof messages.error === 'function'
+          ? messages.error(error)
+          : messages.error;
+        showError(errorMessage, options);
+        throw error;
+      });
   };
 
   return {

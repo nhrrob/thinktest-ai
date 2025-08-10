@@ -211,67 +211,6 @@
         }
     }
 
-    /* Override react-hot-toast default animations with smooth custom ones */
-    /* Target the toast container */
-    [data-hot-toast-container] {
-        z-index: 9999 !important;
-    }
-
-    /* Target individual toast elements with comprehensive selectors */
-    [data-hot-toast-container] > div,
-    [data-hot-toast-container] div[role="status"],
-    .react-hot-toast > div,
-    div[data-hot-toast],
-    div[role="status"],
-    .custom-toast {
-        animation: toast-enter 400ms cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
-        z-index: 9999 !important;
-        transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1) !important;
-        transform-origin: center top !important;
-    }
-
-    /* Exit animation for disappearing toasts - target various opacity states */
-    [data-hot-toast-container] > div[style*="opacity: 0"],
-    [data-hot-toast-container] div[role="status"][style*="opacity: 0"],
-    .react-hot-toast > div[style*="opacity: 0"],
-    div[data-hot-toast][style*="opacity: 0"],
-    div[role="status"][style*="opacity: 0"],
-    .custom-toast[style*="opacity: 0"] {
-        animation: toast-exit 300ms cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
-    }
-
-    /* Also target toasts that are being removed */
-    [data-hot-toast-container] > div[style*="transform: translateY(-100%)"],
-    [data-hot-toast-container] div[role="status"][style*="transform: translateY(-100%)"] {
-        animation: toast-exit 300ms cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
-    }
-
-    /* Ensure proper theme integration - override inline styles */
-    [data-hot-toast-container] > div,
-    [data-hot-toast-container] div[role="status"],
-    .react-hot-toast > div,
-    div[data-hot-toast],
-    /* div[role="status"], */
-    .custom-toast {
-        background: hsl(var(--background)) !important;
-        border: 1px solid hsl(var(--border)) !important;
-        color: hsl(var(--foreground)) !important;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
-    }
-
-    /* Dark theme specific adjustments */
-    .dark [data-hot-toast-container] > div,
-    .dark [data-hot-toast-container] div[role="status"],
-    .dark .react-hot-toast > div,
-    .dark div[data-hot-toast],
-    /* .dark div[role="status"], */
-    .dark .custom-toast {
-        background: hsl(var(--background)) !important;
-        border: 1px solid hsl(var(--border)) !important;
-        color: hsl(var(--foreground)) !important;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2) !important;
-    }
-
     /* Tailwind animation utilities for manual use */
     .animate-enter {
         animation: toast-enter 400ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
@@ -281,27 +220,55 @@
         animation: toast-exit 300ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
     }
 
-    /* Additional specific targeting for react-hot-toast v2+ */
-    /* Target the toast wrapper div that react-hot-toast creates */
-    div[style*="position: fixed"] > div[style*="pointer-events"] > div {
-        animation: toast-enter 400ms cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
-        z-index: 9999 !important;
-        transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1) !important;
-        transform-origin: center top !important;
+    /* Override react-hot-toast default animations with smooth custom ones */
+    /* Target the toast container */
+    [data-hot-toast-container] {
+        z-index: 10000 !important;
+        position: fixed !important;
     }
 
-    /* Target exiting toasts */
-    div[style*="position: fixed"] > div[style*="pointer-events"] > div[style*="opacity: 0"] {
-        animation: toast-exit 300ms cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+    /* Ensure all toast elements have proper z-index and background */
+    [data-hot-toast-container] > div {
+        z-index: 10000 !important;
+        position: relative !important;
     }
 
-    /* Override any default react-hot-toast animations */
-    div[style*="position: fixed"] > div[style*="pointer-events"] {
-        z-index: 9999 !important;
+    /* Custom toast styling to ensure proper background and visibility */
+    .bg-background {
+        background-color: hsl(var(--background)) !important;
     }
 
-    /* Ensure smooth transitions for all toast states */
-    div[style*="position: fixed"] > div[style*="pointer-events"] > div * {
-        transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+    /* Ensure proper opacity for light theme */
+    :root .bg-background {
+        background-color: hsl(var(--background)) !important;
+        opacity: 1 !important;
+    }
+
+    /* Ensure proper opacity for dark theme */
+    .dark .bg-background {
+        background-color: hsl(var(--background)) !important;
+        opacity: 1 !important;
+    }
+
+    /* Enhanced shadow for better visibility */
+    .shadow-lg {
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+                    0 4px 6px -2px rgba(0, 0, 0, 0.05),
+                    0 0 0 1px rgba(0, 0, 0, 0.05) !important;
+    }
+
+    .dark .shadow-lg {
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3),
+                    0 4px 6px -2px rgba(0, 0, 0, 0.2),
+                    0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+    }
+
+    /* Ensure ring opacity works properly */
+    .ring-black {
+        --tw-ring-color: rgb(0 0 0 / 0.1);
+    }
+
+    .dark .ring-black {
+        --tw-ring-color: rgb(255 255 255 / 0.1);
     }
 }
