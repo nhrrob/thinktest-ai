@@ -2,22 +2,18 @@ import { type BreadcrumbItem, type Role } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { PlusIcon, PencilIcon, TrashIcon, EyeIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
-
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import AppLayout from '@/layouts/app-layout';
-import { useConfirmationDialog } from '@/components/confirmation-dialog';
+import { useConfirmationDialog, ConfirmationDialog } from '@/components/confirmation-dialog';
+import { useToast } from '@/hooks/use-toast';
+import React from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Admin',
-        href: '/admin/roles',
-    },
-    {
-        title: 'Roles',
-        href: '/admin/roles',
-    },
+    { title: 'Dashboard', href: route('dashboard') },
+    { title: 'Admin', href: route('admin.users.index') },
+    { title: 'Roles', href: route('admin.roles.index') },
 ];
 
 interface RolesIndexProps {
@@ -36,10 +32,25 @@ interface RolesIndexProps {
 }
 
 export default function RolesIndex({ roles }: RolesIndexProps) {
-    const { openDialog, closeDialog, ConfirmationDialog } = useConfirmationDialog();
+    const { openDialog, closeDialog, dialogProps, isOpen } = useConfirmationDialog();
+    const { error: showError } = useToast();
+    const [isDeleting, setIsDeleting] = React.useState(false);
+
+    // Debug: Log when component re-renders
+    console.log('RolesIndex rendered, modal open:', isOpen, 'isDeleting:', isDeleting);
+
+    // Clear loading state when modal is closed to avoid intermediate open:true/loading:false frame
+    React.useEffect(() => {
+        if (!isOpen && isDeleting) {
+            console.log('Modal closed, clearing loading state');
+            setIsDeleting(false);
+        }
+    }, [isOpen]);
 
     const handleDelete = (role: Role) => {
         let loadingToast: string | undefined;
+
+        console.log('Opening delete dialog for role:', role.name, 'ID:', role.id);
 
         openDialog({
             title: "Delete Role",
@@ -47,28 +58,56 @@ export default function RolesIndex({ roles }: RolesIndexProps) {
             confirmText: "Delete",
             cancelText: "Cancel",
             variant: "destructive",
-            loading: false,
+            loading: isDeleting,
             onConfirm: () => {
+                console.log('Delete confirmed for role:', role.name, 'ID:', role.id);
+                setIsDeleting(true);
                 loadingToast = toast.loading('Deleting role...');
 
                 router.delete(route('admin.roles.destroy', role.id), {
-                    onSuccess: () => {
-                        if (loadingToast) toast.dismiss(loadingToast);
-                        // Add small delay to ensure proper state cleanup before closing modal
-                        setTimeout(() => {
-                            closeDialog();
-                        }, 100);
-                        // Flash message will be handled automatically by useToast hook
+                    onStart: () => {
+                        console.log('Request started for role:', role.name);
                     },
-                    onError: () => {
+                    onProgress: (progress) => {
+                        console.log('Request progress for role:', role.name, progress);
+                    },
+                    onSuccess: () => {
+                        console.log('Role deletion successful for:', role.name);
                         if (loadingToast) toast.dismiss(loadingToast);
-                        // Add small delay to ensure proper state cleanup before closing modal
-                        setTimeout(() => {
-                            closeDialog();
-                        }, 100);
-                        // Flash message will be handled automatically by useToast hook
+                        
+                        // Close dialog and let effect clear loading once closed
+                        closeDialog();
+                    },
+                    onError: (errors: Record<string, string>) => {
+                        console.log('Role deletion failed for:', role.name, 'Errors:', errors);
+                        if (loadingToast) toast.dismiss(loadingToast);
+                        
+                        // Handle validation errors from the backend
+                        if (errors && typeof errors === 'object' && Object.keys(errors).length > 0) {
+                            // Get the error message from the 'role' field or any other field
+                            let errorMessage = 'Failed to delete role. Please try again.';
+                            
+                            if (errors.role) {
+                                errorMessage = errors.role;
+                            } else if (errors.error) {
+                                errorMessage = errors.error;
+                            } else {
+                                // Fallback to first available error message
+                                const firstError = Object.values(errors)[0];
+                                if (firstError && typeof firstError === 'string') {
+                                    errorMessage = firstError;
+                                }
+                            }
+                            
+                            // Show error toast using useToast hook for proper styling
+                            showError(errorMessage);
+                        }
+                        
+                        // Close dialog and let effect clear loading once closed
+                        closeDialog();
                     },
                     onFinish: () => {
+                        console.log('Role deletion request finished for:', role.name);
                         // Ensure loading toast is always dismissed
                         if (loadingToast) toast.dismiss(loadingToast);
                     },
@@ -180,7 +219,7 @@ export default function RolesIndex({ roles }: RolesIndexProps) {
                 </Card>
             </div>
 
-            <ConfirmationDialog />
+            <ConfirmationDialog {...dialogProps} />
         </AppLayout>
     );
 }

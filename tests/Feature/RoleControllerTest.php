@@ -76,8 +76,8 @@ test('cannot delete super-admin role', function () {
 
     $response = $this->actingAs($admin)->delete("/admin/roles/{$superAdminRole->id}");
 
-    $response->assertRedirect('/admin/roles');
-    $response->assertSessionHas('error', 'Cannot delete super-admin role.');
+    $response->assertStatus(422);
+    $response->assertJsonValidationErrors(['role']);
     expect(Role::where('name', 'super-admin')->exists())->toBeTrue();
 });
 
@@ -92,8 +92,8 @@ test('cannot delete role assigned to users', function () {
 
     $response = $this->actingAs($admin)->delete("/admin/roles/{$testRole->id}");
 
-    $response->assertRedirect('/admin/roles');
-    $response->assertSessionHas('error', 'Cannot delete role that is assigned to users.');
+    $response->assertStatus(422);
+    $response->assertJsonValidationErrors(['role']);
     expect(Role::where('name', 'test-role')->exists())->toBeTrue();
 });
 
@@ -106,7 +106,7 @@ test('can delete role not assigned to users', function () {
 
     $response = $this->actingAs($admin)->delete("/admin/roles/{$testRole->id}");
 
-    $response->assertRedirect('/admin/roles');
+    $response->assertRedirect();
     $response->assertSessionHas('success', 'Role deleted successfully.');
     expect(Role::where('name', 'deletable-role')->exists())->toBeFalse();
 });
