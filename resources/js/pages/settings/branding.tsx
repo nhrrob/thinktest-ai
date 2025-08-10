@@ -11,7 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import { type BreadcrumbItem } from '@/types';
-import AppLogoFull from '@/components/app-logo-full';
+import AppLogo from '@/components/app-logo';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -99,7 +99,7 @@ export default function Branding({ currentLogo, availableLogos }: BrandingProps)
                                 <div className="space-y-4">
                                     <Label className="text-sm font-medium">Current Logo</Label>
                                     <div className="p-6 border rounded-lg bg-muted/50 flex items-center justify-center">
-                                        <AppLogoFull className="h-16 w-auto" showText={true} />
+                                        <AppLogo variant="auth" iconSize="lg" showText={true} />
                                     </div>
                                 </div>
 

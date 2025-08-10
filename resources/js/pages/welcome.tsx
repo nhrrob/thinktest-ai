@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Brain, Code, Zap, Shield, Download, Upload, Cpu, CheckCircle } from 'lucide-react';
-import AppLogoFull from '@/components/app-logo-full';
+import AppLogo from '@/components/app-logo';
 
 export default function Welcome() {
     const { auth } = usePage<SharedData>().props;
@@ -20,7 +20,7 @@ export default function Welcome() {
                 <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                     <div className="container flex h-16 items-center justify-between">
                         <div className="flex items-center space-x-2">
-                            <AppLogoFull className="h-8 w-auto" showText={true} />
+                            <AppLogo variant="header" iconSize="md" showText={true} />
                         </div>
                         <nav className="flex items-center gap-4">
                             {auth.user ? (
