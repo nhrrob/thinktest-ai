@@ -1,5 +1,5 @@
-import { Brain } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import AppLogoIconNew from './app-logo-icon-new';
 
 interface AppLogoProps {
     className?: string;
@@ -38,7 +38,7 @@ export default function AppLogo({
         return (
             <>
                 <div className="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
-                    <Brain className="size-5 text-white dark:text-black" />
+                    <AppLogoIconNew className="size-5 text-white dark:text-black" />
                 </div>
                 {showText && (
                     <div className="ml-1 grid flex-1 text-left text-sm">
@@ -67,8 +67,8 @@ export default function AppLogo({
             default:
                 return {
                     container: "bg-primary text-primary-foreground",
-                    icon: "text-white",
-                    text: "text-foreground"
+                    icon: "text-white dark:text-black",
+                    text: "text-foreground dark:text-foreground"
                 };
         }
     };
@@ -82,7 +82,7 @@ export default function AppLogo({
                 colors.container,
                 containerSizes[iconSize]
             )}>
-                <Brain className={cn(colors.icon, iconSizes[iconSize])} />
+                <AppLogoIconNew className={cn(colors.icon, iconSizes[iconSize])} />
             </div>
             {showText && (
                 <span className={cn("font-semibold", colors.text, textSizes[iconSize])}>

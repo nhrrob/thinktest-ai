@@ -1,6 +1,6 @@
-import { Brain } from 'lucide-react';
 import { SVGAttributes } from 'react';
+import AppLogoIconNew from './app-logo-icon-new';
 
 export default function AppLogoIcon(props: SVGAttributes<SVGElement>) {
-    return <Brain {...props} />;
+    return <AppLogoIconNew {...props} />;
 }

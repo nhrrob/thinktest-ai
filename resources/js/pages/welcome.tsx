@@ -5,6 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Brain, Code, Zap, Shield, Download, Upload, Cpu, CheckCircle } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
+import AppLogoIcon from '@/components/app-logo-icon';
+import AppearanceToggleDropdown from '@/components/appearance-dropdown';
 
 export default function Welcome() {
     const { auth } = usePage<SharedData>().props;
@@ -23,6 +25,7 @@ export default function Welcome() {
                             <AppLogo variant="header" iconSize="md" showText={true} />
                         </div>
                         <nav className="flex items-center gap-4">
+                            <AppearanceToggleDropdown />
                             {auth.user ? (
                                 <>
                                     <Link href={route('thinktest.index')}>
@@ -312,7 +315,7 @@ export default function Welcome() {
                         <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
                             <div className="flex items-center space-x-2">
                                 <div className="flex aspect-square size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                                    <Brain className="size-4" />
+                                    <AppLogoIcon className="size-4" />
                                 </div>
                                 <span className="font-bold">ThinkTest AI</span>
                             </div>
