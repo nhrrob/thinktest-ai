@@ -18,7 +18,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('settings/appearance', function () {
         return Inertia::render('settings/appearance');
-    })->name('appearance');
+    })->name('settings.appearance');
 
     Route::get('settings/branding', [BrandingController::class, 'edit'])->name('branding.edit');
     Route::post('settings/branding', [BrandingController::class, 'update'])->name('branding.update');
