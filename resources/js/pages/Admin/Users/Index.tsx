@@ -54,12 +54,18 @@ export default function UsersIndex({ users }: UsersIndexProps) {
                 router.delete(route('admin.users.destroy', user.id), {
                     onSuccess: () => {
                         if (loadingToast) toast.dismiss(loadingToast);
-                        closeDialog();
+                        // Add small delay to ensure proper state cleanup before closing modal
+                        setTimeout(() => {
+                            closeDialog();
+                        }, 100);
                         // Flash message will be handled automatically by useToast hook
                     },
                     onError: () => {
                         if (loadingToast) toast.dismiss(loadingToast);
-                        closeDialog();
+                        // Add small delay to ensure proper state cleanup before closing modal
+                        setTimeout(() => {
+                            closeDialog();
+                        }, 100);
                         // Flash message will be handled automatically by useToast hook
                     },
                     onFinish: () => {

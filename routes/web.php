@@ -31,6 +31,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('test-toast')->with($flashData);
     })->name('test-toast');
 
+    // Test route for toast deduplication fix
+    Route::get('test-toast-deduplication', function () {
+        return Inertia::render('Test/ToastTest');
+    })->name('test-toast-deduplication');
+
+    // Test route for modal toast integration
+    Route::get('test-modal-toast', function () {
+        return Inertia::render('Test/ModalToastTest');
+    })->name('test-modal-toast');
+
     // ThinkTest AI routes
     Route::get('thinktest', [ThinkTestController::class, 'index'])->name('thinktest.index');
     Route::post('thinktest/upload', [ThinkTestController::class, 'upload'])->name('thinktest.upload');

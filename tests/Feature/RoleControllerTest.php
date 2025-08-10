@@ -66,3 +66,47 @@ test('guest cannot access roles', function () {
 
     $response->assertRedirect('/login');
 });
+
+test('cannot delete super-admin role', function () {
+    $admin = User::factory()->create();
+    $admin->assignRole('admin');
+
+    // Create super-admin role
+    $superAdminRole = Role::create(['name' => 'super-admin', 'guard_name' => 'web']);
+
+    $response = $this->actingAs($admin)->delete("/admin/roles/{$superAdminRole->id}");
+
+    $response->assertRedirect('/admin/roles');
+    $response->assertSessionHas('error', 'Cannot delete super-admin role.');
+    expect(Role::where('name', 'super-admin')->exists())->toBeTrue();
+});
+
+test('cannot delete role assigned to users', function () {
+    $admin = User::factory()->create();
+    $admin->assignRole('admin');
+
+    // Create a test role and assign it to a user
+    $testRole = Role::create(['name' => 'test-role', 'guard_name' => 'web']);
+    $testUser = User::factory()->create();
+    $testUser->assignRole('test-role');
+
+    $response = $this->actingAs($admin)->delete("/admin/roles/{$testRole->id}");
+
+    $response->assertRedirect('/admin/roles');
+    $response->assertSessionHas('error', 'Cannot delete role that is assigned to users.');
+    expect(Role::where('name', 'test-role')->exists())->toBeTrue();
+});
+
+test('can delete role not assigned to users', function () {
+    $admin = User::factory()->create();
+    $admin->assignRole('admin');
+
+    // Create a test role without assigning it to any user
+    $testRole = Role::create(['name' => 'deletable-role', 'guard_name' => 'web']);
+
+    $response = $this->actingAs($admin)->delete("/admin/roles/{$testRole->id}");
+
+    $response->assertRedirect('/admin/roles');
+    $response->assertSessionHas('success', 'Role deleted successfully.');
+    expect(Role::where('name', 'deletable-role')->exists())->toBeFalse();
+});

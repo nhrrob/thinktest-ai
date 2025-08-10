@@ -96,6 +96,8 @@ export function useToast() {
     ), {
       duration: options?.duration || 5000,
       position: options?.position || 'top-center',
+      // Generate unique ID to prevent deduplication
+      id: `success-${Date.now()}-${Math.random()}`,
       // Ensure proper exit animation timing
       style: {
         animationDuration: '500ms',
@@ -126,6 +128,8 @@ export function useToast() {
     ), {
       duration: options?.duration || 6000,
       position: options?.position || 'top-center',
+      // Generate unique ID to prevent deduplication
+      id: `error-${Date.now()}-${Math.random()}`,
       // Ensure proper exit animation timing
       style: {
         animationDuration: '500ms',
@@ -156,6 +160,8 @@ export function useToast() {
     ), {
       duration: options?.duration || 5000,
       position: options?.position || 'top-center',
+      // Generate unique ID to prevent deduplication
+      id: `warning-${Date.now()}-${Math.random()}`,
       // Ensure proper exit animation timing
       style: {
         animationDuration: '500ms',
@@ -186,6 +192,8 @@ export function useToast() {
     ), {
       duration: options?.duration || 5000,
       position: options?.position || 'top-center',
+      // Generate unique ID to prevent deduplication
+      id: `info-${Date.now()}-${Math.random()}`,
       // Ensure proper exit animation timing
       style: {
         animationDuration: '500ms',

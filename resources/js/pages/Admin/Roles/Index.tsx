@@ -54,12 +54,18 @@ export default function RolesIndex({ roles }: RolesIndexProps) {
                 router.delete(route('admin.roles.destroy', role.id), {
                     onSuccess: () => {
                         if (loadingToast) toast.dismiss(loadingToast);
-                        closeDialog();
+                        // Add small delay to ensure proper state cleanup before closing modal
+                        setTimeout(() => {
+                            closeDialog();
+                        }, 100);
                         // Flash message will be handled automatically by useToast hook
                     },
                     onError: () => {
                         if (loadingToast) toast.dismiss(loadingToast);
-                        closeDialog();
+                        // Add small delay to ensure proper state cleanup before closing modal
+                        setTimeout(() => {
+                            closeDialog();
+                        }, 100);
                         // Flash message will be handled automatically by useToast hook
                     },
                     onFinish: () => {

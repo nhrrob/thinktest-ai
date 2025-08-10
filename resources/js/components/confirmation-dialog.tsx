@@ -98,20 +98,40 @@ export function useConfirmationDialog() {
     onConfirm: () => {},
   })
 
+  // Use useRef to store the latest onConfirm callback to avoid stale closures
+  const onConfirmRef = React.useRef<() => void>(() => {})
+
   const openDialog = (dialogConfig: Omit<ConfirmationDialogProps, 'open' | 'onOpenChange'>) => {
-    setConfig(dialogConfig)
+    // Store the onConfirm callback in a ref to ensure we always have the latest version
+    onConfirmRef.current = dialogConfig.onConfirm
+
+    // Set the config with a wrapper function that calls the ref
+    setConfig({
+      ...dialogConfig,
+      onConfirm: () => {
+        onConfirmRef.current()
+      }
+    })
     setIsOpen(true)
   }
 
   const closeDialog = () => {
     setIsOpen(false)
+    // Clear the ref when closing to prevent memory leaks
+    onConfirmRef.current = () => {}
   }
 
   const ConfirmationDialogComponent = () => (
     <ConfirmationDialog
       {...config}
       open={isOpen}
-      onOpenChange={setIsOpen}
+      onOpenChange={(open) => {
+        setIsOpen(open)
+        if (!open) {
+          // Clear the ref when dialog is closed via onOpenChange
+          onConfirmRef.current = () => {}
+        }
+      }}
     />
   )
 
