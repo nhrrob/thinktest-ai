@@ -11,6 +11,13 @@ class GitHubRepository extends Model
 {
     use HasFactory;
 
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'github_repositories';
+
     protected $fillable = [
         'user_id',
         'owner',

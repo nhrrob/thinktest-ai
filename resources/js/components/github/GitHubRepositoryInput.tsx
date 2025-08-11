@@ -60,6 +60,22 @@ export default function GitHubRepositoryInput({
                 }),
             });
 
+            // Handle CSRF token mismatch (419) by reloading the page
+            if (response.status === 419) {
+                console.error('CSRF token mismatch detected');
+                alert('Session expired. Please refresh the page and try again.');
+                window.location.reload();
+                return;
+            }
+
+            // Handle authentication errors (401) by reloading the page
+            if (response.status === 401) {
+                console.error('Unauthorized access detected');
+                alert('Authentication required. Please refresh the page and log in again.');
+                window.location.reload();
+                return;
+            }
+
             const result = await response.json();
 
             if (result.success) {
@@ -69,9 +85,7 @@ export default function GitHubRepositoryInput({
                 let errorMessage = result.message || 'Failed to validate repository';
 
                 // Handle specific HTTP status codes
-                if (response.status === 419) {
-                    errorMessage = 'CSRF token mismatch. Please refresh the page and try again.';
-                } else if (response.status === 422) {
+                if (response.status === 422) {
                     errorMessage = result.message || 'Invalid repository URL format.';
                 } else if (response.status === 429) {
                     errorMessage = result.message || 'Rate limit exceeded. Please try again later.';
