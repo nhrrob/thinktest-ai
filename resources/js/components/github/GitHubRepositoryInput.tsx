@@ -47,11 +47,13 @@ export default function GitHubRepositoryInput({
         setValidatedRepository(null);
 
         try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
             const response = await fetch('/thinktest/github/validate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-CSRF-TOKEN': csrfToken || '',
                 },
                 body: JSON.stringify({
                     repository_url: repositoryUrl,
@@ -64,7 +66,17 @@ export default function GitHubRepositoryInput({
                 setValidatedRepository(result.repository);
                 onRepositoryValidated(result.repository);
             } else {
-                const errorMessage = result.message || 'Failed to validate repository';
+                let errorMessage = result.message || 'Failed to validate repository';
+
+                // Handle specific HTTP status codes
+                if (response.status === 419) {
+                    errorMessage = 'CSRF token mismatch. Please refresh the page and try again.';
+                } else if (response.status === 422) {
+                    errorMessage = result.message || 'Invalid repository URL format.';
+                } else if (response.status === 429) {
+                    errorMessage = result.message || 'Rate limit exceeded. Please try again later.';
+                }
+
                 setError(errorMessage);
                 onError(errorMessage);
 

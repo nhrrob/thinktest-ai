@@ -25,6 +25,54 @@ test('github validate endpoint requires authentication', function () {
     $response->assertStatus(401);
 });
 
+test('github validate endpoint works with proper csrf token', function () {
+    // Mock the GitHub service to avoid actual API calls
+    $this->mock(GitHubService::class, function ($mock) {
+        $mock->shouldReceive('isRepositoryAccessible')
+            ->with('owner', 'repo')
+            ->andReturn(true);
+
+        $mock->shouldReceive('getRepositoryInfo')
+            ->with('owner', 'repo')
+            ->andReturn([
+                'id' => 123,
+                'name' => 'repo',
+                'full_name' => 'owner/repo',
+                'description' => 'Test repository',
+                'private' => false,
+                'default_branch' => 'main',
+                'size' => 1024,
+                'language' => 'PHP',
+                'clone_url' => 'https://github.com/owner/repo.git',
+                'html_url' => 'https://github.com/owner/repo',
+                'updated_at' => '2023-01-01T00:00:00Z',
+            ]);
+    });
+
+    $response = $this->postJson('/thinktest/github/validate', [
+        'repository_url' => 'https://github.com/owner/repo'
+    ]);
+
+    $response->assertStatus(200)
+        ->assertJson([
+            'success' => true,
+        ])
+        ->assertJsonStructure([
+            'success',
+            'repository' => [
+                'owner',
+                'repo',
+                'full_name',
+                'name',
+                'description',
+                'private',
+                'default_branch',
+                'size',
+                'language',
+            ]
+        ]);
+});
+
 test('github validate endpoint rejects invalid urls', function () {
     $response = $this->postJson('/thinktest/github/validate', [
         'repository_url' => 'invalid-url'
