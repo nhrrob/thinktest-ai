@@ -113,22 +113,54 @@ class ThinkTestController extends Controller
                 $fileData['filename']
             );
 
-            // Store analysis result
-            $analysisResult = PluginAnalysisResult::create([
-                'user_id' => $user->id,
-                'filename' => $fileData['filename'],
-                'file_hash' => $fileData['file_hash'],
-                'analysis_data' => $analysis,
-                'wordpress_patterns' => $analysis['wordpress_patterns'],
-                'functions' => $analysis['functions'],
-                'classes' => $analysis['classes'],
-                'hooks' => $analysis['hooks'],
-                'filters' => $analysis['filters'],
-                'security_patterns' => $analysis['security_patterns'],
-                'test_recommendations' => $analysis['test_recommendations'],
-                'complexity_score' => $this->calculateComplexityScore($analysis),
-                'analyzed_at' => now(),
-            ]);
+            // Store analysis result (handle duplicates gracefully)
+            $analysisResult = PluginAnalysisResult::where('file_hash', $fileData['file_hash'])->first();
+
+            if ($analysisResult) {
+                // Update existing analysis result
+                Log::info('Plugin upload: Updating existing analysis result', [
+                    'user_id' => $user->id,
+                    'file_hash' => $fileData['file_hash'],
+                    'existing_analysis_id' => $analysisResult->id,
+                ]);
+
+                $analysisResult->update([
+                    'user_id' => $user->id, // Update to current user
+                    'filename' => $fileData['filename'],
+                    'analysis_data' => $analysis,
+                    'wordpress_patterns' => $analysis['wordpress_patterns'],
+                    'functions' => $analysis['functions'],
+                    'classes' => $analysis['classes'],
+                    'hooks' => $analysis['hooks'],
+                    'filters' => $analysis['filters'],
+                    'security_patterns' => $analysis['security_patterns'],
+                    'test_recommendations' => $analysis['test_recommendations'],
+                    'complexity_score' => $this->calculateComplexityScore($analysis),
+                    'analyzed_at' => now(),
+                ]);
+            } else {
+                // Create new analysis result
+                Log::info('Plugin upload: Creating new analysis result', [
+                    'user_id' => $user->id,
+                    'file_hash' => $fileData['file_hash'],
+                ]);
+
+                $analysisResult = PluginAnalysisResult::create([
+                    'user_id' => $user->id,
+                    'filename' => $fileData['filename'],
+                    'file_hash' => $fileData['file_hash'],
+                    'analysis_data' => $analysis,
+                    'wordpress_patterns' => $analysis['wordpress_patterns'],
+                    'functions' => $analysis['functions'],
+                    'classes' => $analysis['classes'],
+                    'hooks' => $analysis['hooks'],
+                    'filters' => $analysis['filters'],
+                    'security_patterns' => $analysis['security_patterns'],
+                    'test_recommendations' => $analysis['test_recommendations'],
+                    'complexity_score' => $this->calculateComplexityScore($analysis),
+                    'analyzed_at' => now(),
+                ]);
+            }
 
             // Create AI conversation
             $conversation = AIConversationState::create([
@@ -652,15 +684,42 @@ class ThinkTestController extends Controller
                 'patterns_count' => count($analysis['wordpress_patterns'] ?? []),
             ]);
 
-            // Store analysis result
-            $analysisResult = PluginAnalysisResult::create([
-                'user_id' => $user->id,
-                'filename' => $processedData['filename'],
-                'file_hash' => $processedData['file_hash'],
-                'analysis_data' => $analysis,
-                'complexity_score' => $this->calculateComplexityScore($analysis),
-                'analyzed_at' => now(),
-            ]);
+            // Store analysis result (handle duplicates gracefully)
+            $analysisResult = PluginAnalysisResult::where('file_hash', $processedData['file_hash'])->first();
+
+            if ($analysisResult) {
+                // Update existing analysis result
+                Log::info('GitHub repository processing: Updating existing analysis result', [
+                    'request_id' => $requestId,
+                    'user_id' => $user->id,
+                    'file_hash' => $processedData['file_hash'],
+                    'existing_analysis_id' => $analysisResult->id,
+                ]);
+
+                $analysisResult->update([
+                    'user_id' => $user->id, // Update to current user
+                    'filename' => $processedData['filename'],
+                    'analysis_data' => $analysis,
+                    'complexity_score' => $this->calculateComplexityScore($analysis),
+                    'analyzed_at' => now(),
+                ]);
+            } else {
+                // Create new analysis result
+                Log::info('GitHub repository processing: Creating new analysis result', [
+                    'request_id' => $requestId,
+                    'user_id' => $user->id,
+                    'file_hash' => $processedData['file_hash'],
+                ]);
+
+                $analysisResult = PluginAnalysisResult::create([
+                    'user_id' => $user->id,
+                    'filename' => $processedData['filename'],
+                    'file_hash' => $processedData['file_hash'],
+                    'analysis_data' => $analysis,
+                    'complexity_score' => $this->calculateComplexityScore($analysis),
+                    'analyzed_at' => now(),
+                ]);
+            }
 
             // Create AI conversation
             Log::info('GitHub repository processing: Creating AI conversation', [
@@ -991,19 +1050,61 @@ class ThinkTestController extends Controller
                 ], 404);
             }
 
-            $pluginData = json_decode($conversation->plugin_data, true);
+            // Get plugin content from file path
+            if (!$conversation->plugin_file_path) {
+                Log::error('No plugin file path in conversation', [
+                    'conversation_id' => $conversationId,
+                    'user_id' => Auth::id(),
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Plugin file not found. Please re-upload or re-process your plugin.',
+                ], 422);
+            }
+
+            // Read plugin content from stored file
+            try {
+                $pluginContent = $this->fileService->getFileContent($conversation->plugin_file_path);
+            } catch (\Exception $e) {
+                Log::error('Failed to read plugin file', [
+                    'conversation_id' => $conversationId,
+                    'user_id' => Auth::id(),
+                    'file_path' => $conversation->plugin_file_path,
+                    'error' => $e->getMessage(),
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to read plugin file. Please re-upload your plugin.',
+                ], 422);
+            }
+
+            // Get filename from context or generate from file path
+            $filename = $conversation->context['filename'] ?? basename($conversation->plugin_file_path);
+
+            // For GitHub repositories, we might have additional files info
+            $additionalFiles = [];
+            if ($conversation->source_type === 'github' && $conversation->githubRepository) {
+                // Get additional files from GitHub repository if available
+                $additionalFiles = $conversation->context['repository_info']['files'] ?? [];
+            }
 
             // Detect missing test infrastructure
             $detection = $this->testDetectionService->detectMissingInfrastructure(
-                $pluginData['content'],
-                $pluginData['filename'],
-                $pluginData['additional_files'] ?? []
+                $pluginContent,
+                $filename,
+                $additionalFiles
             );
 
             // Generate setup instructions
+            $pluginName = $conversation->context['repository_info']['name'] ??
+                         $conversation->context['plugin_name'] ??
+                         'WordPress Plugin';
+
             $instructions = $this->testInstructionsService->generateInstructions($detection, [
                 'framework' => $framework,
-                'plugin_name' => $pluginData['plugin_name'] ?? 'WordPress Plugin'
+                'plugin_name' => $pluginName
             ]);
 
             return response()->json([
