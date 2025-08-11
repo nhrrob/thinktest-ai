@@ -21,7 +21,7 @@ class GitHubRepositoryService
     /**
      * Process GitHub repository for WordPress plugin analysis
      */
-    public function processRepository(string $owner, string $repo, string $branch = null, int $userId = null): array
+    public function processRepository(string $owner, string $repo, ?string $branch = null, ?int $userId = null): array
     {
         Log::info('Starting GitHub repository processing', [
             'owner' => $owner,
@@ -31,9 +31,26 @@ class GitHubRepositoryService
         ]);
 
         try {
+            // Verify GitHub API authentication before processing
+            $authVerification = $this->githubService->verifyApiToken();
+            if (!$authVerification['valid']) {
+                Log::error('GitHub API authentication failed', [
+                    'error' => $authVerification['error'],
+                    'owner' => $owner,
+                    'repo' => $repo,
+                ]);
+                throw new \RuntimeException("GitHub API authentication failed: " . $authVerification['error']);
+            }
+
+            Log::info('GitHub API authentication verified', [
+                'user' => $authVerification['user'] ?? 'unknown',
+                'scopes' => $authVerification['scopes'] ?? 'unknown',
+                'rate_limit_remaining' => $authVerification['rate_limit_remaining'] ?? 'unknown',
+            ]);
+
             // Get repository information
             $repoInfo = $this->githubService->getRepositoryInfo($owner, $repo);
-            
+
             // Use default branch if none specified
             $branch = $branch ?: $repoInfo['default_branch'];
             

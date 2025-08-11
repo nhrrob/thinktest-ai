@@ -98,18 +98,24 @@ class ChatGPT5IntegrationTest extends TestCase
         $this->assertArrayHasKey('wordpress_system_prompt', $config);
     }
 
-    public function test_openai_provider_removed(): void
+    public function test_current_providers_available(): void
     {
         $service = new AIProviderService();
         $providers = $service->getAvailableProviders();
 
-        // Verify openai provider is no longer available
+        // Verify legacy openai provider is no longer available
         $this->assertArrayNotHasKey('openai', $providers);
 
-        // Verify only chatgpt-5 and anthropic are available
+        // Verify current providers are available
         $this->assertCount(2, $providers);
-        $this->assertArrayHasKey('chatgpt-5', $providers);
-        $this->assertArrayHasKey('anthropic', $providers);
+        $this->assertArrayHasKey('openai-gpt5', $providers);
+        $this->assertArrayHasKey('anthropic-claude', $providers);
+
+        // Verify provider details
+        $this->assertEquals('OpenAI GPT-5', $providers['openai-gpt5']['display_name']);
+        $this->assertEquals('OpenAI', $providers['openai-gpt5']['provider_company']);
+        $this->assertEquals('Anthropic Claude 3.5 Sonnet', $providers['anthropic-claude']['display_name']);
+        $this->assertEquals('Anthropic', $providers['anthropic-claude']['provider_company']);
     }
 
     public function test_chatgpt5_provider_validation_in_switch_statement(): void

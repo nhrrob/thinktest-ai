@@ -4,6 +4,7 @@ use App\Http\Controllers\ThinkTestController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\UserController;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -41,6 +42,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('Test/ModalToastTest');
     })->name('test-modal-toast');
 
+    // Session validation endpoint
+    Route::get('auth/check', function () {
+        $user = Auth::user();
+        return response()->json([
+            'authenticated' => true,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+            ],
+            'csrf_token' => csrf_token(),
+        ]);
+    })->name('auth.check');
+
     // ThinkTest AI routes
     Route::get('thinktest', [ThinkTestController::class, 'index'])->name('thinktest.index');
     Route::post('thinktest/upload', [ThinkTestController::class, 'upload'])->name('thinktest.upload');
@@ -57,6 +72,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('thinktest/github/branches', [ThinkTestController::class, 'getRepositoryBranches'])->name('thinktest.github.branches');
         Route::post('thinktest/github/process', [ThinkTestController::class, 'processRepository'])->name('thinktest.github.process');
     });
+
+    // GitHub debug route (admin only)
+    Route::get('thinktest/github/debug', [ThinkTestController::class, 'debugGitHub'])
+        ->name('thinktest.github.debug')
+        ->middleware('can:access dashboard');
 
     // Admin routes - Organized under admin prefix with proper namespace
     Route::prefix('admin')->name('admin.')->group(function () {

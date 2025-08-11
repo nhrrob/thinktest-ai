@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -20,9 +21,16 @@ class GitHubRateLimitMiddleware
         $user = Auth::user();
 
         if (!$user) {
+            Log::warning('GitHub rate limit middleware: User not authenticated', [
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'url' => $request->fullUrl(),
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Authentication required',
+                'message' => 'Authentication required. Please log in and try again.',
+                'error_code' => 'AUTH_REQUIRED',
             ], 401);
         }
 

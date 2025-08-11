@@ -17,6 +17,7 @@ use App\Services\GitHub\GitHubValidationService;
 use App\Services\GitHub\GitHubErrorHandler;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -93,7 +94,7 @@ class ThinkTestController extends Controller
     {
         $request->validate([
             'plugin_file' => 'required|file|max:10240', // 10MB max
-            'provider' => 'sometimes|string|in:chatgpt-5,anthropic',
+            'provider' => 'sometimes|string|in:openai-gpt5,anthropic-claude,chatgpt-5,anthropic',
             'framework' => 'sometimes|string|in:phpunit,pest',
         ]);
 
@@ -176,7 +177,7 @@ class ThinkTestController extends Controller
     {
         $request->validate([
             'conversation_id' => 'required|string',
-            'provider' => 'sometimes|string|in:chatgpt-5,anthropic',
+            'provider' => 'sometimes|string|in:openai-gpt5,anthropic-claude,chatgpt-5,anthropic',
             'framework' => 'sometimes|string|in:phpunit,pest',
         ]);
 
@@ -483,18 +484,55 @@ class ThinkTestController extends Controller
      */
     public function processRepository(Request $request)
     {
+        $startTime = microtime(true);
+        $requestId = Str::uuid();
+
+        Log::info('GitHub repository processing started', [
+            'request_id' => $requestId,
+            'user_id' => Auth::id(),
+            'ip' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'request_data' => $request->only(['owner', 'repo', 'branch', 'provider', 'framework'])
+        ]);
+
         $request->validate([
             'owner' => 'required|string|max:100|regex:/^[a-zA-Z0-9\-_\.]+$/',
             'repo' => 'required|string|max:100|regex:/^[a-zA-Z0-9\-_\.]+$/',
             'branch' => 'required|string|max:250|regex:/^[a-zA-Z0-9\-_\.\/]+$/',
-            'provider' => 'sometimes|string|in:chatgpt-5,anthropic',
+            'provider' => 'sometimes|string|in:openai-gpt5,anthropic-claude,chatgpt-5,anthropic',
             'framework' => 'sometimes|string|in:phpunit,pest',
         ]);
 
         try {
             $user = Auth::user();
 
+            if (!$user) {
+                Log::error('GitHub repository processing: User not authenticated', [
+                    'request_id' => $requestId,
+                    'ip' => $request->ip(),
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Authentication required. Please log in and try again.',
+                    'error_code' => 'AUTH_REQUIRED',
+                ], 401);
+            }
+
+            Log::info('GitHub repository processing: User authenticated', [
+                'request_id' => $requestId,
+                'user_id' => $user->id,
+                'user_email' => $user->email,
+            ]);
+
             // Comprehensive validation
+            Log::info('GitHub repository processing: Starting validation', [
+                'request_id' => $requestId,
+                'user_id' => $user->id,
+                'repository' => "{$request->owner}/{$request->repo}",
+                'branch' => $request->branch,
+            ]);
+
             $this->githubValidationService->validateRateLimit($user->id);
 
             // Validate repository components
@@ -509,6 +547,11 @@ class ThinkTestController extends Controller
             // Validate branch name
             $this->githubValidationService->validateBranchName($request->branch);
 
+            Log::info('GitHub repository processing: Validation completed', [
+                'request_id' => $requestId,
+                'user_id' => $user->id,
+            ]);
+
             // Check if repository record already exists
             $githubRepo = GitHubRepository::where('user_id', $user->id)
                 ->where('full_name', "{$request->owner}/{$request->repo}")
@@ -516,6 +559,12 @@ class ThinkTestController extends Controller
                 ->first();
 
             if (!$githubRepo) {
+                Log::info('GitHub repository processing: Creating new repository record', [
+                    'request_id' => $requestId,
+                    'user_id' => $user->id,
+                    'repository' => "{$request->owner}/{$request->repo}",
+                ]);
+
                 // Create new repository record
                 $repoInfo = $this->githubService->getRepositoryInfo($request->owner, $request->repo);
 
@@ -536,17 +585,42 @@ class ThinkTestController extends Controller
                     'last_updated_at' => $repoInfo['updated_at'],
                     'processing_status' => 'processing',
                 ]);
+
+                Log::info('GitHub repository processing: Repository record created', [
+                    'request_id' => $requestId,
+                    'user_id' => $user->id,
+                    'repository_id' => $githubRepo->id,
+                ]);
             } else {
+                Log::info('GitHub repository processing: Using existing repository record', [
+                    'request_id' => $requestId,
+                    'user_id' => $user->id,
+                    'repository_id' => $githubRepo->id,
+                ]);
                 $githubRepo->markAsProcessing();
             }
 
             // Process repository
+            Log::info('GitHub repository processing: Starting repository processing', [
+                'request_id' => $requestId,
+                'user_id' => $user->id,
+                'repository' => "{$request->owner}/{$request->repo}",
+                'branch' => $request->branch,
+            ]);
+
             $processedData = $this->githubRepositoryService->processRepository(
                 $request->owner,
                 $request->repo,
                 $request->branch,
                 $user->id
             );
+
+            Log::info('GitHub repository processing: Repository processing completed', [
+                'request_id' => $requestId,
+                'user_id' => $user->id,
+                'file_count' => $processedData['file_count'],
+                'filename' => $processedData['filename'],
+            ]);
 
             // Validate processed data
             $this->githubValidationService->validateFileCount($processedData['file_count']);
@@ -559,10 +633,24 @@ class ThinkTestController extends Controller
             );
 
             // Analyze plugin code
+            Log::info('GitHub repository processing: Starting plugin analysis', [
+                'request_id' => $requestId,
+                'user_id' => $user->id,
+                'filename' => $processedData['filename'],
+            ]);
+
             $analysis = $this->analysisService->analyzePlugin(
                 $processedData['content'],
                 $processedData['filename']
             );
+
+            Log::info('GitHub repository processing: Plugin analysis completed', [
+                'request_id' => $requestId,
+                'user_id' => $user->id,
+                'functions_count' => count($analysis['functions'] ?? []),
+                'classes_count' => count($analysis['classes'] ?? []),
+                'patterns_count' => count($analysis['wordpress_patterns'] ?? []),
+            ]);
 
             // Store analysis result
             $analysisResult = PluginAnalysisResult::create([
@@ -575,6 +663,12 @@ class ThinkTestController extends Controller
             ]);
 
             // Create AI conversation
+            Log::info('GitHub repository processing: Creating AI conversation', [
+                'request_id' => $requestId,
+                'user_id' => $user->id,
+                'analysis_id' => $analysisResult->id,
+            ]);
+
             $conversation = AIConversationState::create([
                 'user_id' => $user->id,
                 'conversation_id' => Str::uuid(),
@@ -596,6 +690,19 @@ class ThinkTestController extends Controller
                 'started_at' => now(),
             ]);
 
+            $endTime = microtime(true);
+            $processingTime = round(($endTime - $startTime) * 1000, 2); // Convert to milliseconds
+
+            Log::info('GitHub repository processing: Completed successfully', [
+                'request_id' => $requestId,
+                'user_id' => $user->id,
+                'conversation_id' => $conversation->conversation_id,
+                'analysis_id' => $analysisResult->id,
+                'repository_id' => $githubRepo->id,
+                'processing_time_ms' => $processingTime,
+                'file_count' => $processedData['file_count'],
+            ]);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Repository processed successfully',
@@ -609,10 +716,21 @@ class ThinkTestController extends Controller
                     'file_count' => $processedData['file_count'],
                     'plugin_structure' => $processedData['plugin_structure'],
                 ],
+                'processing_time_ms' => $processingTime,
             ]);
 
         } catch (\InvalidArgumentException $e) {
             // Validation errors
+            Log::warning('GitHub repository processing: Validation failed', [
+                'request_id' => $requestId ?? 'unknown',
+                'user_id' => Auth::id(),
+                'owner' => $request->owner ?? 'unknown',
+                'repo' => $request->repo ?? 'unknown',
+                'branch' => $request->branch ?? 'unknown',
+                'error' => $e->getMessage(),
+                'error_type' => 'validation',
+            ]);
+
             $this->githubValidationService->logSecurityEvent('Repository processing validation failed', [
                 'user_id' => Auth::id(),
                 'owner' => $request->owner,
@@ -624,30 +742,206 @@ class ThinkTestController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
+                'error_code' => 'VALIDATION_ERROR',
             ], 422);
         } catch (\RuntimeException $e) {
             // Rate limiting or size validation errors
+            Log::warning('GitHub repository processing: Runtime error', [
+                'request_id' => $requestId ?? 'unknown',
+                'user_id' => Auth::id(),
+                'owner' => $request->owner ?? 'unknown',
+                'repo' => $request->repo ?? 'unknown',
+                'error' => $e->getMessage(),
+                'error_type' => 'runtime',
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
+                'error_code' => 'RUNTIME_ERROR',
             ], 429);
+        } catch (\JsonException $e) {
+            // JSON parsing errors
+            if (isset($githubRepo)) {
+                $githubRepo->markAsFailed('JSON parsing error: ' . $e->getMessage());
+            }
+
+            Log::error('GitHub repository processing: JSON parsing error', [
+                'request_id' => $requestId ?? 'unknown',
+                'user_id' => Auth::id(),
+                'owner' => $request->owner ?? 'unknown',
+                'repo' => $request->repo ?? 'unknown',
+                'branch' => $request->branch ?? 'unknown',
+                'error' => $e->getMessage(),
+                'error_type' => 'json_parsing',
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Repository processing failed: Received invalid JSON response. This may indicate authentication issues or that the repository returned an HTML error page instead of expected data.',
+                'error_code' => 'JSON_PARSING_ERROR',
+            ], 500);
         } catch (\Exception $e) {
+            $endTime = microtime(true);
+            $processingTime = round(($endTime - $startTime) * 1000, 2);
+
             // Mark repository as failed if it exists
             if (isset($githubRepo)) {
                 $githubRepo->markAsFailed($e->getMessage());
             }
 
-            Log::error('Repository processing failed', [
+            // Check for specific error patterns
+            $errorMessage = $e->getMessage();
+            $isRedirectError = str_contains($errorMessage, '302') || str_contains($errorMessage, 'redirect');
+            $isHtmlError = str_contains($errorMessage, 'DOCTYPE') || str_contains($errorMessage, '<html');
+            $isAuthError = str_contains($errorMessage, 'authentication') || str_contains($errorMessage, 'unauthorized');
+
+            Log::error('GitHub repository processing: General error', [
+                'request_id' => $requestId ?? 'unknown',
                 'user_id' => Auth::id(),
-                'owner' => $request->owner,
-                'repo' => $request->repo,
-                'branch' => $request->branch,
+                'owner' => $request->owner ?? 'unknown',
+                'repo' => $request->repo ?? 'unknown',
+                'branch' => $request->branch ?? 'unknown',
+                'error' => $errorMessage,
+                'error_type' => $isRedirectError ? 'redirect' : ($isHtmlError ? 'html_response' : ($isAuthError ? 'authentication' : 'general')),
+                'processing_time_ms' => $processingTime,
+                'exception_class' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            // Provide more specific error messages based on error type
+            if ($isRedirectError) {
+                $userMessage = 'Repository processing failed: Received unexpected redirect. This may indicate authentication issues or repository access problems. Please verify your GitHub token has the necessary permissions.';
+                $errorCode = 'REDIRECT_ERROR';
+            } elseif ($isHtmlError) {
+                $userMessage = 'Repository processing failed: Received HTML page instead of expected data. This typically indicates authentication issues or that you\'re being redirected to a login page.';
+                $errorCode = 'HTML_RESPONSE_ERROR';
+            } elseif ($isAuthError) {
+                $userMessage = 'Repository processing failed: GitHub authentication error. Please verify your API token is valid and has the necessary permissions.';
+                $errorCode = 'AUTH_ERROR';
+            } else {
+                $userMessage = 'Repository processing failed: ' . $errorMessage;
+                $errorCode = 'GENERAL_ERROR';
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => $userMessage,
+                'error_code' => $errorCode,
+                'processing_time_ms' => $processingTime,
+            ], 500);
+        }
+    }
+
+    /**
+     * Debug GitHub integration
+     */
+    public function debugGitHub(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            $debugInfo = [];
+
+            // 1. Check GitHub configuration
+            $config = config('thinktest_ai.github');
+            $debugInfo['configuration'] = [
+                'enabled' => $config['enabled'] ?? false,
+                'api_token_configured' => !empty($config['api_token']),
+                'api_token_prefix' => !empty($config['api_token']) ? substr($config['api_token'], 0, 7) . '...' : 'Not configured',
+                'max_repository_size' => $config['max_repository_size'] ?? 'Not configured',
+                'clone_timeout' => $config['clone_timeout'] ?? 'Not configured',
+            ];
+
+            // 2. Test GitHub API authentication
+            $authTest = $this->githubService->verifyApiToken();
+            $debugInfo['authentication'] = $authTest;
+
+            // 3. Test GitHub API rate limits
+            try {
+                $rateLimitInfo = $this->githubService->getRateLimitInfo();
+                $debugInfo['rate_limits'] = $rateLimitInfo;
+            } catch (\Exception $e) {
+                $debugInfo['rate_limits'] = [
+                    'error' => $e->getMessage(),
+                ];
+            }
+
+            // 4. Test basic GitHub API connectivity
+            try {
+                $testRepo = $this->githubService->getRepositoryInfo('octocat', 'Hello-World');
+                $debugInfo['api_connectivity'] = [
+                    'status' => 'success',
+                    'test_repository' => $testRepo['full_name'] ?? 'Unknown',
+                    'test_repository_size' => $testRepo['size'] ?? 'Unknown',
+                ];
+            } catch (\Exception $e) {
+                $debugInfo['api_connectivity'] = [
+                    'status' => 'failed',
+                    'error' => $e->getMessage(),
+                ];
+            }
+
+            // 5. Test HTTP client configuration
+            try {
+                $response = Http::withHeaders([
+                    'User-Agent' => 'ThinkTest-AI/1.0',
+                    'Accept' => 'application/vnd.github.v3+json',
+                ])->get('https://api.github.com/zen');
+
+                $debugInfo['http_client'] = [
+                    'status' => 'success',
+                    'status_code' => $response->status(),
+                    'headers' => $response->headers(),
+                    'zen_message' => $response->body(),
+                ];
+            } catch (\Exception $e) {
+                $debugInfo['http_client'] = [
+                    'status' => 'failed',
+                    'error' => $e->getMessage(),
+                ];
+            }
+
+            // 6. Check environment variables
+            $debugInfo['environment'] = [
+                'github_api_token_set' => !empty(env('GITHUB_API_TOKEN')),
+                'github_integration_enabled' => env('GITHUB_INTEGRATION_ENABLED', false),
+                'app_env' => env('APP_ENV'),
+                'app_debug' => env('APP_DEBUG', false),
+            ];
+
+            // 7. Check service registration
+            $debugInfo['services'] = [
+                'github_service_registered' => app()->bound(GitHubService::class),
+                'github_repository_service_registered' => app()->bound(GitHubRepositoryService::class),
+                'github_validation_service_registered' => app()->bound(GitHubValidationService::class),
+                'github_client_registered' => app()->bound(\Github\Client::class),
+            ];
+
+            Log::info('GitHub debug information requested', [
+                'user_id' => $user->id,
+                'debug_info' => $debugInfo,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'debug_info' => $debugInfo,
+                'timestamp' => now()->toISOString(),
+                'user_id' => $user->id,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('GitHub debug endpoint failed', [
+                'user_id' => Auth::id(),
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Repository processing failed: ' . $e->getMessage(),
+                'message' => 'Debug endpoint failed: ' . $e->getMessage(),
+                'timestamp' => now()->toISOString(),
             ], 500);
         }
     }

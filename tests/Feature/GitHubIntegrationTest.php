@@ -5,6 +5,7 @@ use App\Models\GitHubRepository;
 use App\Services\GitHub\GitHubService;
 use App\Services\GitHub\GitHubValidationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 
 uses(RefreshDatabase::class);
 
@@ -112,6 +113,136 @@ test('github process endpoint rejects invalid branch names', function () {
     ]);
 
     $response->assertStatus(422);
+});
+
+test('github process endpoint requires authentication', function () {
+    // Clear rate limiter cache to avoid interference
+    \Illuminate\Support\Facades\RateLimiter::clear('github_global_');
+    \Illuminate\Support\Facades\RateLimiter::clear('github_minute_');
+
+    $response = $this->postJson('/thinktest/github/process', [
+        'owner' => 'octocat',
+        'repo' => 'Hello-World',
+        'branch' => 'master'
+    ]);
+
+    // Should get 401 from the rate limiting middleware since no user is authenticated
+    $response->assertStatus(401);
+    $response->assertJson([
+        'success' => false,
+        'message' => 'Authentication required'
+    ]);
+});
+
+test('authenticated user can access github process endpoint with proper validation', function () {
+    $user = User::factory()->create();
+
+    // Clear rate limiter cache to avoid interference
+    \Illuminate\Support\Facades\RateLimiter::clear("github_global_{$user->id}");
+    \Illuminate\Support\Facades\RateLimiter::clear("github_minute_{$user->id}");
+
+    $response = $this->actingAs($user)->postJson('/thinktest/github/process', [
+        'owner' => 'octocat',
+        'repo' => 'Hello-World',
+        'branch' => 'master'
+    ]);
+
+    // Should get validation error or other error, not authentication error
+    $this->assertNotEquals(401, $response->getStatusCode());
+    $this->assertNotEquals(403, $response->getStatusCode());
+});
+
+test('github process endpoint maintains session during request', function () {
+    $user = User::factory()->create();
+
+    // Clear rate limiter cache to avoid interference
+    \Illuminate\Support\Facades\RateLimiter::clear("github_global_{$user->id}");
+    \Illuminate\Support\Facades\RateLimiter::clear("github_minute_{$user->id}");
+
+    // First, make a request to establish session
+    $this->actingAs($user)->get('/thinktest');
+
+    // Then make the GitHub process request
+    $response = $this->actingAs($user)->postJson('/thinktest/github/process', [
+        'owner' => 'octocat',
+        'repo' => 'Hello-World',
+        'branch' => 'master'
+    ]);
+
+    // Should not get authentication error
+    $this->assertNotEquals(302, $response->getStatusCode());
+    $this->assertNotEquals(401, $response->getStatusCode());
+    $this->assertNotEquals(403, $response->getStatusCode());
+});
+
+test('session persistence with csrf token validation', function () {
+    $user = User::factory()->create();
+
+    // Create required permissions
+    \Spatie\Permission\Models\Permission::create(['name' => 'generate tests', 'group_name' => 'ai-test-generation']);
+
+    // Give user required permissions
+    $user->givePermissionTo('generate tests');
+
+    // Clear rate limiter cache
+    \Illuminate\Support\Facades\RateLimiter::clear("github_global_{$user->id}");
+    \Illuminate\Support\Facades\RateLimiter::clear("github_minute_{$user->id}");
+
+    // Step 1: Login and get the ThinkTest page
+    $response = $this->actingAs($user)->get('/thinktest');
+    $response->assertStatus(200);
+
+    // Step 2: Extract CSRF token from the response
+    $content = $response->getContent();
+    $this->assertStringContainsString('csrf-token', $content);
+
+    // Step 3: Make GitHub process request with proper headers
+    $response = $this->actingAs($user)
+        ->withHeaders([
+            'X-CSRF-TOKEN' => csrf_token(),
+        ])
+        ->postJson('/thinktest/github/process', [
+            'owner' => 'octocat',
+            'repo' => 'Hello-World',
+            'branch' => 'master'
+        ]);
+
+    // Should not get CSRF or authentication errors
+    $this->assertNotEquals(419, $response->getStatusCode()); // CSRF error
+    $this->assertNotEquals(401, $response->getStatusCode()); // Auth error
+    $this->assertNotEquals(302, $response->getStatusCode()); // Redirect to login
+});
+
+test('auth check endpoint works correctly', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->get('/auth/check');
+
+    $response->assertStatus(200);
+    $response->assertJson([
+        'authenticated' => true,
+        'user' => [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+        ]
+    ]);
+    $response->assertJsonStructure([
+        'authenticated',
+        'user' => ['id', 'name', 'email'],
+        'csrf_token'
+    ]);
+});
+
+test('auth check endpoint requires authentication', function () {
+    // Ensure we're not authenticated
+    Auth::logout();
+    $this->assertGuest();
+
+    $response = $this->get('/auth/check');
+
+    // Should redirect to login since the route is protected by auth middleware
+    $response->assertRedirect('/login');
 });
 
 test('github repository model creates correctly', function () {
