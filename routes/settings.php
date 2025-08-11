@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\BrandingController;
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -17,5 +18,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('settings/appearance', function () {
         return Inertia::render('settings/appearance');
-    })->name('appearance');
+    })->name('settings.appearance');
+
+    Route::get('settings/branding', [BrandingController::class, 'edit'])->name('branding.edit');
+    Route::post('settings/branding', [BrandingController::class, 'update'])->name('branding.update');
+    Route::post('settings/branding/set-code-logo', [BrandingController::class, 'setCodeLogo'])->name('branding.set-code-logo');
 });

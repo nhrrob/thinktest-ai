@@ -115,9 +115,6 @@ class RolePermissionSeeder extends Seeder
 
         // Admin permissions
         $permissions[] = $this->permissionItem('admin', [
-            'manage users',
-            'manage roles',
-            'manage permissions',
             'view system health',
             'manage feature flags',
             'access admin panel'
@@ -136,11 +133,27 @@ class RolePermissionSeeder extends Seeder
             'limited test generation'
         ]);
 
-        // Standard CRUD permission groups following reference project pattern
-        $permissionGroups = ['user', 'role', 'permission'];
-        foreach ($permissionGroups as $permissionGroup) {
-            $permissions[] = $this->permissionItem($permissionGroup);
-        }
+        // Granular CRUD permissions for admin resources
+        $permissions[] = $this->permissionItem('user', [
+            'view users',
+            'create users',
+            'edit users',
+            'delete users'
+        ]);
+
+        $permissions[] = $this->permissionItem('role', [
+            'view roles',
+            'create roles',
+            'edit roles',
+            'delete roles'
+        ]);
+
+        $permissions[] = $this->permissionItem('permission', [
+            'view permissions',
+            'create permissions',
+            'edit permissions',
+            'delete permissions'
+        ]);
 
         return $permissions;
     }

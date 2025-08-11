@@ -184,6 +184,107 @@
     body {
         @apply bg-background text-foreground;
     }
+}
 
+/* Custom toast animations for smooth entrance/exit */
+@layer components {
+    /* Custom keyframes for smooth toast animations */
+    @keyframes toast-enter {
+        0% {
+            transform: scale(0.9) translateY(-20px);
+            opacity: 0;
+        }
+        100% {
+            transform: scale(1) translateY(0);
+            opacity: 1;
+        }
+    }
 
+    @keyframes toast-exit {
+        0% {
+            transform: scale(1) translateY(0);
+            opacity: 1;
+        }
+        100% {
+            transform: scale(0.95) translateY(-10px);
+            opacity: 0;
+        }
+    }
+
+    /* Tailwind animation utilities for manual use */
+    .animate-enter {
+        animation: toast-enter 500ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    .animate-leave {
+        animation: toast-exit 500ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    /* Override react-hot-toast default animations with smooth custom ones */
+    /* Target the toast container */
+    [data-hot-toast-container] {
+        z-index: 10000 !important;
+        position: fixed !important;
+    }
+
+    /* Ensure all toast elements have proper z-index and background */
+    [data-hot-toast-container] > div {
+        z-index: 10000 !important;
+        position: relative !important;
+    }
+
+    /* Custom toast styling to ensure proper background and visibility */
+    .bg-background {
+        background-color: var(--background) !important;
+    }
+
+    /* Ensure proper opacity for light theme */
+    :root .bg-background {
+        background-color: var(--background) !important;
+        opacity: 1 !important;
+    }
+
+    /* Ensure proper opacity for dark theme */
+    .dark .bg-background {
+        background-color: var(--background) !important;
+        opacity: 1 !important;
+    }
+
+    /* Enhanced shadow for better visibility */
+    .shadow-lg {
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+                    0 4px 6px -2px rgba(0, 0, 0, 0.05),
+                    0 0 0 1px rgba(0, 0, 0, 0.05) !important;
+    }
+
+    .dark .shadow-lg {
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3),
+                    0 4px 6px -2px rgba(0, 0, 0, 0.2),
+                    0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+    }
+
+    /* Ensure ring opacity works properly */
+    .ring-black {
+        --tw-ring-color: rgb(0 0 0 / 0.1);
+    }
+
+    .dark .ring-black {
+        --tw-ring-color: rgb(255 255 255 / 0.1);
+    }
+
+    /* Dialog specific styling to ensure proper background and visibility */
+    [data-slot="dialog-content"] {
+        background-color: var(--background) !important;
+        color: var(--foreground) !important;
+        border-color: var(--border) !important;
+    }
+
+    /* Ensure dialog overlay has proper opacity */
+    [data-slot="dialog-overlay"] {
+        background-color: rgba(0, 0, 0, 0.8) !important;
+    }
+
+    .dark [data-slot="dialog-overlay"] {
+        background-color: rgba(0, 0, 0, 0.9) !important;
+    }
 }

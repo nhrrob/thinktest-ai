@@ -1,0 +1,42 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .code-primary { stroke: #FF2D20; stroke-width: 8; fill: none; }
+      .test-accent { fill: #F59E0B; }
+      .test-check { stroke: white; stroke-width: 6; fill: none; }
+      .spark { fill: #F59E0B; }
+    </style>
+    <!-- Gradient for modern look -->
+    <linearGradient id="codeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF2D20;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#DC2626;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="sparkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F59E0B;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#D97706;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background circle for better visibility -->
+  <circle cx="90" cy="90" r="85" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="2"/>
+
+  <!-- Code brackets - scaled up and centered -->
+  <path d="M60 45L30 90L60 135" stroke="url(#codeGradient)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M120 45L150 90L120 135" stroke="url(#codeGradient)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Test checkmark in center -->
+  <circle cx="90" cy="90" r="20" fill="url(#sparkGradient)" opacity="0.9"/>
+  <path d="M78 90L87 99L102 84" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- AI spark elements -->
+  <circle cx="45" cy="60" r="4" fill="url(#sparkGradient)" opacity="0.6"/>
+  <circle cx="135" cy="60" r="4" fill="url(#sparkGradient)" opacity="0.6"/>
+  <circle cx="45" cy="120" r="4" fill="url(#sparkGradient)" opacity="0.4"/>
+  <circle cx="135" cy="120" r="4" fill="url(#sparkGradient)" opacity="0.4"/>
+
+  <!-- Additional small sparks for AI effect -->
+  <circle cx="65" cy="45" r="2" fill="url(#sparkGradient)" opacity="0.8"/>
+  <circle cx="115" cy="45" r="2" fill="url(#sparkGradient)" opacity="0.8"/>
+  <circle cx="65" cy="135" r="2" fill="url(#sparkGradient)" opacity="0.6"/>
+  <circle cx="115" cy="135" r="2" fill="url(#sparkGradient)" opacity="0.6"/>
+</svg>

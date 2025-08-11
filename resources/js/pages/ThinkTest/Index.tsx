@@ -2,13 +2,19 @@ import { useState, useRef } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 
-export default function Index({ recentConversations, recentAnalyses, availableProviders }) {
-    const [isUploading, setIsUploading] = useState(false);
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [uploadResult, setUploadResult] = useState(null);
-    const [generatedTests, setGeneratedTests] = useState(null);
-    const [currentConversationId, setCurrentConversationId] = useState(null);
-    const fileInputRef = useRef(null);
+interface ThinkTestProps {
+    recentConversations: any[];
+    recentAnalyses: any[];
+    availableProviders: string[];
+}
+
+export default function Index({ recentConversations, recentAnalyses, availableProviders }: ThinkTestProps) {
+    const [isUploading, setIsUploading] = useState<boolean>(false);
+    const [isGenerating, setIsGenerating] = useState<boolean>(false);
+    const [uploadResult, setUploadResult] = useState<any>(null);
+    const [generatedTests, setGeneratedTests] = useState<any>(null);
+    const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         plugin_file: null,
@@ -16,7 +22,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
         framework: 'phpunit',
     });
 
-    const handleFileUpload = async (e) => {
+    const handleFileUpload = async (e: React.FormEvent) => {
         e.preventDefault();
         
         if (!data.plugin_file) {
@@ -37,7 +43,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                 method: 'POST',
                 body: formData,
                 headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                 },
             });
 
@@ -51,7 +57,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
             }
         } catch (error) {
             console.error('Upload error:', error);
-            alert('Upload failed: ' + error.message);
+            alert('Upload failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
         } finally {
             setIsUploading(false);
         }
@@ -71,7 +77,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                 },
                 body: JSON.stringify({
                     conversation_id: currentConversationId,
@@ -89,7 +95,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
             }
         } catch (error) {
             console.error('Generation error:', error);
-            alert('Test generation failed: ' + error.message);
+            alert('Test generation failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
         } finally {
             setIsGenerating(false);
         }
@@ -105,7 +111,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
             const response = await fetch(`/thinktest/download?conversation_id=${currentConversationId}`, {
                 method: 'GET',
                 headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                 },
             });
 
@@ -126,7 +132,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
             }
         } catch (error) {
             console.error('Download error:', error);
-            alert('Download failed: ' + error.message);
+            alert('Download failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
         }
     };
 
@@ -158,7 +164,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                                             ref={fileInputRef}
                                             type="file"
                                             accept=".php,.zip"
-                                            onChange={(e) => setData('plugin_file', e.target.files[0])}
+                                            onChange={(e) => setData('plugin_file', e.target.files?.[0] || null)}
                                             className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                                         />
                                     </div>
