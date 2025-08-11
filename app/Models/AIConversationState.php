@@ -27,17 +27,21 @@ class AIConversationState extends Model
         'metadata',
         'plugin_file_path',
         'plugin_file_hash',
+        'plugin_data',
         'generated_tests',
         'step',
         'total_steps',
         'started_at',
         'completed_at',
+        'github_repository_id',
+        'source_type',
     ];
 
     protected $casts = [
         'context' => 'array',
         'messages' => 'array',
         'metadata' => 'array',
+        'plugin_data' => 'array',
         'step' => 'integer',
         'total_steps' => 'integer',
         'started_at' => 'datetime',
@@ -50,6 +54,14 @@ class AIConversationState extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the GitHub repository associated with this conversation.
+     */
+    public function githubRepository(): BelongsTo
+    {
+        return $this->belongsTo(GitHubRepository::class);
     }
 
     /**

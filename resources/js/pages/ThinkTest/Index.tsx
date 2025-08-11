@@ -1,6 +1,10 @@
 import { useState, useRef } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
+import SourceToggle, { SourceType } from '@/components/github/SourceToggle';
+import GitHubRepositoryInput from '@/components/github/GitHubRepositoryInput';
+import GitHubBranchSelector from '@/components/github/GitHubBranchSelector';
+import TestSetupWizard from '@/components/TestSetupWizard';
 
 interface ThinkTestProps {
     recentConversations: any[];
@@ -8,7 +12,142 @@ interface ThinkTestProps {
     availableProviders: string[];
 }
 
+// Helper function to handle API responses with proper error checking
+const handleApiResponse = async (response: Response): Promise<any> => {
+    console.log('API Response received:', {
+        status: response.status,
+        statusText: response.statusText,
+        redirected: response.redirected,
+        url: response.url,
+        headers: Object.fromEntries(response.headers.entries())
+    });
+
+    // Check if response is redirected (authentication issue)
+    if (response.redirected || response.status === 302) {
+        console.error('Authentication redirect detected:', {
+            status: response.status,
+            redirected: response.redirected,
+            url: response.url
+        });
+        alert('Authentication required. Please refresh the page and log in again.');
+        window.location.reload();
+        return;
+    }
+
+    // Check if response is not ok
+    if (!response.ok) {
+        if (response.status === 419) {
+            console.error('CSRF token mismatch detected');
+            alert('Session expired. Please refresh the page and try again.');
+            window.location.reload();
+            return;
+        }
+        if (response.status === 401) {
+            console.error('Unauthorized access detected');
+            alert('Authentication required. Please refresh the page and log in again.');
+            window.location.reload();
+            return;
+        }
+        if (response.status === 403) {
+            console.error('Forbidden access detected');
+            alert('You do not have permission to perform this action. Please contact an administrator.');
+            return;
+        }
+
+        // Try to get error details from response
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        try {
+            const errorData = await response.json();
+            if (errorData.message) {
+                errorMessage = errorData.message;
+            }
+        } catch (e) {
+            // If we can't parse JSON, use the default error message
+        }
+
+        throw new Error(errorMessage);
+    }
+
+    // Check if response is JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('Non-JSON response received:', text);
+        throw new Error('Server returned an invalid response. Please try again.');
+    }
+
+    return await response.json();
+};
+
+// Helper function to get fresh CSRF token
+const getCsrfToken = (): string => {
+    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (!token) {
+        console.error('CSRF token not found in meta tag');
+        throw new Error('CSRF token not available. Please refresh the page.');
+    }
+    return token;
+};
+
+// Helper function to validate authentication status
+const validateAuthentication = async (): Promise<boolean> => {
+    try {
+        console.log('Validating authentication status...');
+        const response = await fetch('/auth/check', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin', // Ensure cookies are sent
+        });
+
+        console.log('Authentication check response:', {
+            status: response.status,
+            statusText: response.statusText,
+            redirected: response.redirected,
+            url: response.url
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Authentication data received:', {
+                authenticated: data.authenticated,
+                user: data.user ? { id: data.user.id, name: data.user.name } : null,
+                csrf_token_present: !!data.csrf_token
+            });
+
+            if (data.authenticated) {
+                // Update CSRF token if provided
+                if (data.csrf_token) {
+                    const metaTag = document.querySelector('meta[name="csrf-token"]');
+                    if (metaTag) {
+                        metaTag.setAttribute('content', data.csrf_token);
+                        console.log('CSRF token updated successfully');
+                    } else {
+                        console.warn('CSRF meta tag not found, cannot update token');
+                    }
+                }
+                return true;
+            } else {
+                console.error('User is not authenticated according to server response');
+                return false;
+            }
+        }
+
+        console.error('Authentication validation failed:', {
+            status: response.status,
+            statusText: response.statusText
+        });
+        return false;
+    } catch (error) {
+        console.error('Authentication check error:', error);
+        return false;
+    }
+};
+
 export default function Index({ recentConversations, recentAnalyses, availableProviders }: ThinkTestProps) {
+    const [sourceType, setSourceType] = useState<SourceType>('file');
     const [isUploading, setIsUploading] = useState<boolean>(false);
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
     const [uploadResult, setUploadResult] = useState<any>(null);
@@ -16,9 +155,24 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
     const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const { data, setData, post, processing, errors, reset } = useForm({
+    // GitHub-related state
+    const [validatedRepository, setValidatedRepository] = useState<any>(null);
+    const [selectedBranch, setSelectedBranch] = useState<any>(null);
+    const [isProcessingRepository, setIsProcessingRepository] = useState<boolean>(false);
+    const [processingProgress, setProcessingProgress] = useState<string>('');
+
+    // Test setup wizard state
+    const [showTestSetupWizard, setShowTestSetupWizard] = useState<boolean>(false);
+    const [testInfrastructureDetection, setTestInfrastructureDetection] = useState<any>(null);
+    const [testSetupInstructions, setTestSetupInstructions] = useState<any>(null);
+
+    const { data, setData, post, processing, errors, reset } = useForm<{
+        plugin_file: File | null;
+        provider: string;
+        framework: string;
+    }>({
         plugin_file: null,
-        provider: 'openai',
+        provider: 'openai-gpt5',
         framework: 'phpunit',
     });
 
@@ -43,11 +197,12 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                 method: 'POST',
                 body: formData,
                 headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-CSRF-TOKEN': getCsrfToken(),
                 },
             });
 
-            const result = await response.json();
+            const result = await handleApiResponse(response);
+            if (!result) return; // Handle redirect cases
 
             if (result.success) {
                 setUploadResult(result);
@@ -77,7 +232,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-CSRF-TOKEN': getCsrfToken(),
                 },
                 body: JSON.stringify({
                     conversation_id: currentConversationId,
@@ -86,7 +241,8 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                 }),
             });
 
-            const result = await response.json();
+            const result = await handleApiResponse(response);
+            if (!result) return; // Handle redirect cases
 
             if (result.success) {
                 setGeneratedTests(result.tests);
@@ -115,6 +271,19 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                 },
             });
 
+            // Check for authentication/session issues
+            if (response.redirected || response.status === 302) {
+                alert('Authentication required. Please refresh the page and log in again.');
+                window.location.reload();
+                return;
+            }
+
+            if (response.status === 419) {
+                alert('Session expired. Please refresh the page and try again.');
+                window.location.reload();
+                return;
+            }
+
             if (response.ok) {
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
@@ -127,13 +296,249 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
             } else {
-                const result = await response.json();
+                const result = await handleApiResponse(response);
                 alert('Download failed: ' + result.message);
             }
         } catch (error) {
             console.error('Download error:', error);
             alert('Download failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
         }
+    };
+
+    const handleRepositoryValidated = (repository: any) => {
+        setValidatedRepository(repository);
+        setSelectedBranch(null);
+        setUploadResult(null);
+        setGeneratedTests(null);
+        setCurrentConversationId(null);
+    };
+
+    const handleBranchSelected = (branch: any) => {
+        setSelectedBranch(branch);
+    };
+
+    const handleProcessRepository = async () => {
+        if (!validatedRepository || !selectedBranch) {
+            alert('Please select a repository and branch');
+            return;
+        }
+
+        setIsProcessingRepository(true);
+        setUploadResult(null);
+        setProcessingProgress('Initializing...');
+
+        try {
+            // Step 1: Validate authentication
+            setProcessingProgress('Validating authentication...');
+            const isAuthenticated = await validateAuthentication();
+            if (!isAuthenticated) {
+                alert('Authentication required. Please refresh the page and log in again.');
+                window.location.reload();
+                return;
+            }
+
+            // Step 2: Prepare request
+            setProcessingProgress('Preparing repository processing request...');
+            const csrfToken = getCsrfToken();
+            console.log('Making GitHub repository process request with CSRF token:', csrfToken.substring(0, 10) + '...');
+
+            const requestData = {
+                owner: validatedRepository.owner,
+                repo: validatedRepository.repo,
+                branch: selectedBranch.name,
+                provider: data.provider,
+                framework: data.framework,
+            };
+
+            console.log('Repository processing request data:', requestData);
+
+            // Step 3: Make the request
+            setProcessingProgress('Connecting to GitHub API...');
+            const response = await fetch('/thinktest/github/process', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(requestData),
+            });
+
+            // Step 4: Process response
+            setProcessingProgress('Processing repository data...');
+            const result = await handleApiResponse(response);
+            if (!result) return; // Handle redirect cases
+
+            if (result.success) {
+                setProcessingProgress('Analysis complete!');
+                setUploadResult(result);
+                setCurrentConversationId(result.conversation_id);
+                console.log('Repository processing successful:', {
+                    conversation_id: result.conversation_id,
+                    analysis_id: result.analysis_id,
+                    file_count: result.repository?.file_count,
+                    processing_time_ms: result.processing_time_ms
+                });
+            } else {
+                console.error('Repository processing failed:', result);
+
+                // Provide more specific error messages based on error code
+                let errorMessage = result.message || 'Repository processing failed';
+                if (result.error_code) {
+                    switch (result.error_code) {
+                        case 'AUTH_REQUIRED':
+                            errorMessage = 'Authentication required. Please refresh the page and log in again.';
+                            window.location.reload();
+                            return;
+                        case 'VALIDATION_ERROR':
+                            errorMessage = `Validation error: ${result.message}`;
+                            break;
+                        case 'REDIRECT_ERROR':
+                        case 'HTML_RESPONSE_ERROR':
+                        case 'AUTH_ERROR':
+                            errorMessage = `${result.message}\n\nThis usually indicates a session or authentication issue. Please try refreshing the page and logging in again.`;
+                            break;
+                        default:
+                            errorMessage = result.message;
+                    }
+                }
+
+                alert(errorMessage);
+            }
+        } catch (error) {
+            console.error('Repository processing error:', error);
+            setProcessingProgress('Error occurred during processing');
+
+            // Provide more specific error messages
+            let errorMessage = 'Repository processing failed: ';
+            if (error instanceof Error) {
+                // Check for specific error patterns
+                if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                    errorMessage = 'Network error occurred. Please check your internet connection and try again.';
+                } else if (error.message.includes('Authentication') || error.message.includes('401')) {
+                    errorMessage = 'Authentication error. Please refresh the page and log in again.';
+                } else if (error.message.includes('Session expired') || error.message.includes('419')) {
+                    errorMessage = 'Session expired. Please refresh the page and try again.';
+                } else {
+                    errorMessage += error.message;
+                }
+            } else {
+                errorMessage += 'Unknown error occurred. Please try again or contact support if the problem persists.';
+            }
+
+            alert(errorMessage);
+        } finally {
+            setIsProcessingRepository(false);
+            // Clear progress after a short delay
+            setTimeout(() => setProcessingProgress(''), 2000);
+        }
+    };
+
+    const handleSourceChange = (source: SourceType) => {
+        setSourceType(source);
+        // Reset state when switching sources
+        setUploadResult(null);
+        setGeneratedTests(null);
+        setCurrentConversationId(null);
+        setValidatedRepository(null);
+        setSelectedBranch(null);
+        setShowTestSetupWizard(false);
+        setTestInfrastructureDetection(null);
+        setTestSetupInstructions(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+        setData('plugin_file', null);
+    };
+
+    const handleDetectTestInfrastructure = async () => {
+        if (!currentConversationId) {
+            alert('Please upload a plugin file first');
+            return;
+        }
+
+        try {
+            const response = await fetch('/thinktest/detect-infrastructure', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({
+                    conversation_id: currentConversationId,
+                    framework: data.framework,
+                }),
+            });
+
+            const result = await handleApiResponse(response);
+            if (!result) return; // Handle redirect cases
+
+            if (result.success) {
+                setTestInfrastructureDetection(result.detection);
+                setTestSetupInstructions(result.instructions);
+                setShowTestSetupWizard(true);
+            } else {
+                alert('Detection failed: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Test infrastructure detection error:', error);
+            alert('Detection failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+        }
+    };
+
+    const handleDownloadTemplate = async (template: string, filename: string) => {
+        try {
+            const response = await fetch('/thinktest/download-template', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({
+                    template: template,
+                    framework: data.framework,
+                    plugin_name: uploadResult?.plugin_name || 'WordPress Plugin',
+                }),
+            });
+
+            // Check for authentication/session issues
+            if (response.redirected || response.status === 302) {
+                alert('Authentication required. Please refresh the page and log in again.');
+                window.location.reload();
+                return;
+            }
+
+            if (response.status === 419) {
+                alert('Session expired. Please refresh the page and try again.');
+                window.location.reload();
+                return;
+            }
+
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } else {
+                const result = await handleApiResponse(response);
+                alert('Download failed: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Template download error:', error);
+            alert('Download failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+        }
+    };
+
+    const handleError = (error: string) => {
+        console.error('Error:', error);
+        // You could also show a toast notification here
     };
 
     const breadcrumbs = [
@@ -146,16 +551,26 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
 
             <div className="py-12">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                    <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg">
+                    <div className="overflow-hidden bg-white shadow-lg sm:rounded-lg">
                         <div className="p-6 text-gray-900">
                             
-                            {/* Upload Section */}
+                            {/* Source Selection */}
                             <div className="mb-8">
-                                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                                    Upload WordPress Plugin
-                                </h3>
-                                
-                                <form onSubmit={handleFileUpload} className="space-y-4">
+                                <SourceToggle
+                                    selectedSource={sourceType}
+                                    onSourceChange={handleSourceChange}
+                                    disabled={isUploading || isProcessingRepository || isGenerating}
+                                />
+                            </div>
+
+                            {/* File Upload Section */}
+                            {sourceType === 'file' && (
+                                <div className="mb-8">
+                                    <h3 className="text-lg font-medium text-gray-900 mb-4">
+                                        Upload WordPress Plugin
+                                    </h3>
+
+                                    <form onSubmit={handleFileUpload} className="space-y-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700">
                                             Plugin File (.php or .zip)
@@ -177,10 +592,13 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                                             <select
                                                 value={data.provider}
                                                 onChange={(e) => setData('provider', e.target.value)}
-                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                                className="mt-1 p-1 block w-full rounded-md border-gray-300 shadow-sm border focus:border-indigo-500 focus:ring-indigo-500"
                                             >
-                                                <option value="openai">OpenAI (GPT-4)</option>
-                                                <option value="anthropic">Anthropic (Claude)</option>
+                                                <option value="openai-gpt5">OpenAI GPT-5</option>
+                                                <option value="anthropic-claude">Anthropic Claude 3.5 Sonnet</option>
+                                                {/* Legacy support - will be removed in future version */}
+                                                <option value="chatgpt-5">ChatGPT-5 (Legacy)</option>
+                                                <option value="anthropic">Anthropic (Claude) (Legacy)</option>
                                             </select>
                                         </div>
 
@@ -191,7 +609,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                                             <select
                                                 value={data.framework}
                                                 onChange={(e) => setData('framework', e.target.value)}
-                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                                className="mt-1 p-1 block w-full rounded-md border-gray-300 shadow-sm border focus:border-indigo-500 focus:ring-indigo-500"
                                             >
                                                 <option value="phpunit">PHPUnit</option>
                                                 <option value="pest">Pest</option>
@@ -208,6 +626,106 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                                     </button>
                                 </form>
                             </div>
+                            )}
+
+                            {/* GitHub Repository Section */}
+                            {sourceType === 'github' && (
+                                <div className="mb-8 space-y-6">
+                                    <h3 className="text-lg font-medium text-gray-900">
+                                        GitHub Repository
+                                    </h3>
+
+                                    <GitHubRepositoryInput
+                                        onRepositoryValidated={handleRepositoryValidated}
+                                        onError={handleError}
+                                        disabled={isProcessingRepository || isGenerating}
+                                    />
+
+                                    {validatedRepository && (
+                                        <GitHubBranchSelector
+                                            repository={validatedRepository}
+                                            onBranchSelected={handleBranchSelected}
+                                            onError={handleError}
+                                            disabled={isProcessingRepository || isGenerating}
+                                        />
+                                    )}
+
+                                    {validatedRepository && selectedBranch && (
+                                        <div className="space-y-4">
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700">
+                                                        AI Provider
+                                                    </label>
+                                                    <select
+                                                        value={data.provider}
+                                                        onChange={(e) => setData('provider', e.target.value)}
+                                                        disabled={isProcessingRepository || isGenerating}
+                                                        className="mt-1 p-1 block w-full rounded-md border-gray-300 shadow-sm border focus:border-indigo-500 focus:ring-indigo-500 disabled:opacity-50"
+                                                    >
+                                                        <option value="openai-gpt5">OpenAI GPT-5</option>
+                                                        <option value="anthropic-claude">Anthropic Claude 3.5 Sonnet</option>
+                                                        {/* Legacy support - will be removed in future version */}
+                                                        <option value="chatgpt-5">ChatGPT-5 (Legacy)</option>
+                                                        <option value="anthropic">Anthropic (Claude) (Legacy)</option>
+                                                    </select>
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700">
+                                                        Test Framework
+                                                    </label>
+                                                    <select
+                                                        value={data.framework}
+                                                        onChange={(e) => setData('framework', e.target.value)}
+                                                        disabled={isProcessingRepository || isGenerating}
+                                                        className="mt-1 p-1 block w-full rounded-md border-gray-300 shadow-sm border focus:border-indigo-500 focus:ring-indigo-500 disabled:opacity-50"
+                                                    >
+                                                        <option value="phpunit">PHPUnit</option>
+                                                        <option value="pest">Pest</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <button
+                                                onClick={handleProcessRepository}
+                                                disabled={isProcessingRepository || isGenerating}
+                                                className="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
+                                            >
+                                                {isProcessingRepository ? (
+                                                    <div className="flex items-center">
+                                                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                        </svg>
+                                                        Processing...
+                                                    </div>
+                                                ) : 'Process Repository & Analyze'}
+                                            </button>
+
+                                            {/* Processing Progress Indicator */}
+                                            {isProcessingRepository && processingProgress && (
+                                                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                                                    <div className="flex items-center">
+                                                        <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                        </svg>
+                                                        <div>
+                                                            <p className="text-sm font-medium text-blue-800">
+                                                                {processingProgress}
+                                                            </p>
+                                                            <p className="text-xs text-blue-600 mt-1">
+                                                                This may take a few moments depending on repository size...
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Analysis Results */}
                             {uploadResult && (
@@ -216,18 +734,27 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                                         Analysis Complete
                                     </h4>
                                     <p className="text-green-700 mb-4">
-                                        Plugin analyzed successfully. Found {uploadResult.analysis.functions?.length || 0} functions, 
-                                        {' '}{uploadResult.analysis.classes?.length || 0} classes, and 
+                                        Plugin analyzed successfully. Found {uploadResult.analysis.functions?.length || 0} functions,
+                                        {' '}{uploadResult.analysis.classes?.length || 0} classes, and
                                         {' '}{uploadResult.analysis.wordpress_patterns?.length || 0} WordPress patterns.
                                     </p>
-                                    
-                                    <button
-                                        onClick={handleGenerateTests}
-                                        disabled={isGenerating}
-                                        className="inline-flex justify-center rounded-md border border-transparent bg-green-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
-                                    >
-                                        {isGenerating ? 'Generating Tests...' : 'Generate Tests with AI'}
-                                    </button>
+
+                                    <div className="flex space-x-4">
+                                        <button
+                                            onClick={handleDetectTestInfrastructure}
+                                            className="inline-flex justify-center rounded-md border border-orange-300 bg-orange-50 py-2 px-4 text-sm font-medium text-orange-700 shadow-sm hover:bg-orange-100 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+                                        >
+                                            🔧 Setup Test Environment
+                                        </button>
+
+                                        <button
+                                            onClick={handleGenerateTests}
+                                            disabled={isGenerating}
+                                            className="inline-flex justify-center rounded-md border border-transparent bg-green-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
+                                        >
+                                            {isGenerating ? 'Generating Tests...' : 'Generate Tests with AI'}
+                                        </button>
+                                    </div>
                                 </div>
                             )}
 
@@ -311,6 +838,16 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                     </div>
                 </div>
             </div>
+
+            {/* Test Setup Wizard Modal */}
+            {showTestSetupWizard && testInfrastructureDetection && testSetupInstructions && (
+                <TestSetupWizard
+                    detection={testInfrastructureDetection}
+                    instructions={testSetupInstructions}
+                    onDownloadTemplate={handleDownloadTemplate}
+                    onClose={() => setShowTestSetupWizard(false)}
+                />
+            )}
         </AppLayout>
     );
 }

@@ -234,4 +234,110 @@ class FileProcessingService
 
         return false;
     }
+
+    /**
+     * Process GitHub repository content
+     */
+    public function processGitHubRepository(string $content, string $repositoryName, int $userId): array
+    {
+        // Generate unique filename for GitHub repository
+        $filename = $this->generateGitHubFilename($repositoryName);
+        $fileHash = hash('sha256', $content);
+
+        // Store content
+        $storedPath = $this->storeContent($content, $filename);
+
+        Log::info('GitHub repository content processed successfully', [
+            'user_id' => $userId,
+            'repository_name' => $repositoryName,
+            'stored_path' => $storedPath,
+            'file_hash' => $fileHash,
+            'content_size' => strlen($content),
+        ]);
+
+        return [
+            'filename' => $repositoryName,
+            'stored_path' => $storedPath,
+            'file_hash' => $fileHash,
+            'content' => $content,
+            'size' => strlen($content),
+            'extension' => 'php',
+        ];
+    }
+
+    /**
+     * Generate unique filename for GitHub repository
+     */
+    private function generateGitHubFilename(string $repositoryName): string
+    {
+        $timestamp = time();
+        $hash = substr(md5($repositoryName), 0, 8);
+        $safeName = preg_replace('/[^a-zA-Z0-9\-_]/', '_', $repositoryName);
+
+        return "github_{$safeName}_{$timestamp}_{$hash}.php";
+    }
+
+    /**
+     * Store content directly
+     */
+    private function storeContent(string $content, string $filename): string
+    {
+        Storage::put($this->config['upload_path'] . '/' . $filename, $content);
+        return $this->config['upload_path'] . '/' . $filename;
+    }
+
+    /**
+     * Get content type from file extension
+     */
+    public function getContentType(string $extension): string
+    {
+        $mimeTypes = [
+            'php' => 'text/x-php',
+            'js' => 'application/javascript',
+            'css' => 'text/css',
+            'json' => 'application/json',
+            'md' => 'text/markdown',
+            'txt' => 'text/plain',
+            'zip' => 'application/zip',
+        ];
+
+        return $mimeTypes[strtolower($extension)] ?? 'application/octet-stream';
+    }
+
+    /**
+     * Validate GitHub repository content
+     */
+    public function validateGitHubContent(string $content): bool
+    {
+        // Check if content is not empty
+        if (empty(trim($content))) {
+            return false;
+        }
+
+        // Check for basic PHP content (since we're processing WordPress plugins)
+        if (!str_contains($content, '<?php')) {
+            return false;
+        }
+
+        // Check content size
+        $maxSize = config('thinktest_ai.github.max_repository_size', 52428800); // 50MB
+        if (strlen($content) > $maxSize) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Clean up temporary GitHub files
+     */
+    public function cleanupGitHubFiles(array $filePaths): void
+    {
+        foreach ($filePaths as $filePath) {
+            if (file_exists($filePath)) {
+                unlink($filePath);
+                Log::info('Cleaned up temporary GitHub file', ['file_path' => $filePath]);
+            }
+        }
+    }
 }

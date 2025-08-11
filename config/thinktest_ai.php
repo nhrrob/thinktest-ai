@@ -32,25 +32,36 @@ return [
     */
     'ai' => [
         'providers' => [
-            'openai' => [
-                'api_key' => env('OPENAI_API_KEY'), // Environment-specific
+            'openai-gpt5' => [
+                'api_key' => env('OPENAI_API_KEY'), // Environment-specific - Uses OpenAI API key
                 'organization' => env('OPENAI_ORGANIZATION'), // Environment-specific
-                'model' => 'gpt-4', // Application constant
+                'model' => 'gpt-4-turbo', // Application constant - Using GPT-4 Turbo until GPT-5 is available
+                'display_name' => 'OpenAI GPT-5', // User-facing display name
+                'provider_company' => 'OpenAI', // Provider company name
                 'max_tokens' => 4000, // Application constant
                 'temperature' => 0.7, // Application constant
                 'timeout' => env('AI_TIMEOUT', 60), // May vary by environment
-                'wordpress_system_prompt' => 'You are an expert WordPress plugin developer specializing in intelligent PHPUnit test generation. You understand WordPress hooks, filters, actions, plugin patterns, and WordPress testing best practices.',
+                'wordpress_system_prompt' => 'You are an expert WordPress plugin developer specializing in intelligent PHPUnit test generation. You understand WordPress hooks, filters, actions, plugin patterns, and WordPress testing best practices. You have advanced reasoning capabilities and can generate more sophisticated and comprehensive test suites.',
             ],
-            'anthropic' => [
+            'anthropic-claude' => [
                 'api_key' => env('ANTHROPIC_API_KEY'), // Environment-specific
-                'model' => 'claude-3-sonnet-20240229', // Application constant
+                'model' => 'claude-3-5-sonnet-20241022', // Application constant - Latest Claude 3.5 Sonnet
+                'display_name' => 'Anthropic Claude 3.5 Sonnet', // User-facing display name
+                'provider_company' => 'Anthropic', // Provider company name
                 'max_tokens' => 4000, // Application constant
                 'timeout' => env('AI_TIMEOUT', 60), // May vary by environment
                 'wordpress_system_prompt' => 'You are an expert WordPress plugin developer specializing in intelligent PHPUnit test generation. You understand WordPress hooks, filters, actions, plugin patterns, and WordPress testing best practices.',
             ],
         ],
-        'default_provider' => 'openai', // Application constant
-        'fallback_provider' => 'anthropic', // Application constant
+        'default_provider' => 'openai-gpt5', // Application constant
+        'fallback_provider' => 'anthropic-claude', // Application constant
+
+        // Backward compatibility mapping for existing code
+        'legacy_provider_mapping' => [
+            'chatgpt-5' => 'openai-gpt5',
+            'anthropic' => 'anthropic-claude',
+            'openai' => 'openai-gpt5', // For database migration compatibility
+        ],
         'rate_limits' => [
             'requests_per_minute' => env('AI_RATE_LIMIT_RPM', 60), // Environment-specific
             'tokens_per_minute' => env('AI_RATE_LIMIT_TPM', 100000), // Environment-specific
@@ -288,9 +299,30 @@ return [
         'client_id' => env('GITHUB_CLIENT_ID'),
         'client_secret' => env('GITHUB_CLIENT_SECRET'),
         'webhook_secret' => env('GITHUB_WEBHOOK_SECRET'),
+        'api_token' => env('GITHUB_API_TOKEN'),
         'default_branch_prefix' => env('GITHUB_BRANCH_PREFIX', 'thinktest-ai'),
         'auto_push_enabled' => env('GITHUB_AUTO_PUSH_ENABLED', true),
         'commit_message_template' => env('GITHUB_COMMIT_MESSAGE', 'Add ThinkTest AI generated tests'),
+        'oauth_redirect_uri' => env('GITHUB_OAUTH_REDIRECT_URI'),
+
+        // Repository processing settings
+        'max_repository_size' => env('GITHUB_MAX_REPO_SIZE', 52428800), // 50MB in bytes
+        'clone_timeout' => env('GITHUB_CLONE_TIMEOUT', 300), // 5 minutes
+        'supported_file_extensions' => ['.php', '.js', '.css', '.json', '.md', '.txt'],
+        'ignored_directories' => ['node_modules', 'vendor', '.git', '.github', 'tests', 'test'],
+        'max_files_per_repo' => env('GITHUB_MAX_FILES_PER_REPO', 1000),
+
+        // Rate limiting
+        'rate_limit_requests_per_hour' => env('GITHUB_RATE_LIMIT_PER_HOUR', 5000),
+        'rate_limit_requests_per_minute' => env('GITHUB_RATE_LIMIT_PER_MINUTE', 100),
+
+        // Cache settings
+        'cache_repository_info_minutes' => env('GITHUB_CACHE_REPO_INFO_MINUTES', 60),
+        'cache_branches_minutes' => env('GITHUB_CACHE_BRANCHES_MINUTES', 30),
+
+        // Security
+        'allowed_domains' => ['github.com', 'api.github.com'],
+        'require_authentication_for_private' => true,
     ],
 
     /*
