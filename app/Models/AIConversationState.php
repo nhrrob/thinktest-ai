@@ -32,6 +32,8 @@ class AIConversationState extends Model
         'total_steps',
         'started_at',
         'completed_at',
+        'github_repository_id',
+        'source_type',
     ];
 
     protected $casts = [
@@ -50,6 +52,14 @@ class AIConversationState extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the GitHub repository associated with this conversation.
+     */
+    public function githubRepository(): BelongsTo
+    {
+        return $this->belongsTo(GitHubRepository::class);
     }
 
     /**

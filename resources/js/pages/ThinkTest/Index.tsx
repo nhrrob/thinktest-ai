@@ -1,6 +1,9 @@
 import { useState, useRef } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
+import SourceToggle, { SourceType } from '@/components/github/SourceToggle';
+import GitHubRepositoryInput from '@/components/github/GitHubRepositoryInput';
+import GitHubBranchSelector from '@/components/github/GitHubBranchSelector';
 
 interface ThinkTestProps {
     recentConversations: any[];
@@ -9,6 +12,7 @@ interface ThinkTestProps {
 }
 
 export default function Index({ recentConversations, recentAnalyses, availableProviders }: ThinkTestProps) {
+    const [sourceType, setSourceType] = useState<SourceType>('file');
     const [isUploading, setIsUploading] = useState<boolean>(false);
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
     const [uploadResult, setUploadResult] = useState<any>(null);
@@ -16,7 +20,16 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
     const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const { data, setData, post, processing, errors, reset } = useForm({
+    // GitHub-related state
+    const [validatedRepository, setValidatedRepository] = useState<any>(null);
+    const [selectedBranch, setSelectedBranch] = useState<any>(null);
+    const [isProcessingRepository, setIsProcessingRepository] = useState<boolean>(false);
+
+    const { data, setData, post, processing, errors, reset } = useForm<{
+        plugin_file: File | null;
+        provider: string;
+        framework: string;
+    }>({
         plugin_file: null,
         provider: 'openai',
         framework: 'phpunit',
@@ -136,6 +149,78 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
         }
     };
 
+    const handleRepositoryValidated = (repository: any) => {
+        setValidatedRepository(repository);
+        setSelectedBranch(null);
+        setUploadResult(null);
+        setGeneratedTests(null);
+        setCurrentConversationId(null);
+    };
+
+    const handleBranchSelected = (branch: any) => {
+        setSelectedBranch(branch);
+    };
+
+    const handleProcessRepository = async () => {
+        if (!validatedRepository || !selectedBranch) {
+            alert('Please select a repository and branch');
+            return;
+        }
+
+        setIsProcessingRepository(true);
+        setUploadResult(null);
+
+        try {
+            const response = await fetch('/thinktest/github/process', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({
+                    owner: validatedRepository.owner,
+                    repo: validatedRepository.repo,
+                    branch: selectedBranch.name,
+                    provider: data.provider,
+                    framework: data.framework,
+                }),
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                setUploadResult(result);
+                setCurrentConversationId(result.conversation_id);
+            } else {
+                alert('Repository processing failed: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Repository processing error:', error);
+            alert('Repository processing failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+        } finally {
+            setIsProcessingRepository(false);
+        }
+    };
+
+    const handleSourceChange = (source: SourceType) => {
+        setSourceType(source);
+        // Reset state when switching sources
+        setUploadResult(null);
+        setGeneratedTests(null);
+        setCurrentConversationId(null);
+        setValidatedRepository(null);
+        setSelectedBranch(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+        setData('plugin_file', null);
+    };
+
+    const handleError = (error: string) => {
+        console.error('Error:', error);
+        // You could also show a toast notification here
+    };
+
     const breadcrumbs = [
         { title: 'ThinkTest AI', href: '/thinktest' },
     ];
@@ -149,13 +234,23 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                     <div className="overflow-hidden bg-white shadow-lg sm:rounded-lg">
                         <div className="p-6 text-gray-900">
                             
-                            {/* Upload Section */}
+                            {/* Source Selection */}
                             <div className="mb-8">
-                                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                                    Upload WordPress Plugin
-                                </h3>
-                                
-                                <form onSubmit={handleFileUpload} className="space-y-4">
+                                <SourceToggle
+                                    selectedSource={sourceType}
+                                    onSourceChange={handleSourceChange}
+                                    disabled={isUploading || isProcessingRepository || isGenerating}
+                                />
+                            </div>
+
+                            {/* File Upload Section */}
+                            {sourceType === 'file' && (
+                                <div className="mb-8">
+                                    <h3 className="text-lg font-medium text-gray-900 mb-4">
+                                        Upload WordPress Plugin
+                                    </h3>
+
+                                    <form onSubmit={handleFileUpload} className="space-y-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700">
                                             Plugin File (.php or .zip)
@@ -209,6 +304,76 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                                     </button>
                                 </form>
                             </div>
+                            )}
+
+                            {/* GitHub Repository Section */}
+                            {sourceType === 'github' && (
+                                <div className="mb-8 space-y-6">
+                                    <h3 className="text-lg font-medium text-gray-900">
+                                        GitHub Repository
+                                    </h3>
+
+                                    <GitHubRepositoryInput
+                                        onRepositoryValidated={handleRepositoryValidated}
+                                        onError={handleError}
+                                        disabled={isProcessingRepository || isGenerating}
+                                    />
+
+                                    {validatedRepository && (
+                                        <GitHubBranchSelector
+                                            repository={validatedRepository}
+                                            onBranchSelected={handleBranchSelected}
+                                            onError={handleError}
+                                            disabled={isProcessingRepository || isGenerating}
+                                        />
+                                    )}
+
+                                    {validatedRepository && selectedBranch && (
+                                        <div className="space-y-4">
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700">
+                                                        AI Provider
+                                                    </label>
+                                                    <select
+                                                        value={data.provider}
+                                                        onChange={(e) => setData('provider', e.target.value)}
+                                                        disabled={isProcessingRepository || isGenerating}
+                                                        className="mt-1 p-1 block w-full rounded-md border-gray-300 shadow-sm border focus:border-indigo-500 focus:ring-indigo-500 disabled:opacity-50"
+                                                    >
+                                                        <option value="openai">OpenAI (GPT-4)</option>
+                                                        <option value="chatgpt-5">ChatGPT-5</option>
+                                                        <option value="anthropic">Anthropic (Claude)</option>
+                                                    </select>
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700">
+                                                        Test Framework
+                                                    </label>
+                                                    <select
+                                                        value={data.framework}
+                                                        onChange={(e) => setData('framework', e.target.value)}
+                                                        disabled={isProcessingRepository || isGenerating}
+                                                        className="mt-1 p-1 block w-full rounded-md border-gray-300 shadow-sm border focus:border-indigo-500 focus:ring-indigo-500 disabled:opacity-50"
+                                                    >
+                                                        <option value="phpunit">PHPUnit</option>
+                                                        <option value="pest">Pest</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <button
+                                                onClick={handleProcessRepository}
+                                                disabled={isProcessingRepository || isGenerating}
+                                                className="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
+                                            >
+                                                {isProcessingRepository ? 'Processing Repository...' : 'Process Repository & Analyze'}
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Analysis Results */}
                             {uploadResult && (

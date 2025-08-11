@@ -4,9 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\AIConversationState;
 use App\Models\PluginAnalysisResult;
+use App\Models\GitHubRepository;
 use App\Services\AI\AIProviderService;
 use App\Services\WordPress\PluginAnalysisService;
 use App\Services\FileProcessing\FileProcessingService;
+use App\Services\GitHub\GitHubService;
+use App\Services\GitHub\GitHubRepositoryService;
+use App\Services\GitHub\GitHubValidationService;
+use App\Services\GitHub\GitHubErrorHandler;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -18,15 +23,24 @@ class ThinkTestController extends Controller
     private AIProviderService $aiService;
     private PluginAnalysisService $analysisService;
     private FileProcessingService $fileService;
+    private GitHubService $githubService;
+    private GitHubRepositoryService $githubRepositoryService;
+    private GitHubValidationService $githubValidationService;
 
     public function __construct(
         AIProviderService $aiService,
         PluginAnalysisService $analysisService,
-        FileProcessingService $fileService
+        FileProcessingService $fileService,
+        GitHubService $githubService,
+        GitHubRepositoryService $githubRepositoryService,
+        GitHubValidationService $githubValidationService
     ) {
         $this->aiService = $aiService;
         $this->analysisService = $analysisService;
         $this->fileService = $fileService;
+        $this->githubService = $githubService;
+        $this->githubRepositoryService = $githubRepositoryService;
+        $this->githubValidationService = $githubValidationService;
 
         // Apply permission-based middleware for ThinkTest AI functionality
         $this->middleware('permission:generate tests|limited test generation')->only(['index', 'generateTests']);
@@ -289,6 +303,341 @@ class ThinkTestController extends Controller
             'provider' => $conversation->provider,
             'context' => $conversation->context,
         ]);
+    }
+
+    /**
+     * Validate GitHub repository URL
+     */
+    public function validateRepository(Request $request)
+    {
+        $request->validate([
+            'repository_url' => 'required|string|max:500',
+        ]);
+
+        try {
+            $user = Auth::user();
+
+            // Use validation service with comprehensive security checks
+            $repoData = $this->githubValidationService->validateRepositoryUrl(
+                $request->repository_url,
+                $user->id
+            );
+
+            // Check if repository is accessible
+            if (!$this->githubService->isRepositoryAccessible($repoData['owner'], $repoData['repo'])) {
+                $this->githubValidationService->logSecurityEvent('Repository access denied', [
+                    'user_id' => $user->id,
+                    'repository_url' => $request->repository_url,
+                    'owner' => $repoData['owner'],
+                    'repo' => $repoData['repo'],
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Repository not found or not accessible. Please check the URL and ensure the repository is public or you have access.',
+                ], 404);
+            }
+
+            // Get repository information
+            $repoInfo = $this->githubService->getRepositoryInfo($repoData['owner'], $repoData['repo']);
+
+            // Validate repository size
+            $this->githubValidationService->validateRepositorySize($repoInfo['size']);
+
+            Log::info('Repository validated successfully', [
+                'user_id' => $user->id,
+                'repository' => $repoData['full_name'],
+                'size' => $repoInfo['size'],
+                'private' => $repoInfo['private'],
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'repository' => array_merge($repoData, $repoInfo),
+            ]);
+
+        } catch (\InvalidArgumentException $e) {
+            $this->githubValidationService->logSecurityEvent('Invalid repository URL', [
+                'user_id' => Auth::id(),
+                'repository_url' => $request->repository_url,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        } catch (\RuntimeException $e) {
+            // Rate limiting or size validation errors
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 429);
+        } catch (\Exception $e) {
+            $errorInfo = GitHubErrorHandler::handleException($e, [
+                'user_id' => Auth::id(),
+                'repository_url' => $request->repository_url,
+                'action' => 'validate_repository',
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $errorInfo['user_message'],
+                'error_code' => $errorInfo['error_code'],
+                'retry_possible' => $errorInfo['retry_possible'] ?? false,
+                'retry_after' => $errorInfo['retry_after'] ?? null,
+            ], $errorInfo['http_status'] ?? 500);
+        }
+    }
+
+    /**
+     * Get repository branches
+     */
+    public function getRepositoryBranches(Request $request)
+    {
+        $request->validate([
+            'owner' => 'required|string|max:100|regex:/^[a-zA-Z0-9\-_\.]+$/',
+            'repo' => 'required|string|max:100|regex:/^[a-zA-Z0-9\-_\.]+$/',
+        ]);
+
+        try {
+            $user = Auth::user();
+
+            // Rate limiting check
+            $this->githubValidationService->validateRateLimit($user->id);
+
+            // Validate repository components
+            $repoData = [
+                'owner' => $request->owner,
+                'repo' => $request->repo,
+                'full_name' => "{$request->owner}/{$request->repo}",
+                'url' => "https://github.com/{$request->owner}/{$request->repo}",
+            ];
+            $this->githubValidationService->validateRepositoryComponents($repoData);
+
+            $branches = $this->githubService->getRepositoryBranches($request->owner, $request->repo);
+
+            // Validate branch names
+            foreach ($branches as $branch) {
+                $this->githubValidationService->validateBranchName($branch['name']);
+            }
+
+            Log::info('Repository branches fetched successfully', [
+                'user_id' => $user->id,
+                'repository' => "{$request->owner}/{$request->repo}",
+                'branch_count' => count($branches),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'branches' => $branches,
+            ]);
+
+        } catch (\RuntimeException $e) {
+            // Rate limiting errors
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 429);
+        } catch (\InvalidArgumentException $e) {
+            $this->githubValidationService->logSecurityEvent('Invalid repository components', [
+                'user_id' => Auth::id(),
+                'owner' => $request->owner,
+                'repo' => $request->repo,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Failed to fetch repository branches', [
+                'user_id' => Auth::id(),
+                'owner' => $request->owner,
+                'repo' => $request->repo,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch branches: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Process GitHub repository
+     */
+    public function processRepository(Request $request)
+    {
+        $request->validate([
+            'owner' => 'required|string|max:100|regex:/^[a-zA-Z0-9\-_\.]+$/',
+            'repo' => 'required|string|max:100|regex:/^[a-zA-Z0-9\-_\.]+$/',
+            'branch' => 'required|string|max:250|regex:/^[a-zA-Z0-9\-_\.\/]+$/',
+            'provider' => 'sometimes|string|in:openai,anthropic',
+            'framework' => 'sometimes|string|in:phpunit,pest',
+        ]);
+
+        try {
+            $user = Auth::user();
+
+            // Comprehensive validation
+            $this->githubValidationService->validateRateLimit($user->id);
+
+            // Validate repository components
+            $repoData = [
+                'owner' => $request->owner,
+                'repo' => $request->repo,
+                'full_name' => "{$request->owner}/{$request->repo}",
+                'url' => "https://github.com/{$request->owner}/{$request->repo}",
+            ];
+            $this->githubValidationService->validateRepositoryComponents($repoData);
+
+            // Validate branch name
+            $this->githubValidationService->validateBranchName($request->branch);
+
+            // Check if repository record already exists
+            $githubRepo = GitHubRepository::where('user_id', $user->id)
+                ->where('full_name', "{$request->owner}/{$request->repo}")
+                ->where('branch', $request->branch)
+                ->first();
+
+            if (!$githubRepo) {
+                // Create new repository record
+                $repoInfo = $this->githubService->getRepositoryInfo($request->owner, $request->repo);
+
+                $githubRepo = GitHubRepository::create([
+                    'user_id' => $user->id,
+                    'owner' => $request->owner,
+                    'repo' => $request->repo,
+                    'full_name' => "{$request->owner}/{$request->repo}",
+                    'branch' => $request->branch,
+                    'github_id' => $repoInfo['id'],
+                    'description' => $repoInfo['description'],
+                    'is_private' => $repoInfo['private'],
+                    'default_branch' => $repoInfo['default_branch'],
+                    'size_bytes' => $repoInfo['size'],
+                    'language' => $repoInfo['language'],
+                    'clone_url' => $repoInfo['clone_url'],
+                    'html_url' => $repoInfo['html_url'],
+                    'last_updated_at' => $repoInfo['updated_at'],
+                    'processing_status' => 'processing',
+                ]);
+            } else {
+                $githubRepo->markAsProcessing();
+            }
+
+            // Process repository
+            $processedData = $this->githubRepositoryService->processRepository(
+                $request->owner,
+                $request->repo,
+                $request->branch,
+                $user->id
+            );
+
+            // Validate processed data
+            $this->githubValidationService->validateFileCount($processedData['file_count']);
+            $processedData['content'] = $this->githubValidationService->sanitizeFileContent($processedData['content']);
+
+            // Update repository record
+            $githubRepo->markAsCompleted(
+                $processedData['plugin_structure'],
+                $processedData['file_count']
+            );
+
+            // Analyze plugin code
+            $analysis = $this->analysisService->analyzePlugin(
+                $processedData['content'],
+                $processedData['filename']
+            );
+
+            // Store analysis result
+            $analysisResult = PluginAnalysisResult::create([
+                'user_id' => $user->id,
+                'filename' => $processedData['filename'],
+                'file_hash' => $processedData['file_hash'],
+                'analysis_data' => $analysis,
+                'complexity_score' => $this->calculateComplexityScore($analysis),
+                'analyzed_at' => now(),
+            ]);
+
+            // Create AI conversation
+            $conversation = AIConversationState::create([
+                'user_id' => $user->id,
+                'conversation_id' => Str::uuid(),
+                'provider' => $request->input('provider', 'openai'),
+                'status' => 'active',
+                'context' => [
+                    'filename' => $processedData['filename'],
+                    'framework' => $request->input('framework', 'phpunit'),
+                    'analysis_id' => $analysisResult->id,
+                    'repository_info' => $processedData['repository_info'],
+                    'branch' => $processedData['branch'],
+                ],
+                'plugin_file_path' => $processedData['stored_path'],
+                'plugin_file_hash' => $processedData['file_hash'],
+                'github_repository_id' => $githubRepo->id,
+                'source_type' => 'github',
+                'step' => 1,
+                'total_steps' => 3,
+                'started_at' => now(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Repository processed successfully',
+                'conversation_id' => $conversation->conversation_id,
+                'analysis' => $analysis,
+                'analysis_id' => $analysisResult->id,
+                'repository' => [
+                    'id' => $githubRepo->id,
+                    'full_name' => $githubRepo->full_name,
+                    'branch' => $githubRepo->branch,
+                    'file_count' => $processedData['file_count'],
+                    'plugin_structure' => $processedData['plugin_structure'],
+                ],
+            ]);
+
+        } catch (\InvalidArgumentException $e) {
+            // Validation errors
+            $this->githubValidationService->logSecurityEvent('Repository processing validation failed', [
+                'user_id' => Auth::id(),
+                'owner' => $request->owner,
+                'repo' => $request->repo,
+                'branch' => $request->branch,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        } catch (\RuntimeException $e) {
+            // Rate limiting or size validation errors
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 429);
+        } catch (\Exception $e) {
+            // Mark repository as failed if it exists
+            if (isset($githubRepo)) {
+                $githubRepo->markAsFailed($e->getMessage());
+            }
+
+            Log::error('Repository processing failed', [
+                'user_id' => Auth::id(),
+                'owner' => $request->owner,
+                'repo' => $request->repo,
+                'branch' => $request->branch,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Repository processing failed: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**

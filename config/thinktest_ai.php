@@ -297,9 +297,30 @@ return [
         'client_id' => env('GITHUB_CLIENT_ID'),
         'client_secret' => env('GITHUB_CLIENT_SECRET'),
         'webhook_secret' => env('GITHUB_WEBHOOK_SECRET'),
+        'api_token' => env('GITHUB_API_TOKEN'),
         'default_branch_prefix' => env('GITHUB_BRANCH_PREFIX', 'thinktest-ai'),
         'auto_push_enabled' => env('GITHUB_AUTO_PUSH_ENABLED', true),
         'commit_message_template' => env('GITHUB_COMMIT_MESSAGE', 'Add ThinkTest AI generated tests'),
+        'oauth_redirect_uri' => env('GITHUB_OAUTH_REDIRECT_URI'),
+
+        // Repository processing settings
+        'max_repository_size' => env('GITHUB_MAX_REPO_SIZE', 52428800), // 50MB in bytes
+        'clone_timeout' => env('GITHUB_CLONE_TIMEOUT', 300), // 5 minutes
+        'supported_file_extensions' => ['.php', '.js', '.css', '.json', '.md', '.txt'],
+        'ignored_directories' => ['node_modules', 'vendor', '.git', '.github', 'tests', 'test'],
+        'max_files_per_repo' => env('GITHUB_MAX_FILES_PER_REPO', 1000),
+
+        // Rate limiting
+        'rate_limit_requests_per_hour' => env('GITHUB_RATE_LIMIT_PER_HOUR', 5000),
+        'rate_limit_requests_per_minute' => env('GITHUB_RATE_LIMIT_PER_MINUTE', 100),
+
+        // Cache settings
+        'cache_repository_info_minutes' => env('GITHUB_CACHE_REPO_INFO_MINUTES', 60),
+        'cache_branches_minutes' => env('GITHUB_CACHE_BRANCHES_MINUTES', 30),
+
+        // Security
+        'allowed_domains' => ['github.com', 'api.github.com'],
+        'require_authentication_for_private' => true,
     ],
 
     /*

@@ -47,6 +47,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('thinktest/generate', [ThinkTestController::class, 'generateTests'])->name('thinktest.generate');
     Route::get('thinktest/download', [ThinkTestController::class, 'downloadTests'])->name('thinktest.download');
 
+    // GitHub repository routes with rate limiting
+    Route::middleware(['github.rate_limit'])->group(function () {
+        Route::post('thinktest/github/validate', [ThinkTestController::class, 'validateRepository'])->name('thinktest.github.validate');
+        Route::post('thinktest/github/branches', [ThinkTestController::class, 'getRepositoryBranches'])->name('thinktest.github.branches');
+        Route::post('thinktest/github/process', [ThinkTestController::class, 'processRepository'])->name('thinktest.github.process');
+    });
+
     // Admin routes - Organized under admin prefix with proper namespace
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::middleware(['permission:view roles|create roles|edit roles|delete roles'])->group(function () {
