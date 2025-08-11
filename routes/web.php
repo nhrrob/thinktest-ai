@@ -47,6 +47,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('thinktest/generate', [ThinkTestController::class, 'generateTests'])->name('thinktest.generate');
     Route::get('thinktest/download', [ThinkTestController::class, 'downloadTests'])->name('thinktest.download');
 
+    // Test infrastructure setup routes
+    Route::post('thinktest/detect-infrastructure', [ThinkTestController::class, 'detectTestInfrastructure'])->name('thinktest.detect_infrastructure');
+    Route::post('thinktest/download-template', [ThinkTestController::class, 'downloadTemplate'])->name('thinktest.download_template');
+
     // GitHub repository routes with rate limiting
     Route::middleware(['github.rate_limit'])->group(function () {
         Route::post('thinktest/github/validate', [ThinkTestController::class, 'validateRepository'])->name('thinktest.github.validate');

@@ -66,85 +66,44 @@ class AIProviderService
      */
     private function callProvider(string $provider, string $pluginCode, array $options): array
     {
+        // Handle legacy provider names for backward compatibility
+        $provider = $this->mapLegacyProvider($provider);
+
         switch ($provider) {
-            case 'openai':
-                return $this->callOpenAI($pluginCode, $options);
+            case 'openai-gpt5':
+                return $this->callOpenAIGPT5($pluginCode, $options);
+            case 'anthropic-claude':
+                return $this->callAnthropicClaude($pluginCode, $options);
+            // Legacy support - will be removed in future version
             case 'chatgpt-5':
-                return $this->callChatGPT5($pluginCode, $options);
+                return $this->callOpenAIGPT5($pluginCode, $options);
             case 'anthropic':
-                return $this->callAnthropic($pluginCode, $options);
+                return $this->callAnthropicClaude($pluginCode, $options);
             default:
                 throw new \InvalidArgumentException("Unsupported AI provider: {$provider}");
         }
     }
 
     /**
-     * Call OpenAI API
+     * Map legacy provider names to new standardized names
      */
-    private function callOpenAI(string $pluginCode, array $options): array
+    private function mapLegacyProvider(string $provider): string
     {
-        $config = $this->config['providers']['openai'];
-        
-        if (empty($config['api_key'])) {
-            throw new \RuntimeException('OpenAI API key not configured');
-        }
-
-        $prompt = $this->buildWordPressTestPrompt($pluginCode, $options);
-
-        $payload = [
-            'model' => $config['model'],
-            'messages' => [
-                [
-                    'role' => 'system',
-                    'content' => $config['wordpress_system_prompt']
-                ],
-                [
-                    'role' => 'user',
-                    'content' => $prompt
-                ]
-            ],
-            'max_tokens' => $config['max_tokens'],
-            'temperature' => $config['temperature'],
-        ];
-
-        try {
-            $response = $this->httpClient->post('https://api.openai.com/v1/chat/completions', [
-                'headers' => [
-                    'Authorization' => 'Bearer ' . $config['api_key'],
-                    'Content-Type' => 'application/json',
-                ],
-                'json' => $payload,
-                'timeout' => $config['timeout'],
-            ]);
-
-            $data = json_decode($response->getBody()->getContents(), true);
-            
-            if (!isset($data['choices'][0]['message']['content'])) {
-                throw new \RuntimeException('Invalid OpenAI response format');
-            }
-
-            return [
-                'provider' => 'openai',
-                'generated_tests' => $data['choices'][0]['message']['content'],
-                'usage' => $data['usage'] ?? null,
-                'model' => $config['model'],
-                'success' => true,
-            ];
-
-        } catch (RequestException $e) {
-            throw new \RuntimeException('OpenAI API request failed: ' . $e->getMessage());
-        }
+        $mapping = $this->config['legacy_provider_mapping'] ?? [];
+        return $mapping[$provider] ?? $provider;
     }
 
+
+
     /**
-     * Call ChatGPT-5 API (uses OpenAI API with gpt-5 model)
+     * Call OpenAI GPT-5 API (uses OpenAI API with GPT-4 Turbo until GPT-5 is available)
      */
-    private function callChatGPT5(string $pluginCode, array $options): array
+    private function callOpenAIGPT5(string $pluginCode, array $options): array
     {
-        $config = $this->config['providers']['chatgpt-5'];
+        $config = $this->config['providers']['openai-gpt5'] ?? $this->config['providers']['chatgpt-5'];
 
         if (empty($config['api_key'])) {
-            throw new \RuntimeException('ChatGPT-5 API key not configured');
+            throw new \RuntimeException('OpenAI API key not configured');
         }
 
         $prompt = $this->buildWordPressTestPrompt($pluginCode, $options);
@@ -182,7 +141,8 @@ class AIProviderService
             }
 
             return [
-                'provider' => 'chatgpt-5',
+                'provider' => 'openai-gpt5',
+                'provider_display_name' => $config['display_name'] ?? 'OpenAI GPT-5',
                 'generated_tests' => $data['choices'][0]['message']['content'],
                 'usage' => $data['usage'] ?? null,
                 'model' => $config['model'],
@@ -195,11 +155,11 @@ class AIProviderService
     }
 
     /**
-     * Call Anthropic API
+     * Call Anthropic Claude API
      */
-    private function callAnthropic(string $pluginCode, array $options): array
+    private function callAnthropicClaude(string $pluginCode, array $options): array
     {
-        $config = $this->config['providers']['anthropic'];
+        $config = $this->config['providers']['anthropic-claude'] ?? $this->config['providers']['anthropic'];
         
         if (empty($config['api_key'])) {
             throw new \RuntimeException('Anthropic API key not configured');
@@ -237,7 +197,8 @@ class AIProviderService
             }
 
             return [
-                'provider' => 'anthropic',
+                'provider' => 'anthropic-claude',
+                'provider_display_name' => $config['display_name'] ?? 'Anthropic Claude 3.5 Sonnet',
                 'generated_tests' => $data['content'][0]['text'],
                 'usage' => $data['usage'] ?? null,
                 'model' => $config['model'],
@@ -317,10 +278,12 @@ class AIProviderService
     public function getAvailableProviders(): array
     {
         $providers = [];
-        
+
         foreach ($this->config['providers'] as $name => $config) {
             $providers[$name] = [
                 'name' => $name,
+                'display_name' => $config['display_name'] ?? $name,
+                'provider_company' => $config['provider_company'] ?? 'Unknown',
                 'available' => !empty($config['api_key']),
                 'model' => $config['model'] ?? 'unknown',
             ];

@@ -6,7 +6,7 @@ ThinkTest AI is an intelligent WordPress plugin testing platform that automatica
 
 ### Core Functionality
 - **AI-Powered Test Generation**: Automatically generate comprehensive test suites for WordPress plugins using advanced AI models
-- **Multiple AI Providers**: Support for OpenAI GPT-4, ChatGPT-5, and Anthropic Claude
+- **Advanced AI Providers**: Support for OpenAI GPT-5 and Anthropic Claude 3.5 Sonnet for superior test generation
 - **Framework Flexibility**: Generate tests for both PHPUnit and Pest testing frameworks
 - **Plugin Analysis**: Deep analysis of WordPress plugin structure and functionality
 - **User Management**: Secure user authentication and role-based access control
@@ -73,7 +73,9 @@ ThinkTest AI is an intelligent WordPress plugin testing platform that automatica
    DB_PASSWORD=your_password
 
    # AI Provider Configuration
+   # OpenAI GPT-5 (uses GPT-4 Turbo until GPT-5 is available)
    OPENAI_API_KEY=your_openai_api_key
+   # Anthropic Claude 3.5 Sonnet
    ANTHROPIC_API_KEY=your_anthropic_api_key
 
    # GitHub Integration

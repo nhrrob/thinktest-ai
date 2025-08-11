@@ -176,7 +176,7 @@ export default function Welcome() {
                                     <div className="flex items-center gap-3">
                                         <Cpu className="size-8 text-primary" />
                                         <div>
-                                            <CardTitle>OpenAI GPT-4</CardTitle>
+                                            <CardTitle>OpenAI GPT-5</CardTitle>
                                             <Badge variant="secondary">Default Provider</Badge>
                                         </div>
                                     </div>
@@ -206,7 +206,7 @@ export default function Welcome() {
                                     <div className="flex items-center gap-3">
                                         <Cpu className="size-8 text-primary" />
                                         <div>
-                                            <CardTitle>Anthropic Claude</CardTitle>
+                                            <CardTitle>Anthropic Claude 3.5 Sonnet</CardTitle>
                                             <Badge variant="outline">Fallback Provider</Badge>
                                         </div>
                                     </div>
@@ -218,7 +218,7 @@ export default function Welcome() {
                                     <ul className="space-y-2">
                                         <li className="flex items-center gap-2">
                                             <CheckCircle className="size-4 text-green-500" />
-                                            <span className="text-sm">Claude-3 Sonnet model</span>
+                                            <span className="text-sm">Claude 3.5 Sonnet model</span>
                                         </li>
                                         <li className="flex items-center gap-2">
                                             <CheckCircle className="size-4 text-green-500" />

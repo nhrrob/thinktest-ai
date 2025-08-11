@@ -157,7 +157,7 @@ The main configuration is in `config/thinktest_ai.php`:
    - Default branch is pre-selected
 
 5. **Process Repository**
-   - Choose AI provider (OpenAI, Anthropic)
+   - Choose AI provider (ChatGPT-5, Anthropic Claude)
    - Select testing framework (PHPUnit, Pest)
    - Click "Process Repository & Analyze"
 

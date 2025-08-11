@@ -4,6 +4,7 @@ import AppLayout from '@/layouts/app-layout';
 import SourceToggle, { SourceType } from '@/components/github/SourceToggle';
 import GitHubRepositoryInput from '@/components/github/GitHubRepositoryInput';
 import GitHubBranchSelector from '@/components/github/GitHubBranchSelector';
+import TestSetupWizard from '@/components/TestSetupWizard';
 
 interface ThinkTestProps {
     recentConversations: any[];
@@ -25,13 +26,18 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
     const [selectedBranch, setSelectedBranch] = useState<any>(null);
     const [isProcessingRepository, setIsProcessingRepository] = useState<boolean>(false);
 
+    // Test setup wizard state
+    const [showTestSetupWizard, setShowTestSetupWizard] = useState<boolean>(false);
+    const [testInfrastructureDetection, setTestInfrastructureDetection] = useState<any>(null);
+    const [testSetupInstructions, setTestSetupInstructions] = useState<any>(null);
+
     const { data, setData, post, processing, errors, reset } = useForm<{
         plugin_file: File | null;
         provider: string;
         framework: string;
     }>({
         plugin_file: null,
-        provider: 'openai',
+        provider: 'openai-gpt5',
         framework: 'phpunit',
     });
 
@@ -210,10 +216,83 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
         setCurrentConversationId(null);
         setValidatedRepository(null);
         setSelectedBranch(null);
+        setShowTestSetupWizard(false);
+        setTestInfrastructureDetection(null);
+        setTestSetupInstructions(null);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
         setData('plugin_file', null);
+    };
+
+    const handleDetectTestInfrastructure = async () => {
+        if (!currentConversationId) {
+            alert('Please upload a plugin file first');
+            return;
+        }
+
+        try {
+            const response = await fetch('/thinktest/detect-infrastructure', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({
+                    conversation_id: currentConversationId,
+                    framework: data.framework,
+                }),
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                setTestInfrastructureDetection(result.detection);
+                setTestSetupInstructions(result.instructions);
+                setShowTestSetupWizard(true);
+            } else {
+                alert('Detection failed: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Test infrastructure detection error:', error);
+            alert('Detection failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+        }
+    };
+
+    const handleDownloadTemplate = async (template: string, filename: string) => {
+        try {
+            const response = await fetch('/thinktest/download-template', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({
+                    template: template,
+                    framework: data.framework,
+                    plugin_name: uploadResult?.plugin_name || 'WordPress Plugin',
+                }),
+            });
+
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } else {
+                const result = await response.json();
+                alert('Download failed: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Template download error:', error);
+            alert('Download failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+        }
     };
 
     const handleError = (error: string) => {
@@ -274,9 +353,11 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                                                 onChange={(e) => setData('provider', e.target.value)}
                                                 className="mt-1 p-1 block w-full rounded-md border-gray-300 shadow-sm border focus:border-indigo-500 focus:ring-indigo-500"
                                             >
-                                                <option value="openai">OpenAI (GPT-4)</option>
-                                                <option value="chatgpt-5">ChatGPT-5</option>
-                                                <option value="anthropic">Anthropic (Claude)</option>
+                                                <option value="openai-gpt5">OpenAI GPT-5</option>
+                                                <option value="anthropic-claude">Anthropic Claude 3.5 Sonnet</option>
+                                                {/* Legacy support - will be removed in future version */}
+                                                <option value="chatgpt-5">ChatGPT-5 (Legacy)</option>
+                                                <option value="anthropic">Anthropic (Claude) (Legacy)</option>
                                             </select>
                                         </div>
 
@@ -341,9 +422,11 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                                                         disabled={isProcessingRepository || isGenerating}
                                                         className="mt-1 p-1 block w-full rounded-md border-gray-300 shadow-sm border focus:border-indigo-500 focus:ring-indigo-500 disabled:opacity-50"
                                                     >
-                                                        <option value="openai">OpenAI (GPT-4)</option>
-                                                        <option value="chatgpt-5">ChatGPT-5</option>
-                                                        <option value="anthropic">Anthropic (Claude)</option>
+                                                        <option value="openai-gpt5">OpenAI GPT-5</option>
+                                                        <option value="anthropic-claude">Anthropic Claude 3.5 Sonnet</option>
+                                                        {/* Legacy support - will be removed in future version */}
+                                                        <option value="chatgpt-5">ChatGPT-5 (Legacy)</option>
+                                                        <option value="anthropic">Anthropic (Claude) (Legacy)</option>
                                                     </select>
                                                 </div>
 
@@ -382,18 +465,27 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                                         Analysis Complete
                                     </h4>
                                     <p className="text-green-700 mb-4">
-                                        Plugin analyzed successfully. Found {uploadResult.analysis.functions?.length || 0} functions, 
-                                        {' '}{uploadResult.analysis.classes?.length || 0} classes, and 
+                                        Plugin analyzed successfully. Found {uploadResult.analysis.functions?.length || 0} functions,
+                                        {' '}{uploadResult.analysis.classes?.length || 0} classes, and
                                         {' '}{uploadResult.analysis.wordpress_patterns?.length || 0} WordPress patterns.
                                     </p>
-                                    
-                                    <button
-                                        onClick={handleGenerateTests}
-                                        disabled={isGenerating}
-                                        className="inline-flex justify-center rounded-md border border-transparent bg-green-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
-                                    >
-                                        {isGenerating ? 'Generating Tests...' : 'Generate Tests with AI'}
-                                    </button>
+
+                                    <div className="flex space-x-4">
+                                        <button
+                                            onClick={handleDetectTestInfrastructure}
+                                            className="inline-flex justify-center rounded-md border border-orange-300 bg-orange-50 py-2 px-4 text-sm font-medium text-orange-700 shadow-sm hover:bg-orange-100 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+                                        >
+                                            🔧 Setup Test Environment
+                                        </button>
+
+                                        <button
+                                            onClick={handleGenerateTests}
+                                            disabled={isGenerating}
+                                            className="inline-flex justify-center rounded-md border border-transparent bg-green-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
+                                        >
+                                            {isGenerating ? 'Generating Tests...' : 'Generate Tests with AI'}
+                                        </button>
+                                    </div>
                                 </div>
                             )}
 
@@ -477,6 +569,16 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                     </div>
                 </div>
             </div>
+
+            {/* Test Setup Wizard Modal */}
+            {showTestSetupWizard && testInfrastructureDetection && testSetupInstructions && (
+                <TestSetupWizard
+                    detection={testInfrastructureDetection}
+                    instructions={testSetupInstructions}
+                    onDownloadTemplate={handleDownloadTemplate}
+                    onClose={() => setShowTestSetupWizard(false)}
+                />
+            )}
         </AppLayout>
     );
 }

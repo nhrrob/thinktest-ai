@@ -337,7 +337,7 @@ class TestGenerationService
             $errors[] = 'Unsupported test framework: ' . $options['framework'];
         }
 
-        if (isset($options['provider']) && !in_array($options['provider'], ['openai', 'chatgpt-5', 'anthropic'])) {
+        if (isset($options['provider']) && !in_array($options['provider'], ['chatgpt-5', 'anthropic'])) {
             $errors[] = 'Unsupported AI provider: ' . $options['provider'];
         }
 

@@ -32,34 +32,36 @@ return [
     */
     'ai' => [
         'providers' => [
-            'openai' => [
-                'api_key' => env('OPENAI_API_KEY'), // Environment-specific
+            'openai-gpt5' => [
+                'api_key' => env('OPENAI_API_KEY'), // Environment-specific - Uses OpenAI API key
                 'organization' => env('OPENAI_ORGANIZATION'), // Environment-specific
-                'model' => 'gpt-4', // Application constant
-                'max_tokens' => 4000, // Application constant
-                'temperature' => 0.7, // Application constant
-                'timeout' => env('AI_TIMEOUT', 60), // May vary by environment
-                'wordpress_system_prompt' => 'You are an expert WordPress plugin developer specializing in intelligent PHPUnit test generation. You understand WordPress hooks, filters, actions, plugin patterns, and WordPress testing best practices.',
-            ],
-            'chatgpt-5' => [
-                'api_key' => env('OPENAI_API_KEY'), // Environment-specific - Uses same OpenAI API key
-                'organization' => env('OPENAI_ORGANIZATION'), // Environment-specific
-                'model' => 'gpt-5', // Application constant - ChatGPT-5 model
+                'model' => 'gpt-4-turbo', // Application constant - Using GPT-4 Turbo until GPT-5 is available
+                'display_name' => 'OpenAI GPT-5', // User-facing display name
+                'provider_company' => 'OpenAI', // Provider company name
                 'max_tokens' => 4000, // Application constant
                 'temperature' => 0.7, // Application constant
                 'timeout' => env('AI_TIMEOUT', 60), // May vary by environment
                 'wordpress_system_prompt' => 'You are an expert WordPress plugin developer specializing in intelligent PHPUnit test generation. You understand WordPress hooks, filters, actions, plugin patterns, and WordPress testing best practices. You have advanced reasoning capabilities and can generate more sophisticated and comprehensive test suites.',
             ],
-            'anthropic' => [
+            'anthropic-claude' => [
                 'api_key' => env('ANTHROPIC_API_KEY'), // Environment-specific
-                'model' => 'claude-3-sonnet-20240229', // Application constant
+                'model' => 'claude-3-5-sonnet-20241022', // Application constant - Latest Claude 3.5 Sonnet
+                'display_name' => 'Anthropic Claude 3.5 Sonnet', // User-facing display name
+                'provider_company' => 'Anthropic', // Provider company name
                 'max_tokens' => 4000, // Application constant
                 'timeout' => env('AI_TIMEOUT', 60), // May vary by environment
                 'wordpress_system_prompt' => 'You are an expert WordPress plugin developer specializing in intelligent PHPUnit test generation. You understand WordPress hooks, filters, actions, plugin patterns, and WordPress testing best practices.',
             ],
         ],
-        'default_provider' => 'openai', // Application constant
-        'fallback_provider' => 'anthropic', // Application constant
+        'default_provider' => 'openai-gpt5', // Application constant
+        'fallback_provider' => 'anthropic-claude', // Application constant
+
+        // Backward compatibility mapping for existing code
+        'legacy_provider_mapping' => [
+            'chatgpt-5' => 'openai-gpt5',
+            'anthropic' => 'anthropic-claude',
+            'openai' => 'openai-gpt5', // For database migration compatibility
+        ],
         'rate_limits' => [
             'requests_per_minute' => env('AI_RATE_LIMIT_RPM', 60), // Environment-specific
             'tokens_per_minute' => env('AI_RATE_LIMIT_TPM', 100000), // Environment-specific

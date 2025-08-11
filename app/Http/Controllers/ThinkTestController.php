@@ -7,6 +7,9 @@ use App\Models\PluginAnalysisResult;
 use App\Models\GitHubRepository;
 use App\Services\AI\AIProviderService;
 use App\Services\WordPress\PluginAnalysisService;
+use App\Services\WordPress\TestInfrastructureDetectionService;
+use App\Services\WordPress\TestSetupInstructionsService;
+use App\Services\WordPress\TestConfigurationTemplateService;
 use App\Services\FileProcessing\FileProcessingService;
 use App\Services\GitHub\GitHubService;
 use App\Services\GitHub\GitHubRepositoryService;
@@ -22,6 +25,9 @@ class ThinkTestController extends Controller
 {
     private AIProviderService $aiService;
     private PluginAnalysisService $analysisService;
+    private TestInfrastructureDetectionService $testDetectionService;
+    private TestSetupInstructionsService $testInstructionsService;
+    private TestConfigurationTemplateService $testTemplateService;
     private FileProcessingService $fileService;
     private GitHubService $githubService;
     private GitHubRepositoryService $githubRepositoryService;
@@ -30,6 +36,9 @@ class ThinkTestController extends Controller
     public function __construct(
         AIProviderService $aiService,
         PluginAnalysisService $analysisService,
+        TestInfrastructureDetectionService $testDetectionService,
+        TestSetupInstructionsService $testInstructionsService,
+        TestConfigurationTemplateService $testTemplateService,
         FileProcessingService $fileService,
         GitHubService $githubService,
         GitHubRepositoryService $githubRepositoryService,
@@ -37,6 +46,9 @@ class ThinkTestController extends Controller
     ) {
         $this->aiService = $aiService;
         $this->analysisService = $analysisService;
+        $this->testDetectionService = $testDetectionService;
+        $this->testInstructionsService = $testInstructionsService;
+        $this->testTemplateService = $testTemplateService;
         $this->fileService = $fileService;
         $this->githubService = $githubService;
         $this->githubRepositoryService = $githubRepositoryService;
@@ -81,7 +93,7 @@ class ThinkTestController extends Controller
     {
         $request->validate([
             'plugin_file' => 'required|file|max:10240', // 10MB max
-            'provider' => 'sometimes|string|in:openai,anthropic',
+            'provider' => 'sometimes|string|in:chatgpt-5,anthropic',
             'framework' => 'sometimes|string|in:phpunit,pest',
         ]);
 
@@ -164,7 +176,7 @@ class ThinkTestController extends Controller
     {
         $request->validate([
             'conversation_id' => 'required|string',
-            'provider' => 'sometimes|string|in:openai,anthropic',
+            'provider' => 'sometimes|string|in:chatgpt-5,anthropic',
             'framework' => 'sometimes|string|in:phpunit,pest',
         ]);
 
@@ -475,7 +487,7 @@ class ThinkTestController extends Controller
             'owner' => 'required|string|max:100|regex:/^[a-zA-Z0-9\-_\.]+$/',
             'repo' => 'required|string|max:100|regex:/^[a-zA-Z0-9\-_\.]+$/',
             'branch' => 'required|string|max:250|regex:/^[a-zA-Z0-9\-_\.\/]+$/',
-            'provider' => 'sometimes|string|in:openai,anthropic',
+            'provider' => 'sometimes|string|in:chatgpt-5,anthropic',
             'framework' => 'sometimes|string|in:phpunit,pest',
         ]);
 
@@ -657,5 +669,138 @@ class ThinkTestController extends Controller
         $score += count($analysis['database_operations']) * 1;
         
         return min($score, 100); // Cap at 100
+    }
+
+    /**
+     * Detect test infrastructure for uploaded plugin
+     */
+    public function detectTestInfrastructure(Request $request)
+    {
+        $request->validate([
+            'conversation_id' => 'required|string',
+            'framework' => 'sometimes|string|in:phpunit,pest',
+        ]);
+
+        try {
+            $conversationId = $request->input('conversation_id');
+            $framework = $request->input('framework', 'phpunit');
+
+            // Get conversation state
+            $conversation = AIConversationState::where('conversation_id', $conversationId)
+                ->where('user_id', Auth::id())
+                ->first();
+
+            if (!$conversation) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Conversation not found',
+                ], 404);
+            }
+
+            $pluginData = json_decode($conversation->plugin_data, true);
+
+            // Detect missing test infrastructure
+            $detection = $this->testDetectionService->detectMissingInfrastructure(
+                $pluginData['content'],
+                $pluginData['filename'],
+                $pluginData['additional_files'] ?? []
+            );
+
+            // Generate setup instructions
+            $instructions = $this->testInstructionsService->generateInstructions($detection, [
+                'framework' => $framework,
+                'plugin_name' => $pluginData['plugin_name'] ?? 'WordPress Plugin'
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'detection' => $detection,
+                'instructions' => $instructions,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Test infrastructure detection failed', [
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+                'conversation_id' => $request->input('conversation_id'),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Detection failed: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Download configuration template
+     */
+    public function downloadTemplate(Request $request)
+    {
+        $request->validate([
+            'template' => 'required|string|in:phpunit_config,pest_config,composer_json,bootstrap,sample_test',
+            'framework' => 'sometimes|string|in:phpunit,pest',
+            'plugin_name' => 'sometimes|string|max:255',
+        ]);
+
+        try {
+            $template = $request->input('template');
+            $framework = $request->input('framework', 'phpunit');
+            $pluginName = $request->input('plugin_name', 'WordPress Plugin');
+
+            $options = [
+                'framework' => $framework,
+                'plugin_name' => $pluginName,
+                'plugin_description' => "A WordPress plugin with automated testing setup",
+                'namespace' => str_replace([' ', '-'], '', ucwords($pluginName, ' -'))
+            ];
+
+            $content = '';
+            $filename = '';
+
+            switch ($template) {
+                case 'phpunit_config':
+                    $content = $this->testTemplateService->generatePhpUnitConfig($options);
+                    $filename = 'phpunit.xml';
+                    break;
+                case 'pest_config':
+                    $content = $this->testTemplateService->generatePestConfig($options);
+                    $filename = 'Pest.php';
+                    break;
+                case 'composer_json':
+                    $content = $this->testTemplateService->generateComposerJson($options);
+                    $filename = 'composer.json';
+                    break;
+                case 'bootstrap':
+                    $content = $this->testTemplateService->generateBootstrapFile($options);
+                    $filename = 'bootstrap.php';
+                    break;
+                case 'sample_test':
+                    $content = $this->testTemplateService->generateSampleTest($options);
+                    $filename = 'SampleTest.php';
+                    break;
+                default:
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Invalid template type',
+                    ], 400);
+            }
+
+            return response($content)
+                ->header('Content-Type', 'application/octet-stream')
+                ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+
+        } catch (\Exception $e) {
+            Log::error('Template download failed', [
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+                'template' => $request->input('template'),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Template generation failed: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 }

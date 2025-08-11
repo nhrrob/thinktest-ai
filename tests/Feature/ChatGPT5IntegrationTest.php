@@ -11,13 +11,16 @@ class ChatGPT5IntegrationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_chatgpt5_config_exists(): void
+    public function test_openai_gpt5_config_exists(): void
     {
-        $config = config('thinktest_ai.ai.providers.chatgpt-5');
-        
+        $config = config('thinktest_ai.ai.providers.openai-gpt5');
+
         $this->assertIsArray($config);
         $this->assertArrayHasKey('model', $config);
-        $this->assertEquals('gpt-5', $config['model']);
+        $this->assertArrayHasKey('display_name', $config);
+        $this->assertEquals('OpenAI GPT-5', $config['display_name']);
+        $this->assertArrayHasKey('provider_company', $config);
+        $this->assertEquals('OpenAI', $config['provider_company']);
         $this->assertArrayHasKey('wordpress_system_prompt', $config);
         $this->assertStringContainsString('advanced reasoning capabilities', $config['wordpress_system_prompt']);
     }
@@ -58,16 +61,55 @@ class ChatGPT5IntegrationTest extends TestCase
         $this->assertStringContainsString('Unsupported AI provider', $errors[0]);
     }
 
-    public function test_available_providers_includes_chatgpt5(): void
+    public function test_available_providers_includes_openai_gpt5(): void
     {
         $service = new AIProviderService();
         $providers = $service->getAvailableProviders();
-        
+
         $this->assertIsArray($providers);
+        $this->assertArrayHasKey('openai-gpt5', $providers);
+        $this->assertEquals('openai-gpt5', $providers['openai-gpt5']['name']);
+        $this->assertEquals('OpenAI GPT-5', $providers['openai-gpt5']['display_name']);
+        $this->assertEquals('OpenAI', $providers['openai-gpt5']['provider_company']);
+        $this->assertIsBool($providers['openai-gpt5']['available']);
+    }
+
+    public function test_legacy_provider_mapping_exists(): void
+    {
+        $mapping = config('thinktest_ai.ai.legacy_provider_mapping');
+
+        $this->assertIsArray($mapping);
+        $this->assertArrayHasKey('chatgpt-5', $mapping);
+        $this->assertEquals('openai-gpt5', $mapping['chatgpt-5']);
+        $this->assertArrayHasKey('anthropic', $mapping);
+        $this->assertEquals('anthropic-claude', $mapping['anthropic']);
+    }
+
+    public function test_anthropic_claude_config_exists(): void
+    {
+        $config = config('thinktest_ai.ai.providers.anthropic-claude');
+
+        $this->assertIsArray($config);
+        $this->assertArrayHasKey('model', $config);
+        $this->assertArrayHasKey('display_name', $config);
+        $this->assertEquals('Anthropic Claude 3.5 Sonnet', $config['display_name']);
+        $this->assertArrayHasKey('provider_company', $config);
+        $this->assertEquals('Anthropic', $config['provider_company']);
+        $this->assertArrayHasKey('wordpress_system_prompt', $config);
+    }
+
+    public function test_openai_provider_removed(): void
+    {
+        $service = new AIProviderService();
+        $providers = $service->getAvailableProviders();
+
+        // Verify openai provider is no longer available
+        $this->assertArrayNotHasKey('openai', $providers);
+
+        // Verify only chatgpt-5 and anthropic are available
+        $this->assertCount(2, $providers);
         $this->assertArrayHasKey('chatgpt-5', $providers);
-        $this->assertEquals('chatgpt-5', $providers['chatgpt-5']['name']);
-        $this->assertEquals('gpt-5', $providers['chatgpt-5']['model']);
-        $this->assertIsBool($providers['chatgpt-5']['available']);
+        $this->assertArrayHasKey('anthropic', $providers);
     }
 
     public function test_chatgpt5_provider_validation_in_switch_statement(): void
