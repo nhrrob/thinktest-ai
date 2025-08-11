@@ -146,7 +146,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
 
             <div className="py-12">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                    <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg">
+                    <div className="overflow-hidden bg-white shadow-lg sm:rounded-lg">
                         <div className="p-6 text-gray-900">
                             
                             {/* Upload Section */}
@@ -177,9 +177,10 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                                             <select
                                                 value={data.provider}
                                                 onChange={(e) => setData('provider', e.target.value)}
-                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                                className="mt-1 p-1 block w-full rounded-md border-gray-300 shadow-sm border focus:border-indigo-500 focus:ring-indigo-500"
                                             >
                                                 <option value="openai">OpenAI (GPT-4)</option>
+                                                <option value="chatgpt-5">ChatGPT-5</option>
                                                 <option value="anthropic">Anthropic (Claude)</option>
                                             </select>
                                         </div>
@@ -191,7 +192,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                                             <select
                                                 value={data.framework}
                                                 onChange={(e) => setData('framework', e.target.value)}
-                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                                className="mt-1 p-1 block w-full rounded-md border-gray-300 shadow-sm border focus:border-indigo-500 focus:ring-indigo-500"
                                             >
                                                 <option value="phpunit">PHPUnit</option>
                                                 <option value="pest">Pest</option>

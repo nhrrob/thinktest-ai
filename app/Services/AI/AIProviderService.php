@@ -69,6 +69,8 @@ class AIProviderService
         switch ($provider) {
             case 'openai':
                 return $this->callOpenAI($pluginCode, $options);
+            case 'chatgpt-5':
+                return $this->callChatGPT5($pluginCode, $options);
             case 'anthropic':
                 return $this->callAnthropic($pluginCode, $options);
             default:
@@ -131,6 +133,64 @@ class AIProviderService
 
         } catch (RequestException $e) {
             throw new \RuntimeException('OpenAI API request failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Call ChatGPT-5 API (uses OpenAI API with gpt-5 model)
+     */
+    private function callChatGPT5(string $pluginCode, array $options): array
+    {
+        $config = $this->config['providers']['chatgpt-5'];
+
+        if (empty($config['api_key'])) {
+            throw new \RuntimeException('ChatGPT-5 API key not configured');
+        }
+
+        $prompt = $this->buildWordPressTestPrompt($pluginCode, $options);
+
+        $payload = [
+            'model' => $config['model'],
+            'messages' => [
+                [
+                    'role' => 'system',
+                    'content' => $config['wordpress_system_prompt']
+                ],
+                [
+                    'role' => 'user',
+                    'content' => $prompt
+                ]
+            ],
+            'max_tokens' => $config['max_tokens'],
+            'temperature' => $config['temperature'],
+        ];
+
+        try {
+            $response = $this->httpClient->post('https://api.openai.com/v1/chat/completions', [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $config['api_key'],
+                    'Content-Type' => 'application/json',
+                ],
+                'json' => $payload,
+                'timeout' => $config['timeout'],
+            ]);
+
+            $data = json_decode($response->getBody()->getContents(), true);
+
+            if (!isset($data['choices'][0]['message']['content'])) {
+                throw new \RuntimeException('Invalid ChatGPT-5 response format');
+            }
+
+            return [
+                'provider' => 'chatgpt-5',
+                'generated_tests' => $data['choices'][0]['message']['content'],
+                'usage' => $data['usage'] ?? null,
+                'model' => $config['model'],
+                'success' => true,
+            ];
+
+        } catch (RequestException $e) {
+            throw new \RuntimeException('ChatGPT-5 API request failed: ' . $e->getMessage());
         }
     }
 
