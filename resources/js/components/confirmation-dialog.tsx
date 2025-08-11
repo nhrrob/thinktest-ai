@@ -157,10 +157,15 @@ export function useConfirmationDialog() {
     onOpenChange: handleOpenChange,
   }
 
+  // Backward-compatible component for existing pages
+  const Instance: React.FC = () => <ConfirmationDialog {...dialogProps} />
+
   return {
     openDialog,
     closeDialog,
     dialogProps,
+    // For backward compatibility with existing usages
+    ConfirmationDialog: Instance,
     isOpen,
   }
 }
