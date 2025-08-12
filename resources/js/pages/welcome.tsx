@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
-import { CheckCircle, Code, Cpu, Download, Shield, Upload, Zap } from 'lucide-react';
+import { CheckCircle, Code, Cpu, Download, GitBranch, Shield, Upload, Zap } from 'lucide-react';
 
 export default function Welcome() {
     const { auth } = usePage<SharedData>().props;
@@ -22,7 +22,9 @@ export default function Welcome() {
                 <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                     <div className="container flex h-16 items-center justify-between">
                         <div className="flex items-center space-x-2">
-                            <AppLogo variant="header" iconSize="md" showText={true} />
+                            <Link href={route('home')} className="cursor-pointer">
+                                <AppLogo variant="header" iconSize="md" showText={true} />
+                            </Link>
                         </div>
                         <nav className="flex items-center gap-4">
                             <AppearanceToggleDropdown />
@@ -60,29 +62,84 @@ export default function Welcome() {
                                 Smarter Unit Tests for <span className="text-primary">WordPress Plugins</span>
                             </h1>
                             <p className="mb-8 text-xl text-muted-foreground lg:text-2xl">
-                                Generate comprehensive, intelligent test suites for your WordPress plugins using advanced AI. Support for PHPUnit and
-                                Pest frameworks with OpenAI and Anthropic integration.
+                                Generate comprehensive, intelligent test suites for your WordPress plugins using advanced AI. Upload plugin files directly or connect your GitHub repositories for seamless testing. Support for PHPUnit and Pest frameworks with OpenAI and Anthropic integration.
                             </p>
+                            <div className="mb-8 rounded-lg bg-muted/30 p-4 border-l-4 border-primary">
+                                <p className="text-lg italic text-muted-foreground text-center">
+                                    "Testing leads to failure, and failure leads to understanding." - Burt Rutan
+                                </p>
+                            </div>
                             <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
                                 {auth.user ? (
                                     <Link href={route('thinktest.index')}>
-                                        <Button size="lg" className="w-full sm:w-auto">
+                                        <Button size="lg" className="w-full sm:w-auto bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
                                             <Code className="mr-2 size-4" />
                                             Start Testing
                                         </Button>
                                     </Link>
                                 ) : (
                                     <Link href={route('register')}>
-                                        <Button size="lg" className="w-full sm:w-auto">
+                                        <Button size="lg" className="w-full sm:w-auto bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
                                             <Code className="mr-2 size-4" />
                                             Get Started Free
                                         </Button>
                                     </Link>
                                 )}
-                                <Button variant="outline" size="lg" className="w-full sm:w-auto">
-                                    <Code className="mr-2 size-4" />
-                                    View Demo
-                                </Button>
+                                <Link href={route('login')}>
+                                    <Button variant="outline" size="lg" className="w-full sm:w-auto border-2 hover:bg-primary/5 hover:border-primary/50 shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+                                        <Code className="mr-2 size-4" />
+                                        View Demo
+                                    </Button>
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Workflow Demonstration Section */}
+                <section className="py-20 bg-gradient-to-b from-background to-muted/30">
+                    <div className="container">
+                        <div className="mx-auto mb-16 max-w-2xl text-center">
+                            <h2 className="mb-4 text-3xl font-bold lg:text-4xl">How ThinkTest AI Works</h2>
+                            <p className="text-lg text-muted-foreground">
+                                See how easy it is to generate comprehensive tests for your WordPress plugins
+                            </p>
+                        </div>
+                        <div className="mx-auto max-w-4xl">
+                            <div className="grid gap-8 md:grid-cols-3">
+                                <div className="text-center">
+                                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                        <Upload className="h-8 w-8" />
+                                    </div>
+                                    <h3 className="mb-2 text-xl font-semibold">1. Upload or Connect</h3>
+                                    <p className="text-muted-foreground">Upload your plugin files or connect your GitHub repository</p>
+                                </div>
+                                <div className="text-center">
+                                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                        <Cpu className="h-8 w-8" />
+                                    </div>
+                                    <h3 className="mb-2 text-xl font-semibold">2. AI Analysis</h3>
+                                    <p className="text-muted-foreground">Our AI analyzes your code structure and generates intelligent tests</p>
+                                </div>
+                                <div className="text-center">
+                                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                        <Download className="h-8 w-8" />
+                                    </div>
+                                    <h3 className="mb-2 text-xl font-semibold">3. Download Tests</h3>
+                                    <p className="text-muted-foreground">Get your comprehensive test suite ready for integration</p>
+                                </div>
+                            </div>
+                            <div className="mt-12 rounded-lg bg-muted/50 p-8 text-center border">
+                                <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                    <Code className="h-12 w-12" />
+                                </div>
+                                <h3 className="mb-2 text-2xl font-bold">Ready to Transform Your Testing?</h3>
+                                <p className="text-muted-foreground mb-4">
+                                    Join developers who are already using AI to create better, more comprehensive tests
+                                </p>
+                                <div className="text-sm text-muted-foreground">
+                                    <em>* Banner image/GIF demonstrating the workflow will be added here</em>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -137,9 +194,18 @@ export default function Welcome() {
                             <Card>
                                 <CardHeader>
                                     <Upload className="mb-2 size-10 text-primary" />
-                                    <CardTitle>Easy Upload</CardTitle>
+                                    <CardTitle>File Upload</CardTitle>
                                     <CardDescription>
-                                        Simple drag-and-drop interface for uploading your WordPress plugin files (up to 10MB)
+                                        Simple drag-and-drop interface for uploading your WordPress plugin files or ZIP archives (up to 10MB)
+                                    </CardDescription>
+                                </CardHeader>
+                            </Card>
+                            <Card>
+                                <CardHeader>
+                                    <GitBranch className="mb-2 size-10 text-primary" />
+                                    <CardTitle>GitHub Integration</CardTitle>
+                                    <CardDescription>
+                                        Connect your GitHub repositories for seamless testing. Support for public and private repos with branch selection
                                     </CardDescription>
                                 </CardHeader>
                             </Card>
@@ -300,7 +366,7 @@ export default function Welcome() {
                                 </div>
                                 <span className="font-bold">ThinkTest AI</span>
                             </div>
-                            <p className="text-sm text-muted-foreground">© 2024 ThinkTest AI. Smarter Unit Tests for WordPress Plugins.</p>
+                            <p className="text-sm text-muted-foreground">© 2025 ThinkTest AI. Smarter Unit Tests for WordPress Plugins.</p>
                         </div>
                     </div>
                 </footer>

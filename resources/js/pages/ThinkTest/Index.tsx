@@ -748,8 +748,8 @@ export default function Index({ recentConversations, recentAnalyses }: ThinkTest
 
             <div className="py-12">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                    <div className="overflow-hidden bg-white shadow-lg sm:rounded-lg">
-                        <div className="p-6 text-gray-900">
+                    <div className="overflow-hidden bg-background shadow-lg sm:rounded-lg border">
+                        <div className="p-6 text-foreground">
                             {/* Source Selection */}
                             <div className="mb-8">
                                 <SourceToggle
@@ -762,27 +762,27 @@ export default function Index({ recentConversations, recentAnalyses }: ThinkTest
                             {/* File Upload Section */}
                             {sourceType === 'file' && (
                                 <div className="mb-8">
-                                    <h3 className="mb-4 text-lg font-medium text-gray-900">Upload WordPress Plugin</h3>
+                                    <h3 className="mb-4 text-lg font-medium text-foreground">Upload WordPress Plugin</h3>
 
                                     <form onSubmit={handleFileUpload} className="space-y-4">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700">Plugin File (.php or .zip)</label>
+                                            <label className="block text-sm font-medium text-muted-foreground">Plugin File (.php or .zip)</label>
                                             <input
                                                 ref={fileInputRef}
                                                 type="file"
                                                 accept=".php,.zip"
                                                 onChange={(e) => setData('plugin_file', e.target.files?.[0] || null)}
-                                                className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:rounded-full file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100"
+                                                className="mt-1 block w-full text-sm text-muted-foreground file:mr-4 file:rounded-full file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary hover:file:bg-primary/20"
                                             />
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700">AI Provider</label>
+                                                <label className="block text-sm font-medium text-muted-foreground">AI Provider</label>
                                                 <select
                                                     value={data.provider}
                                                     onChange={(e) => setData('provider', e.target.value)}
-                                                    className="mt-1 block w-full rounded-md border border-gray-300 p-1 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                                    className="mt-1 block w-full rounded-md border border-input bg-background p-1 shadow-sm focus:border-ring focus:ring-ring"
                                                 >
                                                     <option value="openai-gpt5">OpenAI GPT-5</option>
                                                     <option value="anthropic-claude">Anthropic Claude 3.5 Sonnet</option>
@@ -793,11 +793,11 @@ export default function Index({ recentConversations, recentAnalyses }: ThinkTest
                                             </div>
 
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700">Test Framework</label>
+                                                <label className="block text-sm font-medium text-muted-foreground">Test Framework</label>
                                                 <select
                                                     value={data.framework}
                                                     onChange={(e) => setData('framework', e.target.value)}
-                                                    className="mt-1 block w-full rounded-md border border-gray-300 p-1 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                                    className="mt-1 block w-full rounded-md border border-input bg-background p-1 shadow-sm focus:border-ring focus:ring-ring"
                                                 >
                                                     <option value="phpunit">PHPUnit</option>
                                                     <option value="pest">Pest</option>
@@ -819,7 +819,7 @@ export default function Index({ recentConversations, recentAnalyses }: ThinkTest
                             {/* GitHub Repository Section */}
                             {sourceType === 'github' && (
                                 <div className="mb-8 space-y-6">
-                                    <h3 className="text-lg font-medium text-gray-900">GitHub Repository</h3>
+                                    <h3 className="text-lg font-medium text-foreground">GitHub Repository</h3>
 
                                     <GitHubRepositoryInput
                                         onRepositoryValidated={handleRepositoryValidated}
@@ -839,7 +839,7 @@ export default function Index({ recentConversations, recentAnalyses }: ThinkTest
                                     {validatedRepository && selectedBranch && (
                                         <div className="space-y-4">
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Processing Mode</label>
+                                                <label className="block text-sm font-medium text-muted-foreground mb-2">Processing Mode</label>
                                                 <div className="flex space-x-4">
                                                     <label className="flex items-center">
                                                         <input
@@ -895,12 +895,12 @@ export default function Index({ recentConversations, recentAnalyses }: ThinkTest
                                         <div className="space-y-4">
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700">AI Provider</label>
+                                                    <label className="block text-sm font-medium text-muted-foreground">AI Provider</label>
                                                     <select
                                                         value={data.provider}
                                                         onChange={(e) => setData('provider', e.target.value)}
                                                         disabled={isProcessingRepository || isGenerating}
-                                                        className="mt-1 block w-full rounded-md border border-gray-300 p-1 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:opacity-50"
+                                                        className="mt-1 block w-full rounded-md border border-input bg-background p-1 shadow-sm focus:border-ring focus:ring-ring disabled:opacity-50"
                                                     >
                                                         <option value="openai-gpt5">OpenAI GPT-5</option>
                                                         <option value="anthropic-claude">Anthropic Claude 3.5 Sonnet</option>
@@ -911,12 +911,12 @@ export default function Index({ recentConversations, recentAnalyses }: ThinkTest
                                                 </div>
 
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700">Test Framework</label>
+                                                    <label className="block text-sm font-medium text-muted-foreground">Test Framework</label>
                                                     <select
                                                         value={data.framework}
                                                         onChange={(e) => setData('framework', e.target.value)}
                                                         disabled={isProcessingRepository || isGenerating}
-                                                        className="mt-1 block w-full rounded-md border border-gray-300 p-1 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:opacity-50"
+                                                        className="mt-1 block w-full rounded-md border border-input bg-background p-1 shadow-sm focus:border-ring focus:ring-ring disabled:opacity-50"
                                                     >
                                                         <option value="phpunit">PHPUnit</option>
                                                         <option value="pest">Pest</option>
@@ -1042,7 +1042,7 @@ export default function Index({ recentConversations, recentAnalyses }: ThinkTest
 
                                     <details className="mt-4">
                                         <summary className="cursor-pointer font-medium text-blue-800">Preview Generated Tests</summary>
-                                        <pre className="mt-2 overflow-x-auto rounded bg-gray-100 p-4 text-sm">{generatedTests.tests}</pre>
+                                        <pre className="mt-2 overflow-x-auto rounded bg-muted p-4 text-sm">{generatedTests.tests}</pre>
                                     </details>
                                 </div>
                             )}
@@ -1050,36 +1050,36 @@ export default function Index({ recentConversations, recentAnalyses }: ThinkTest
                             {/* Recent Activity */}
                             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                 <div>
-                                    <h4 className="mb-4 text-lg font-medium text-gray-900">Recent Conversations</h4>
+                                    <h4 className="mb-4 text-lg font-medium text-foreground">Recent Conversations</h4>
                                     {recentConversations?.length > 0 ? (
                                         <div className="space-y-2">
                                             {recentConversations.map((conversation) => (
-                                                <div key={conversation.id} className="rounded bg-gray-50 p-3">
+                                                <div key={conversation.id} className="rounded bg-muted p-3">
                                                     <div className="text-sm font-medium">{conversation.context?.filename || 'Unknown file'}</div>
-                                                    <div className="text-xs text-gray-500">
+                                                    <div className="text-xs text-muted-foreground">
                                                         {conversation.status} • {conversation.provider}
                                                     </div>
                                                 </div>
                                             ))}
                                         </div>
                                     ) : (
-                                        <p className="text-gray-500">No recent conversations</p>
+                                        <p className="text-muted-foreground">No recent conversations</p>
                                     )}
                                 </div>
 
                                 <div>
-                                    <h4 className="mb-4 text-lg font-medium text-gray-900">Recent Analyses</h4>
+                                    <h4 className="mb-4 text-lg font-medium text-foreground">Recent Analyses</h4>
                                     {recentAnalyses?.length > 0 ? (
                                         <div className="space-y-2">
                                             {recentAnalyses.map((analysis) => (
-                                                <div key={analysis.id} className="rounded bg-gray-50 p-3">
+                                                <div key={analysis.id} className="rounded bg-muted p-3">
                                                     <div className="text-sm font-medium">{analysis.filename}</div>
-                                                    <div className="text-xs text-gray-500">Complexity: {analysis.complexity_score || 'N/A'}</div>
+                                                    <div className="text-xs text-muted-foreground">Complexity: {analysis.complexity_score || 'N/A'}</div>
                                                 </div>
                                             ))}
                                         </div>
                                     ) : (
-                                        <p className="text-gray-500">No recent analyses</p>
+                                        <p className="text-muted-foreground">No recent analyses</p>
                                     )}
                                 </div>
                             </div>
