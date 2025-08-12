@@ -313,8 +313,8 @@ return [
         'max_files_per_repo' => env('GITHUB_MAX_FILES_PER_REPO', 1000),
 
         // Rate limiting
-        'rate_limit_requests_per_hour' => env('GITHUB_RATE_LIMIT_PER_HOUR', 5000),
-        'rate_limit_requests_per_minute' => env('GITHUB_RATE_LIMIT_PER_MINUTE', 100),
+        'rate_limit_requests_per_hour' => env('GITHUB_RATE_LIMIT_PER_HOUR', 500),
+        'rate_limit_requests_per_minute' => env('GITHUB_RATE_LIMIT_PER_MINUTE', 30),
 
         // Cache settings
         'cache_repository_info_minutes' => env('GITHUB_CACHE_REPO_INFO_MINUTES', 60),

@@ -2,6 +2,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 import { 
     File, 
     Code, 
@@ -54,12 +55,12 @@ interface GitHubFileSelectorProps {
     isGenerating?: boolean;
 }
 
-export default function GitHubFileSelector({ 
-    repository, 
-    branch, 
-    selectedFile, 
-    onFileContentLoaded, 
-    onError, 
+export default function GitHubFileSelector({
+    repository,
+    branch,
+    selectedFile,
+    onFileContentLoaded,
+    onError,
     onGenerateTests,
     disabled = false,
     isGenerating = false
@@ -67,6 +68,22 @@ export default function GitHubFileSelector({
     const [fileContent, setFileContent] = useState<FileContent | null>(null);
     const [isLoadingContent, setIsLoadingContent] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const { error: showError, warning: showWarning, success: showSuccess } = useToast();
+
+    // Enhanced logging function with timestamps and context
+    const logDebug = (message: string, data?: any) => {
+        const timestamp = new Date().toISOString();
+        const context = {
+            timestamp,
+            component: 'GitHubFileSelector',
+            repository: `${repository.owner}/${repository.repo}`,
+            branch,
+            selectedFile: selectedFile?.path,
+            ...data
+        };
+        console.log(`[${timestamp}] GitHubFileSelector: ${message}`, context);
+    };
 
     const getCsrfToken = () => {
         return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
@@ -116,48 +133,113 @@ export default function GitHubFileSelector({
     };
 
     const fetchFileContent = async (file: FileItem) => {
+        logDebug('Starting file content fetch', {
+            fileName: file.name,
+            filePath: file.path,
+            fileSize: file.size,
+            fileType: file.type
+        });
+
         setIsLoadingContent(true);
         setError(null);
         setFileContent(null);
 
+        const requestPayload = {
+            owner: repository.owner,
+            repo: repository.repo,
+            path: file.path,
+            branch: branch,
+        };
+
         try {
+            logDebug('Making API request to /thinktest/github/file', { payload: requestPayload });
+
             const response = await fetch('/thinktest/github/file', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': getCsrfToken(),
                 },
-                body: JSON.stringify({
-                    owner: repository.owner,
-                    repo: repository.repo,
-                    path: file.path,
-                    branch: branch,
-                }),
+                body: JSON.stringify(requestPayload),
+            });
+
+            logDebug('API response received', {
+                status: response.status,
+                statusText: response.statusText,
+                headers: Object.fromEntries(response.headers.entries())
             });
 
             const result = await response.json();
+            logDebug('API response parsed', { result });
 
-            if (result.success) {
-                setFileContent(result.file);
-                onFileContentLoaded(result.file);
-            } else {
-                const errorMessage = result.message || 'Failed to fetch file content';
+            if (response.status === 429) {
+                // Handle rate limiting
+                const retryAfterSeconds = result.retry_after || 60;
+                const errorMessage = result.message || `Rate limit exceeded. Please wait ${retryAfterSeconds} seconds before trying again.`;
+
+                logDebug('Rate limit exceeded', {
+                    retryAfterSeconds,
+                    message: result.message,
+                    rateLimitInfo: result
+                });
+
                 setError(errorMessage);
                 onError(errorMessage);
+                showWarning(errorMessage, { duration: retryAfterSeconds * 1000 });
+                return;
+            }
+
+            if (result.success) {
+                logDebug('File content loaded successfully', {
+                    fileName: result.file.name,
+                    filePath: result.file.path,
+                    contentLength: result.file.content?.length || 0,
+                    encoding: result.file.encoding
+                });
+
+                setFileContent(result.file);
+                onFileContentLoaded(result.file);
+                showSuccess(`File "${file.name}" loaded successfully`);
+            } else {
+                const errorMessage = result.message || 'Failed to fetch file content. Please check the file path and try again.';
+                logDebug('API request failed', {
+                    success: result.success,
+                    message: result.message,
+                    fullResult: result
+                });
+                setError(errorMessage);
+                onError(errorMessage);
+                showError(errorMessage);
             }
         } catch (err) {
-            const errorMessage = 'Network error occurred while fetching file content';
+            const errorMessage = 'Network error occurred while fetching file content. Please check your internet connection and try again.';
+            logDebug('Network error during API request', {
+                error: err instanceof Error ? err.message : String(err),
+                stack: err instanceof Error ? err.stack : undefined,
+                requestPayload
+            });
             setError(errorMessage);
             onError(errorMessage);
+            showError(errorMessage);
         } finally {
             setIsLoadingContent(false);
+            logDebug('File content fetch completed', { isLoading: false });
         }
     };
 
     useEffect(() => {
         if (selectedFile && selectedFile.type === 'file') {
+            logDebug('Selected file changed, fetching content', {
+                fileName: selectedFile.name,
+                filePath: selectedFile.path,
+                fileType: selectedFile.type
+            });
             fetchFileContent(selectedFile);
         } else {
+            logDebug('Selected file cleared or is directory', {
+                selectedFile: selectedFile?.path || 'none',
+                fileType: selectedFile?.type || 'none'
+            });
             setFileContent(null);
             setError(null);
         }

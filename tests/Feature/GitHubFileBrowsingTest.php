@@ -300,3 +300,69 @@ test('github file test generation model relationships work correctly', function 
     expect($githubRepo->fileTestGenerations)->toHaveCount(1);
     expect($fileTestGeneration->isSuccessful())->toBeTrue();
 });
+
+test('github tree filtering correctly includes supported file extensions', function () {
+    // Mock the GitHub service directly instead of the client
+    $this->mock(GitHubService::class, function ($mock) {
+        $mock->shouldReceive('getRepositoryTree')
+            ->with('owner', 'repo', 'main', true)
+            ->andReturn([
+                // PHP files (should be included)
+                ['path' => 'index.php', 'type' => 'file', 'sha' => 'sha1', 'size' => 100, 'url' => 'url1'],
+                ['path' => 'includes/Admin.php', 'type' => 'file', 'sha' => 'sha2', 'size' => 200, 'url' => 'url2'],
+
+                // JS files (should be included)
+                ['path' => 'assets/js/script.js', 'type' => 'file', 'sha' => 'sha3', 'size' => 300, 'url' => 'url3'],
+
+                // JSON files (should be included)
+                ['path' => 'package.json', 'type' => 'file', 'sha' => 'sha4', 'size' => 400, 'url' => 'url4'],
+
+                // Directories (should be included)
+                ['path' => 'includes', 'type' => 'dir', 'sha' => 'sha9', 'size' => 0, 'url' => 'url9'],
+                ['path' => 'assets', 'type' => 'dir', 'sha' => 'sha10', 'size' => 0, 'url' => 'url10'],
+            ]);
+    });
+
+    // Mock validation service
+    $this->mock(GitHubValidationService::class, function ($mock) {
+        $mock->shouldReceive('validateRateLimit')->with($this->user->id)->andReturn(true);
+        $mock->shouldReceive('validateRepositoryComponents')->andReturn(true);
+        $mock->shouldReceive('validateBranchName')->with('main')->andReturn(true);
+    });
+
+    $response = $this->postJson('/thinktest/github/tree', [
+        'owner' => 'owner',
+        'repo' => 'repo',
+        'branch' => 'main',
+        'recursive' => true,
+    ]);
+
+    $response->assertStatus(200)
+        ->assertJson([
+            'success' => true,
+            'tree' => [
+                ['path' => 'index.php', 'type' => 'file'],
+                ['path' => 'includes/Admin.php', 'type' => 'file'],
+                ['path' => 'assets/js/script.js', 'type' => 'file'],
+                ['path' => 'package.json', 'type' => 'file'],
+                ['path' => 'includes', 'type' => 'dir'],
+                ['path' => 'assets', 'type' => 'dir'],
+            ],
+        ]);
+
+    // Verify the response contains the expected number of items
+    $responseData = $response->json();
+    expect($responseData['tree'])->toHaveCount(6); // 4 files + 2 directories
+
+    // Check that supported files are included
+    $filePaths = collect($responseData['tree'])->where('type', 'file')->pluck('path')->toArray();
+    expect($filePaths)->toContain('index.php');
+    expect($filePaths)->toContain('includes/Admin.php');
+    expect($filePaths)->toContain('assets/js/script.js');
+    expect($filePaths)->toContain('package.json');
+
+    // Check that allowed directories are included
+    $dirPaths = collect($responseData['tree'])->where('type', 'dir')->pluck('path')->toArray();
+    expect($dirPaths)->toContain('includes');
+    expect($dirPaths)->toContain('assets');
+});

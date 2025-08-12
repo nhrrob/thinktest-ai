@@ -42,10 +42,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('Test/ToastTest');
     })->name('test-toast-deduplication');
 
+    // Test route for GitHub error handling
+    Route::get('test-github-error-handling', function () {
+        return Inertia::render('Test/GitHubErrorHandlingTest');
+    })->name('test-github-error-handling');
+
     // Test route for modal toast integration
     Route::get('test-modal-toast', function () {
         return Inertia::render('Test/ModalToastTest');
     })->name('test-modal-toast');
+
+    // Test route for toast function verification
+    Route::get('test-toast-functions', function () {
+        return Inertia::render('Test/ToastFunctionTest');
+    })->name('test-toast-functions');
 
     // Session validation endpoint
     Route::get('auth/check', function () {

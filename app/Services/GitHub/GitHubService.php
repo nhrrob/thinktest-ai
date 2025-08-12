@@ -491,6 +491,14 @@ class GitHubService
                 $supportedExtensions = $this->config['supported_file_extensions'];
                 $ignoredDirectories = $this->config['ignored_directories'];
 
+                Log::info('GitHub tree filtering started', [
+                    'repository' => "{$owner}/{$repo}",
+                    'branch' => $branch,
+                    'total_items' => count($tree['tree']),
+                    'supported_extensions' => $supportedExtensions,
+                    'ignored_directories' => $ignoredDirectories,
+                ]);
+
                 $filteredTree = array_filter($tree['tree'], function ($item) use ($supportedExtensions, $ignoredDirectories) {
                     // Skip ignored directories
                     foreach ($ignoredDirectories as $ignoredDir) {
@@ -501,7 +509,11 @@ class GitHubService
 
                     // For files, check if extension is supported
                     if ($item['type'] === 'blob') {
-                        $extension = '.'.pathinfo($item['path'], PATHINFO_EXTENSION);
+                        $pathExtension = pathinfo($item['path'], PATHINFO_EXTENSION);
+                        if (empty($pathExtension)) {
+                            return false; // Files without extensions are not supported
+                        }
+                        $extension = '.' . $pathExtension;
                         return in_array($extension, $supportedExtensions);
                     }
 
@@ -509,15 +521,29 @@ class GitHubService
                     return $item['type'] === 'tree';
                 });
 
-                return array_map(function ($item) {
+                $finalTree = array_map(function ($item) use ($owner, $repo, $branch) {
+                    $name = basename($item['path']);
                     return [
+                        'name' => $name,
                         'path' => $item['path'],
                         'type' => $item['type'] === 'blob' ? 'file' : 'dir',
                         'sha' => $item['sha'],
                         'size' => $item['size'] ?? 0,
                         'url' => $item['url'],
+                        'html_url' => "https://github.com/{$owner}/{$repo}/blob/{$branch}/" . $item['path'],
+                        'download_url' => $item['type'] === 'blob' ? "https://raw.githubusercontent.com/{$owner}/{$repo}/{$branch}/" . $item['path'] : null,
                     ];
                 }, array_values($filteredTree));
+
+                Log::info('GitHub tree filtering completed', [
+                    'repository' => "{$owner}/{$repo}",
+                    'branch' => $branch,
+                    'filtered_items' => count($finalTree),
+                    'files_count' => count(array_filter($finalTree, fn($item) => $item['type'] === 'file')),
+                    'directories_count' => count(array_filter($finalTree, fn($item) => $item['type'] === 'dir')),
+                ]);
+
+                return $finalTree;
             } catch (GitHubRuntimeException $e) {
                 $errorInfo = GitHubErrorHandler::handleException($e, [
                     'owner' => $owner,
