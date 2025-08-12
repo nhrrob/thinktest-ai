@@ -1,12 +1,12 @@
 import { type BreadcrumbItem, type User } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
-import { PlusIcon, PencilIcon, TrashIcon, EyeIcon } from 'lucide-react';
+import { EyeIcon, PencilIcon, PlusIcon, TrashIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-import { Button } from '@/components/ui/button';
 import { useConfirmationDialog } from '@/components/confirmation-dialog';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -42,11 +42,11 @@ export default function UsersIndex({ users }: UsersIndexProps) {
         let loadingToast: string | undefined;
 
         openDialog({
-            title: "Delete User",
+            title: 'Delete User',
             description: `Are you sure you want to delete the user "${user.name}"? This action cannot be undone.`,
-            confirmText: "Delete",
-            cancelText: "Cancel",
-            variant: "destructive",
+            confirmText: 'Delete',
+            cancelText: 'Cancel',
+            variant: 'destructive',
             loading: false,
             onConfirm: () => {
                 loadingToast = toast.loading('Deleting user...');
@@ -80,14 +80,12 @@ export default function UsersIndex({ users }: UsersIndexProps) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Users Management" />
-            
-            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
+
+            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-semibold tracking-tight">Users</h1>
-                        <p className="text-muted-foreground">
-                            Manage users and their role assignments
-                        </p>
+                        <p className="text-muted-foreground">Manage users and their role assignments</p>
                     </div>
                     <Link href={route('admin.users.create')}>
                         <Button>
@@ -100,24 +98,17 @@ export default function UsersIndex({ users }: UsersIndexProps) {
                 <Card>
                     <CardHeader>
                         <CardTitle>All Users</CardTitle>
-                        <CardDescription>
-                            A list of all users in the system with their assigned roles.
-                        </CardDescription>
+                        <CardDescription>A list of all users in the system with their assigned roles.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
                             {users.data.length === 0 ? (
-                                <p className="text-center text-muted-foreground py-8">
-                                    No users found.
-                                </p>
+                                <p className="py-8 text-center text-muted-foreground">No users found.</p>
                             ) : (
                                 users.data.map((user) => (
-                                    <div
-                                        key={user.id}
-                                        className="flex items-center justify-between p-4 border rounded-lg"
-                                    >
+                                    <div key={user.id} className="flex items-center justify-between rounded-lg border p-4">
                                         <div className="flex-1">
-                                            <div className="flex items-center gap-3 mb-2">
+                                            <div className="mb-2 flex items-center gap-3">
                                                 <h3 className="font-medium">{user.name}</h3>
                                                 <div className="flex gap-1">
                                                     {user.roles?.map((role) => (
@@ -127,12 +118,8 @@ export default function UsersIndex({ users }: UsersIndexProps) {
                                                     ))}
                                                 </div>
                                             </div>
-                                            <p className="text-sm text-muted-foreground mb-1">
-                                                {user.email}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">
-                                                Created {new Date(user.created_at).toLocaleDateString()}
-                                            </p>
+                                            <p className="mb-1 text-sm text-muted-foreground">{user.email}</p>
+                                            <p className="text-xs text-muted-foreground">Created {new Date(user.created_at).toLocaleDateString()}</p>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <Link href={route('admin.users.show', user.id)}>
@@ -145,7 +132,7 @@ export default function UsersIndex({ users }: UsersIndexProps) {
                                                     <PencilIcon className="h-4 w-4" />
                                                 </Button>
                                             </Link>
-                                            {!user.roles?.some(role => role.name === 'super-admin') && (
+                                            {!user.roles?.some((role) => role.name === 'super-admin') && (
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
@@ -163,17 +150,16 @@ export default function UsersIndex({ users }: UsersIndexProps) {
 
                         {/* Pagination */}
                         {users.last_page > 1 && (
-                            <div className="flex items-center justify-between mt-6">
+                            <div className="mt-6 flex items-center justify-between">
                                 <div className="text-sm text-muted-foreground">
-                                    Showing {((users.current_page - 1) * users.per_page) + 1} to{' '}
-                                    {Math.min(users.current_page * users.per_page, users.total)} of{' '}
-                                    {users.total} results
+                                    Showing {(users.current_page - 1) * users.per_page + 1} to{' '}
+                                    {Math.min(users.current_page * users.per_page, users.total)} of {users.total} results
                                 </div>
                                 <div className="flex items-center gap-2">
                                     {users.links.map((link, index) => (
                                         <Button
                                             key={index}
-                                            variant={link.active ? "default" : "outline"}
+                                            variant={link.active ? 'default' : 'outline'}
                                             size="sm"
                                             disabled={!link.url}
                                             onClick={() => link.url && router.get(link.url)}

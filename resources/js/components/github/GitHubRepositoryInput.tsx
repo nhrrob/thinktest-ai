@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Github, ExternalLink, GitBranch, Calendar, FileText } from 'lucide-react';
+import { Calendar, ExternalLink, FileText, GitBranch, Github, Loader2 } from 'lucide-react';
+import { useState } from 'react';
 
 interface Repository {
     id: number;
@@ -26,11 +26,7 @@ interface GitHubRepositoryInputProps {
     disabled?: boolean;
 }
 
-export default function GitHubRepositoryInput({ 
-    onRepositoryValidated, 
-    onError, 
-    disabled = false 
-}: GitHubRepositoryInputProps) {
+export default function GitHubRepositoryInput({ onRepositoryValidated, onError, disabled = false }: GitHubRepositoryInputProps) {
     const [repositoryUrl, setRepositoryUrl] = useState('');
     const [isValidating, setIsValidating] = useState(false);
     const [validatedRepository, setValidatedRepository] = useState<Repository | null>(null);
@@ -154,7 +150,7 @@ export default function GitHubRepositoryInput({
                 </Label>
                 <div className="flex space-x-2">
                     <div className="relative flex-1">
-                        <Github className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Github className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
                         <Input
                             id="repository-url"
                             type="text"
@@ -165,14 +161,10 @@ export default function GitHubRepositoryInput({
                             className="pl-10"
                         />
                     </div>
-                    <Button
-                        onClick={handleValidateRepository}
-                        disabled={disabled || isValidating || !repositoryUrl.trim()}
-                        className="px-4"
-                    >
+                    <Button onClick={handleValidateRepository} disabled={disabled || isValidating || !repositoryUrl.trim()} className="px-4">
                         {isValidating ? (
                             <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                 Validating...
                             </>
                         ) : (
@@ -180,9 +172,7 @@ export default function GitHubRepositoryInput({
                         )}
                     </Button>
                 </div>
-                <p className="text-xs text-gray-500">
-                    Enter a GitHub repository URL (e.g., https://github.com/owner/repo)
-                </p>
+                <p className="text-xs text-gray-500">Enter a GitHub repository URL (e.g., https://github.com/owner/repo)</p>
             </div>
 
             {error && (
@@ -192,60 +182,46 @@ export default function GitHubRepositoryInput({
             )}
 
             {validatedRepository && (
-                <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+                <div className="rounded-md border border-green-200 bg-green-50 p-4">
                     <div className="flex items-start justify-between">
                         <div className="flex-1">
-                            <div className="flex items-center space-x-2 mb-2">
+                            <div className="mb-2 flex items-center space-x-2">
                                 <Github className="h-5 w-5 text-green-600" />
-                                <h4 className="text-lg font-medium text-green-800">
-                                    {validatedRepository.full_name}
-                                </h4>
+                                <h4 className="text-lg font-medium text-green-800">{validatedRepository.full_name}</h4>
                                 {validatedRepository.private && (
-                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    <span className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800">
                                         Private
                                     </span>
                                 )}
                             </div>
-                            
-                            {validatedRepository.description && (
-                                <p className="text-green-700 mb-3">
-                                    {validatedRepository.description}
-                                </p>
-                            )}
-                            
+
+                            {validatedRepository.description && <p className="mb-3 text-green-700">{validatedRepository.description}</p>}
+
                             <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div className="flex items-center space-x-2">
                                     <GitBranch className="h-4 w-4 text-green-600" />
-                                    <span className="text-green-700">
-                                        Default: {validatedRepository.default_branch}
-                                    </span>
+                                    <span className="text-green-700">Default: {validatedRepository.default_branch}</span>
                                 </div>
-                                
+
                                 <div className="flex items-center space-x-2">
                                     <FileText className="h-4 w-4 text-green-600" />
-                                    <span className="text-green-700">
-                                        Size: {formatFileSize(validatedRepository.size)}
-                                    </span>
+                                    <span className="text-green-700">Size: {formatFileSize(validatedRepository.size)}</span>
                                 </div>
-                                
+
                                 {validatedRepository.language && (
                                     <div className="flex items-center space-x-2">
                                         <div className="h-4 w-4 rounded-full bg-green-600"></div>
-                                        <span className="text-green-700">
-                                            {validatedRepository.language}
-                                        </span>
+                                        <span className="text-green-700">{validatedRepository.language}</span>
                                     </div>
                                 )}
-                                
+
                                 <div className="flex items-center space-x-2">
                                     <Calendar className="h-4 w-4 text-green-600" />
-                                    <span className="text-green-700">
-                                        Updated: {formatDate(validatedRepository.updated_at)}
-                                    </span>
+                                    <span className="text-green-700">Updated: {formatDate(validatedRepository.updated_at)}</span>
                                 </div>
                             </div>
                         </div>
-                        
+
                         <a
                             href={validatedRepository.html_url}
                             target="_blank"

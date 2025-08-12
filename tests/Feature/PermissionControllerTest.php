@@ -1,8 +1,8 @@
 <?php
 
 use App\Models\User;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 beforeEach(function () {
     $this->artisan('migrate:fresh');

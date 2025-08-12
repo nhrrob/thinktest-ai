@@ -4,10 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PermissionRequest;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Permission;
-use Illuminate\Support\Facades\Redirect;
 
 class PermissionController extends Controller
 {
@@ -65,7 +64,7 @@ class PermissionController extends Controller
                 ->with('success', 'Permission created successfully.');
         } catch (\Exception $e) {
             return Redirect::route('admin.permissions.index')
-                ->with('error', 'Failed to create permission: ' . $e->getMessage());
+                ->with('error', 'Failed to create permission: '.$e->getMessage());
         }
     }
 
@@ -113,7 +112,7 @@ class PermissionController extends Controller
                 ->with('success', 'Permission updated successfully.');
         } catch (\Exception $e) {
             return Redirect::route('admin.permissions.index')
-                ->with('error', 'Failed to update permission: ' . $e->getMessage());
+                ->with('error', 'Failed to update permission: '.$e->getMessage());
         }
     }
 
@@ -135,7 +134,7 @@ class PermissionController extends Controller
                 ->with('success', 'Permission deleted successfully.');
         } catch (\Exception $e) {
             return Redirect::route('admin.permissions.index')
-                ->with('error', 'Failed to delete permission: ' . $e->getMessage());
+                ->with('error', 'Failed to delete permission: '.$e->getMessage());
         }
     }
 }

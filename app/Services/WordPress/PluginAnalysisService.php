@@ -2,15 +2,16 @@
 
 namespace App\Services\WordPress;
 
+use Illuminate\Support\Facades\Log;
 use PhpParser\Error;
 use PhpParser\Node;
 use PhpParser\NodeFinder;
 use PhpParser\ParserFactory;
-use Illuminate\Support\Facades\Log;
 
 class PluginAnalysisService
 {
     private $parser;
+
     private $nodeFinder;
 
     public function __construct()
@@ -69,13 +70,13 @@ class PluginAnalysisService
     {
         $patterns = [];
         $wpHooks = ['add_action', 'add_filter', 'do_action', 'apply_filters'];
-        
+
         $functionCalls = $this->nodeFinder->findInstanceOf($ast, Node\Expr\FuncCall::class);
-        
+
         foreach ($functionCalls as $call) {
             if ($call->name instanceof \PhpParser\Node\Name) {
                 $functionName = $call->name->toString();
-                
+
                 if (in_array($functionName, $wpHooks)) {
                     $patterns[] = [
                         'type' => 'hook',
@@ -93,7 +94,7 @@ class PluginAnalysisService
     {
         $functions = [];
         $functionNodes = $this->nodeFinder->findInstanceOf($ast, Node\Stmt\Function_::class);
-        
+
         foreach ($functionNodes as $function) {
             $functions[] = [
                 'name' => $function->name->toString(),
@@ -108,7 +109,7 @@ class PluginAnalysisService
     {
         $classes = [];
         $classNodes = $this->nodeFinder->findInstanceOf($ast, Node\Stmt\Class_::class);
-        
+
         foreach ($classNodes as $class) {
             $classes[] = [
                 'name' => $class->name->toString(),
@@ -231,7 +232,7 @@ class PluginAnalysisService
         $wpFunctions = ['add_action', 'add_filter', 'do_action', 'apply_filters', 'wp_enqueue_script', 'wp_enqueue_style'];
 
         foreach ($wpFunctions as $function) {
-            if (preg_match_all('/\b' . preg_quote($function) . '\s*\(/i', $content, $matches, PREG_OFFSET_CAPTURE)) {
+            if (preg_match_all('/\b'.preg_quote($function).'\s*\(/i', $content, $matches, PREG_OFFSET_CAPTURE)) {
                 foreach ($matches[0] as $match) {
                     $line = substr_count(substr($content, 0, $match[1]), "\n") + 1;
                     $analysis['wordpress_patterns'][] = [

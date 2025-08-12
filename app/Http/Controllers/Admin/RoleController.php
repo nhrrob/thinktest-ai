@@ -4,12 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\RoleRequest;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
-use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redirect;
+use Inertia\Inertia;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class RoleController extends Controller
 {
@@ -65,7 +64,7 @@ class RoleController extends Controller
                 ->with('success', 'Role created successfully.');
         } catch (\Exception $e) {
             return Redirect::route('admin.roles.index')
-                ->with('error', 'Failed to create role: ' . $e->getMessage());
+                ->with('error', 'Failed to create role: '.$e->getMessage());
         }
     }
 
@@ -116,7 +115,7 @@ class RoleController extends Controller
                 ->with('success', 'Role updated successfully.');
         } catch (\Exception $e) {
             return Redirect::route('admin.roles.index')
-                ->with('error', 'Failed to update role: ' . $e->getMessage());
+                ->with('error', 'Failed to update role: '.$e->getMessage());
         }
     }
 
@@ -127,27 +126,27 @@ class RoleController extends Controller
     {
         try {
             Log::info('Attempting to delete role', ['role_id' => $role->id, 'role_name' => $role->name]);
-            
+
             // Prevent deletion of super-admin role
             if ($role->name === 'super-admin') {
                 Log::warning('Attempted to delete super-admin role', ['role_id' => $role->id]);
                 throw \Illuminate\Validation\ValidationException::withMessages([
-                    'role' => 'Cannot delete super-admin role.'
+                    'role' => 'Cannot delete super-admin role.',
                 ]);
             }
 
             // Check if role is assigned to any users
             $userCount = $role->users()->count();
             Log::info('Role user count check', ['role_id' => $role->id, 'user_count' => $userCount]);
-            
+
             if ($userCount > 0) {
                 Log::warning('Cannot delete role with assigned users', [
-                    'role_id' => $role->id, 
-                    'role_name' => $role->name, 
-                    'user_count' => $userCount
+                    'role_id' => $role->id,
+                    'role_name' => $role->name,
+                    'user_count' => $userCount,
                 ]);
                 throw \Illuminate\Validation\ValidationException::withMessages([
-                    'role' => 'Cannot delete role that is assigned to users.'
+                    'role' => 'Cannot delete role that is assigned to users.',
                 ]);
             }
 
@@ -157,21 +156,21 @@ class RoleController extends Controller
             return back()->with('success', 'Role deleted successfully.');
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::warning('Validation failed for role deletion', [
-                'role_id' => $role->id, 
-                'role_name' => $role->name, 
-                'errors' => $e->errors()
+                'role_id' => $role->id,
+                'role_name' => $role->name,
+                'errors' => $e->errors(),
             ]);
             throw $e;
         } catch (\Exception $e) {
             Log::error('Failed to delete role', [
-                'role_id' => $role->id, 
-                'role_name' => $role->name, 
+                'role_id' => $role->id,
+                'role_name' => $role->name,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            
+
             throw \Illuminate\Validation\ValidationException::withMessages([
-                'role' => 'Failed to delete role: ' . $e->getMessage()
+                'role' => 'Failed to delete role: '.$e->getMessage(),
             ]);
         }
     }

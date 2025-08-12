@@ -70,11 +70,11 @@ class PluginAnalysisResult extends Model
         if ($minScore !== null) {
             $query->where('complexity_score', '>=', $minScore);
         }
-        
+
         if ($maxScore !== null) {
             $query->where('complexity_score', '<=', $maxScore);
         }
-        
+
         return $query;
     }
 
@@ -107,7 +107,7 @@ class PluginAnalysisResult extends Model
      */
     public function hasSecurityPatterns(): bool
     {
-        return !empty($this->security_patterns);
+        return ! empty($this->security_patterns);
     }
 
     /**

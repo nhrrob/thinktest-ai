@@ -2,9 +2,9 @@
 
 namespace App\Services\GitHub;
 
+use Github\Exception\ErrorException;
 use Github\Exception\RuntimeException as GitHubRuntimeException;
 use Github\Exception\ValidationFailedException;
-use Github\Exception\ErrorException;
 use Illuminate\Support\Facades\Log;
 
 class GitHubErrorHandler
@@ -16,7 +16,7 @@ class GitHubErrorHandler
     {
         $errorCode = $exception->getCode();
         $errorMessage = $exception->getMessage();
-        
+
         Log::error('GitHub API Error', array_merge($context, [
             'exception_class' => get_class($exception),
             'error_code' => $errorCode,
@@ -138,7 +138,7 @@ class GitHubErrorHandler
     {
         return [
             'user_message' => 'Invalid data provided. Please check your input and try again.',
-            'technical_message' => 'GitHub API validation failed: ' . $exception->getMessage(),
+            'technical_message' => 'GitHub API validation failed: '.$exception->getMessage(),
             'error_code' => 'GITHUB_VALIDATION_ERROR',
             'http_status' => 422,
             'retry_possible' => false,
@@ -152,7 +152,7 @@ class GitHubErrorHandler
     {
         return [
             'user_message' => 'A GitHub API error occurred. Please try again.',
-            'technical_message' => 'GitHub API error: ' . $exception->getMessage(),
+            'technical_message' => 'GitHub API error: '.$exception->getMessage(),
             'error_code' => 'GITHUB_API_ERROR',
             'http_status' => 500,
             'retry_possible' => true,
@@ -220,6 +220,7 @@ class GitHubErrorHandler
         // Try to extract reset time from GitHub rate limit message
         if (preg_match('/reset at (\d+)/', $message, $matches)) {
             $resetTime = (int) $matches[1];
+
             return max(0, $resetTime - time());
         }
 
@@ -247,7 +248,7 @@ class GitHubErrorHandler
 
         // Replace parameters in the message
         foreach ($params as $key => $value) {
-            $message = str_replace('{' . $key . '}', $value, $message);
+            $message = str_replace('{'.$key.'}', $value, $message);
         }
 
         return $message;

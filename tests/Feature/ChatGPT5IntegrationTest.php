@@ -27,16 +27,16 @@ class ChatGPT5IntegrationTest extends TestCase
 
     public function test_ai_provider_service_supports_chatgpt5(): void
     {
-        $service = new AIProviderService();
-        
+        $service = new AIProviderService;
+
         $simplePlugin = '<?php
         function test_function() {
             return "test";
         }';
-        
+
         // Test with ChatGPT-5 provider (should use mock since no API key)
         $result = $service->generateWordPressTests($simplePlugin, ['provider' => 'chatgpt-5']);
-        
+
         $this->assertIsArray($result);
         $this->assertTrue($result['success']);
         // Should fall back to mock provider since no API key is configured
@@ -50,11 +50,11 @@ class ChatGPT5IntegrationTest extends TestCase
             app(\App\Services\AI\AIProviderService::class),
             app(\App\Services\WordPress\PluginAnalysisService::class)
         );
-        
+
         // Test valid provider
         $errors = $service->validateOptions(['provider' => 'chatgpt-5']);
         $this->assertEmpty($errors);
-        
+
         // Test invalid provider
         $errors = $service->validateOptions(['provider' => 'invalid-provider']);
         $this->assertNotEmpty($errors);
@@ -63,7 +63,7 @@ class ChatGPT5IntegrationTest extends TestCase
 
     public function test_available_providers_includes_openai_gpt5(): void
     {
-        $service = new AIProviderService();
+        $service = new AIProviderService;
         $providers = $service->getAvailableProviders();
 
         $this->assertIsArray($providers);
@@ -100,7 +100,7 @@ class ChatGPT5IntegrationTest extends TestCase
 
     public function test_current_providers_available(): void
     {
-        $service = new AIProviderService();
+        $service = new AIProviderService;
         $providers = $service->getAvailableProviders();
 
         // Verify legacy openai provider is no longer available
@@ -120,15 +120,15 @@ class ChatGPT5IntegrationTest extends TestCase
 
     public function test_chatgpt5_provider_validation_in_switch_statement(): void
     {
-        $service = new AIProviderService();
-        
+        $service = new AIProviderService;
+
         // Use reflection to test the private callProvider method
         $reflection = new \ReflectionClass($service);
         $method = $reflection->getMethod('callProvider');
         $method->setAccessible(true);
-        
+
         $simplePlugin = '<?php function test() { return true; }';
-        
+
         // This should not throw an exception for chatgpt-5
         try {
             $result = $method->invoke($service, 'chatgpt-5', $simplePlugin, []);

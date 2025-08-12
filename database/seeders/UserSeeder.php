@@ -62,7 +62,7 @@ class UserSeeder extends Seeder
             );
 
             // Assign role using Spatie Permission
-            if (!$user->hasRole($roleName)) {
+            if (! $user->hasRole($roleName)) {
                 $user->assignRole($roleName);
                 $this->command->info("Assigned {$roleName} role to {$user->email}");
             }

@@ -41,7 +41,7 @@ class PermissionRequest extends FormRequest
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('permissions')->ignore($this->route('permission'))
+                Rule::unique('permissions')->ignore($this->route('permission')),
             ];
         }
 

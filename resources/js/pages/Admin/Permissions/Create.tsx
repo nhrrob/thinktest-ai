@@ -2,12 +2,12 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, useForm } from '@inertiajs/react';
 import { FormEventHandler } from 'react';
 
+import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import InputError from '@/components/input-error';
 import AppLayout from '@/layouts/app-layout';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -48,22 +48,18 @@ export default function PermissionCreate({ groups }: PermissionCreateProps) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Create Permission" />
-            
-            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
+
+            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 <div>
                     <h1 className="text-2xl font-semibold tracking-tight">Create Permission</h1>
-                    <p className="text-muted-foreground">
-                        Create a new permission for the system
-                    </p>
+                    <p className="text-muted-foreground">Create a new permission for the system</p>
                 </div>
 
                 <form onSubmit={submit} className="space-y-6">
                     <Card>
                         <CardHeader>
                             <CardTitle>Permission Information</CardTitle>
-                            <CardDescription>
-                                Enter the details for the new permission.
-                            </CardDescription>
+                            <CardDescription>Enter the details for the new permission.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid gap-2">
@@ -75,19 +71,14 @@ export default function PermissionCreate({ groups }: PermissionCreateProps) {
                                     placeholder="e.g., manage users, create posts"
                                     required
                                 />
-                                <p className="text-sm text-muted-foreground">
-                                    Use descriptive names like "manage users" or "create posts"
-                                </p>
+                                <p className="text-sm text-muted-foreground">Use descriptive names like "manage users" or "create posts"</p>
                                 <InputError message={errors.name} />
                             </div>
 
                             <div className="grid gap-2">
                                 <Label htmlFor="group_name">Permission Group</Label>
                                 <div className="flex gap-2">
-                                    <Select
-                                        value={data.group_name}
-                                        onValueChange={(value) => setData('group_name', value)}
-                                    >
+                                    <Select value={data.group_name} onValueChange={(value) => setData('group_name', value)}>
                                         <SelectTrigger className="flex-1">
                                             <SelectValue placeholder="Select existing group or type new one" />
                                         </SelectTrigger>
@@ -100,17 +91,13 @@ export default function PermissionCreate({ groups }: PermissionCreateProps) {
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                <div className="text-sm text-muted-foreground">
-                                    Or enter a new group name:
-                                </div>
+                                <div className="text-sm text-muted-foreground">Or enter a new group name:</div>
                                 <Input
                                     value={data.group_name}
                                     onChange={(e) => setData('group_name', e.target.value)}
                                     placeholder="e.g., user-management, content-management"
                                 />
-                                <p className="text-sm text-muted-foreground">
-                                    Groups help organize related permissions together
-                                </p>
+                                <p className="text-sm text-muted-foreground">Groups help organize related permissions together</p>
                                 <InputError message={errors.group_name} />
                             </div>
                         </CardContent>
@@ -119,15 +106,13 @@ export default function PermissionCreate({ groups }: PermissionCreateProps) {
                     <Card>
                         <CardHeader>
                             <CardTitle>Permission Examples</CardTitle>
-                            <CardDescription>
-                                Common permission naming patterns for reference.
-                            </CardDescription>
+                            <CardDescription>Common permission naming patterns for reference.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="grid gap-4 md:grid-cols-2">
                                 <div>
-                                    <h4 className="font-medium mb-2">CRUD Operations</h4>
-                                    <ul className="text-sm text-muted-foreground space-y-1">
+                                    <h4 className="mb-2 font-medium">CRUD Operations</h4>
+                                    <ul className="space-y-1 text-sm text-muted-foreground">
                                         <li>• view users</li>
                                         <li>• create users</li>
                                         <li>• edit users</li>
@@ -135,8 +120,8 @@ export default function PermissionCreate({ groups }: PermissionCreateProps) {
                                     </ul>
                                 </div>
                                 <div>
-                                    <h4 className="font-medium mb-2">System Actions</h4>
-                                    <ul className="text-sm text-muted-foreground space-y-1">
+                                    <h4 className="mb-2 font-medium">System Actions</h4>
+                                    <ul className="space-y-1 text-sm text-muted-foreground">
                                         <li>• access admin panel</li>
                                         <li>• manage settings</li>
                                         <li>• view reports</li>

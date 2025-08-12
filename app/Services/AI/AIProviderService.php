@@ -5,11 +5,11 @@ namespace App\Services\AI;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Config;
 
 class AIProviderService
 {
     private Client $httpClient;
+
     private array $config;
 
     public function __construct()
@@ -31,6 +31,7 @@ class AIProviderService
         // For MVP development: Use mock provider if no API keys are configured
         if ($this->shouldUseMockProvider($provider)) {
             Log::info('Using mock AI provider for development');
+
             return $this->callMockProvider($pluginCode, $options);
         }
 
@@ -39,7 +40,7 @@ class AIProviderService
         } catch (\Exception $e) {
             Log::error("AI provider {$provider} failed", [
                 'error' => $e->getMessage(),
-                'provider' => $provider
+                'provider' => $provider,
             ]);
 
             // Try fallback provider
@@ -50,13 +51,14 @@ class AIProviderService
                     return $this->callProvider($fallbackProvider, $pluginCode, $options);
                 } catch (\Exception $fallbackError) {
                     Log::error("Fallback provider {$fallbackProvider} also failed", [
-                        'error' => $fallbackError->getMessage()
+                        'error' => $fallbackError->getMessage(),
                     ]);
                 }
             }
 
             // If all providers fail, use mock provider
             Log::warning('All AI providers failed, using mock provider');
+
             return $this->callMockProvider($pluginCode, $options);
         }
     }
@@ -74,7 +76,7 @@ class AIProviderService
                 return $this->callOpenAIGPT5($pluginCode, $options);
             case 'anthropic-claude':
                 return $this->callAnthropicClaude($pluginCode, $options);
-            // Legacy support - will be removed in future version
+                // Legacy support - will be removed in future version
             case 'chatgpt-5':
                 return $this->callOpenAIGPT5($pluginCode, $options);
             case 'anthropic':
@@ -90,10 +92,9 @@ class AIProviderService
     private function mapLegacyProvider(string $provider): string
     {
         $mapping = $this->config['legacy_provider_mapping'] ?? [];
+
         return $mapping[$provider] ?? $provider;
     }
-
-
 
     /**
      * Call OpenAI GPT-5 API (uses OpenAI API with GPT-4 Turbo until GPT-5 is available)
@@ -113,12 +114,12 @@ class AIProviderService
             'messages' => [
                 [
                     'role' => 'system',
-                    'content' => $config['wordpress_system_prompt']
+                    'content' => $config['wordpress_system_prompt'],
                 ],
                 [
                     'role' => 'user',
-                    'content' => $prompt
-                ]
+                    'content' => $prompt,
+                ],
             ],
             'max_tokens' => $config['max_tokens'],
             'temperature' => $config['temperature'],
@@ -127,7 +128,7 @@ class AIProviderService
         try {
             $response = $this->httpClient->post('https://api.openai.com/v1/chat/completions', [
                 'headers' => [
-                    'Authorization' => 'Bearer ' . $config['api_key'],
+                    'Authorization' => 'Bearer '.$config['api_key'],
                     'Content-Type' => 'application/json',
                 ],
                 'json' => $payload,
@@ -136,7 +137,7 @@ class AIProviderService
 
             $data = json_decode($response->getBody()->getContents(), true);
 
-            if (!isset($data['choices'][0]['message']['content'])) {
+            if (! isset($data['choices'][0]['message']['content'])) {
                 throw new \RuntimeException('Invalid ChatGPT-5 response format');
             }
 
@@ -150,7 +151,7 @@ class AIProviderService
             ];
 
         } catch (RequestException $e) {
-            throw new \RuntimeException('ChatGPT-5 API request failed: ' . $e->getMessage());
+            throw new \RuntimeException('ChatGPT-5 API request failed: '.$e->getMessage());
         }
     }
 
@@ -160,7 +161,7 @@ class AIProviderService
     private function callAnthropicClaude(string $pluginCode, array $options): array
     {
         $config = $this->config['providers']['anthropic-claude'] ?? $this->config['providers']['anthropic'];
-        
+
         if (empty($config['api_key'])) {
             throw new \RuntimeException('Anthropic API key not configured');
         }
@@ -174,8 +175,8 @@ class AIProviderService
             'messages' => [
                 [
                     'role' => 'user',
-                    'content' => $prompt
-                ]
+                    'content' => $prompt,
+                ],
             ],
         ];
 
@@ -191,8 +192,8 @@ class AIProviderService
             ]);
 
             $data = json_decode($response->getBody()->getContents(), true);
-            
-            if (!isset($data['content'][0]['text'])) {
+
+            if (! isset($data['content'][0]['text'])) {
                 throw new \RuntimeException('Invalid Anthropic response format');
             }
 
@@ -206,7 +207,7 @@ class AIProviderService
             ];
 
         } catch (RequestException $e) {
-            throw new \RuntimeException('Anthropic API request failed: ' . $e->getMessage());
+            throw new \RuntimeException('Anthropic API request failed: '.$e->getMessage());
         }
     }
 
@@ -217,17 +218,17 @@ class AIProviderService
     {
         $framework = $options['framework'] ?? 'phpunit';
         $testType = $options['test_type'] ?? 'unit';
-        
-        return "Please analyze the following WordPress plugin code and generate comprehensive {$framework} tests.\n\n" .
-               "Focus on:\n" .
-               "- WordPress hooks and filters\n" .
-               "- Plugin activation/deactivation\n" .
-               "- WordPress-specific functions\n" .
-               "- Security and sanitization\n" .
-               "- Database operations\n" .
-               "- AJAX handlers\n" .
-               "- REST API endpoints\n\n" .
-               "Plugin Code:\n```php\n{$pluginCode}\n```\n\n" .
+
+        return "Please analyze the following WordPress plugin code and generate comprehensive {$framework} tests.\n\n".
+               "Focus on:\n".
+               "- WordPress hooks and filters\n".
+               "- Plugin activation/deactivation\n".
+               "- WordPress-specific functions\n".
+               "- Security and sanitization\n".
+               "- Database operations\n".
+               "- AJAX handlers\n".
+               "- REST API endpoints\n\n".
+               "Plugin Code:\n```php\n{$pluginCode}\n```\n\n".
                "Please provide complete, runnable {$framework} test files with proper setup and teardown methods.";
     }
 
@@ -237,7 +238,8 @@ class AIProviderService
     private function shouldUseMockProvider(string $provider): bool
     {
         $config = $this->config['providers'][$provider] ?? null;
-        return !$config || empty($config['api_key']);
+
+        return ! $config || empty($config['api_key']);
     }
 
     /**
@@ -246,21 +248,21 @@ class AIProviderService
     private function callMockProvider(string $pluginCode, array $options): array
     {
         $framework = $options['framework'] ?? 'phpunit';
-        
-        $mockTest = "<?php\n\n" .
-                   "use PHPUnit\\Framework\\TestCase;\n\n" .
-                   "class MockWordPressPluginTest extends TestCase\n" .
-                   "{\n" .
-                   "    public function test_plugin_activation()\n" .
-                   "    {\n" .
-                   "        // Mock test for plugin activation\n" .
-                   "        \$this->assertTrue(true);\n" .
-                   "    }\n\n" .
-                   "    public function test_wordpress_hooks()\n" .
-                   "    {\n" .
-                   "        // Mock test for WordPress hooks\n" .
-                   "        \$this->assertTrue(has_action('init'));\n" .
-                   "    }\n" .
+
+        $mockTest = "<?php\n\n".
+                   "use PHPUnit\\Framework\\TestCase;\n\n".
+                   "class MockWordPressPluginTest extends TestCase\n".
+                   "{\n".
+                   "    public function test_plugin_activation()\n".
+                   "    {\n".
+                   "        // Mock test for plugin activation\n".
+                   "        \$this->assertTrue(true);\n".
+                   "    }\n\n".
+                   "    public function test_wordpress_hooks()\n".
+                   "    {\n".
+                   "        // Mock test for WordPress hooks\n".
+                   "        \$this->assertTrue(has_action('init'));\n".
+                   "    }\n".
                    "}\n";
 
         return [
@@ -284,7 +286,7 @@ class AIProviderService
                 'name' => $name,
                 'display_name' => $config['display_name'] ?? $name,
                 'provider_company' => $config['provider_company'] ?? 'Unknown',
-                'available' => !empty($config['api_key']),
+                'available' => ! empty($config['api_key']),
                 'model' => $config['model'] ?? 'unknown',
             ];
         }

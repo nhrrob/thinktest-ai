@@ -2,9 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Models\PluginAnalysisResult;
-use App\Services\FileProcessing\FileProcessingService;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -24,7 +23,7 @@ class PluginAnalysisDuplicateHandlingTest extends TestCase
         $this->app['config']->set('thinktest_ai.wordpress.analysis.max_file_size', 1024 * 1024); // 1MB
         $this->app['config']->set('thinktest_ai.wordpress.analysis.allowed_extensions', ['php', 'zip']);
         $this->app['config']->set('thinktest_ai.security.file_validation.blocked_php_functions', [
-            'exec', 'shell_exec', 'system', 'passthru', 'eval'
+            'exec', 'shell_exec', 'system', 'passthru', 'eval',
         ]);
 
         // Create required permissions
@@ -39,7 +38,7 @@ class PluginAnalysisDuplicateHandlingTest extends TestCase
 
         $user2 = User::factory()->create();
         $user2->givePermissionTo('upload files');
-        
+
         // Create a plugin file
         $pluginContent = '<?php
 /*
@@ -51,7 +50,7 @@ function test_init() {
 }';
 
         $file = UploadedFile::fake()->createWithContent('test-plugin.php', $pluginContent);
-        
+
         // First upload by user1
         $response1 = $this->actingAs($user1)->postJson('/thinktest/upload', [
             'plugin_file' => $file,
@@ -69,7 +68,7 @@ function test_init() {
 
         // Second upload by user2 with the same content
         $file2 = UploadedFile::fake()->createWithContent('test-plugin.php', $pluginContent);
-        
+
         $response2 = $this->actingAs($user2)->postJson('/thinktest/upload', [
             'plugin_file' => $file2,
             'provider' => 'openai-gpt5',
@@ -81,7 +80,7 @@ function test_init() {
 
         // Check that still only one analysis result exists (updated, not duplicated)
         $this->assertDatabaseCount('plugin_analysis_results', 1);
-        
+
         // Check that the record was updated to the second user
         $updatedAnalysis = PluginAnalysisResult::first();
         $this->assertEquals($user2->id, $updatedAnalysis->user_id);
@@ -93,7 +92,7 @@ function test_init() {
     {
         $user = User::factory()->create();
         $user->givePermissionTo('upload files');
-        
+
         // First plugin
         $pluginContent1 = '<?php
 /*
@@ -102,7 +101,7 @@ Plugin Name: Test Plugin 1
 add_action("init", "test_init_1");';
 
         $file1 = UploadedFile::fake()->createWithContent('test-plugin-1.php', $pluginContent1);
-        
+
         $response1 = $this->actingAs($user)->postJson('/thinktest/upload', [
             'plugin_file' => $file1,
             'provider' => 'openai-gpt5',
@@ -119,7 +118,7 @@ Plugin Name: Test Plugin 2
 add_action("init", "test_init_2");';
 
         $file2 = UploadedFile::fake()->createWithContent('test-plugin-2.php', $pluginContent2);
-        
+
         $response2 = $this->actingAs($user)->postJson('/thinktest/upload', [
             'plugin_file' => $file2,
             'provider' => 'openai-gpt5',
@@ -130,7 +129,7 @@ add_action("init", "test_init_2");';
 
         // Check that two separate analysis results were created
         $this->assertDatabaseCount('plugin_analysis_results', 2);
-        
+
         $analyses = PluginAnalysisResult::all();
         $this->assertNotEquals($analyses[0]->file_hash, $analyses[1]->file_hash);
     }
@@ -142,7 +141,7 @@ add_action("init", "test_init_2");';
 
         $user2 = User::factory()->create();
         $user2->givePermissionTo('upload files');
-        
+
         $pluginContent = '<?php
 /*
 Plugin Name: Test Plugin
@@ -156,7 +155,7 @@ class TestClass {
 
         // First upload
         $file1 = UploadedFile::fake()->createWithContent('test-plugin.php', $pluginContent);
-        
+
         $response1 = $this->actingAs($user1)->postJson('/thinktest/upload', [
             'plugin_file' => $file1,
             'provider' => 'openai-gpt5',
@@ -167,7 +166,7 @@ class TestClass {
 
         // Second upload with same content
         $file2 = UploadedFile::fake()->createWithContent('test-plugin.php', $pluginContent);
-        
+
         $response2 = $this->actingAs($user2)->postJson('/thinktest/upload', [
             'plugin_file' => $file2,
             'provider' => 'openai-gpt5',
@@ -175,14 +174,14 @@ class TestClass {
         ]);
 
         $response2->assertStatus(200);
-        
+
         // Check that analysis data is properly updated
         $updatedAnalysis = PluginAnalysisResult::first();
         $this->assertIsArray($updatedAnalysis->analysis_data);
         $this->assertArrayHasKey('wordpress_patterns', $updatedAnalysis->analysis_data);
         $this->assertArrayHasKey('functions', $updatedAnalysis->analysis_data);
         $this->assertArrayHasKey('classes', $updatedAnalysis->analysis_data);
-        
+
         // Check that the analysis found the expected patterns
         $this->assertGreaterThan(0, count($updatedAnalysis->analysis_data['wordpress_patterns']));
         $this->assertGreaterThan(0, count($updatedAnalysis->analysis_data['classes']));

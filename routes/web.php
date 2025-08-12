@@ -1,9 +1,9 @@
 <?php
 
-use App\Http\Controllers\ThinkTestController;
-use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\PermissionController;
+use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\ThinkTestController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -45,6 +45,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Session validation endpoint
     Route::get('auth/check', function () {
         $user = Auth::user();
+
         return response()->json([
             'authenticated' => true,
             'user' => [

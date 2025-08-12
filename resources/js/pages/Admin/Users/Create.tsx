@@ -1,13 +1,13 @@
+import { useToast } from '@/hooks/use-toast';
 import { type BreadcrumbItem, type Role } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { ArrowLeftIcon, SaveIcon } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import AppLayout from '@/layouts/app-layout';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -52,7 +52,10 @@ export default function UserCreate({ roles }: UserCreateProps) {
         if (checked) {
             setData('roles', [...data.roles, roleId]);
         } else {
-            setData('roles', data.roles.filter(id => id !== roleId));
+            setData(
+                'roles',
+                data.roles.filter((id) => id !== roleId),
+            );
         }
     };
 
@@ -76,14 +79,12 @@ export default function UserCreate({ roles }: UserCreateProps) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Create User" />
-            
-            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
+
+            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-semibold tracking-tight">Create User</h1>
-                        <p className="text-muted-foreground">
-                            Add a new user to the system
-                        </p>
+                        <p className="text-muted-foreground">Add a new user to the system</p>
                     </div>
                     <Link href={route('admin.users.index')}>
                         <Button variant="outline">
@@ -97,12 +98,10 @@ export default function UserCreate({ roles }: UserCreateProps) {
                     <Card>
                         <CardHeader>
                             <CardTitle>User Information</CardTitle>
-                            <CardDescription>
-                                Enter the basic information for the new user.
-                            </CardDescription>
+                            <CardDescription>Enter the basic information for the new user.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <div className="space-y-2">
                                     <Label htmlFor="name">Name</Label>
                                     <Input
@@ -113,9 +112,7 @@ export default function UserCreate({ roles }: UserCreateProps) {
                                         placeholder="Enter user name"
                                         className={errors.name ? 'border-destructive' : ''}
                                     />
-                                    {errors.name && (
-                                        <p className="text-sm text-destructive">{errors.name}</p>
-                                    )}
+                                    {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
                                 </div>
 
                                 <div className="space-y-2">
@@ -128,9 +125,7 @@ export default function UserCreate({ roles }: UserCreateProps) {
                                         placeholder="Enter email address"
                                         className={errors.email ? 'border-destructive' : ''}
                                     />
-                                    {errors.email && (
-                                        <p className="text-sm text-destructive">{errors.email}</p>
-                                    )}
+                                    {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
                                 </div>
 
                                 <div className="space-y-2">
@@ -143,9 +138,7 @@ export default function UserCreate({ roles }: UserCreateProps) {
                                         placeholder="Enter password"
                                         className={errors.password ? 'border-destructive' : ''}
                                     />
-                                    {errors.password && (
-                                        <p className="text-sm text-destructive">{errors.password}</p>
-                                    )}
+                                    {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
                                 </div>
 
                                 <div className="space-y-2">
@@ -158,9 +151,7 @@ export default function UserCreate({ roles }: UserCreateProps) {
                                         placeholder="Confirm password"
                                         className={errors.password_confirmation ? 'border-destructive' : ''}
                                     />
-                                    {errors.password_confirmation && (
-                                        <p className="text-sm text-destructive">{errors.password_confirmation}</p>
-                                    )}
+                                    {errors.password_confirmation && <p className="text-sm text-destructive">{errors.password_confirmation}</p>}
                                 </div>
                             </div>
                         </CardContent>
@@ -169,9 +160,7 @@ export default function UserCreate({ roles }: UserCreateProps) {
                     <Card>
                         <CardHeader>
                             <CardTitle>Role Assignment</CardTitle>
-                            <CardDescription>
-                                Select the roles to assign to this user.
-                            </CardDescription>
+                            <CardDescription>Select the roles to assign to this user.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-3">
@@ -180,9 +169,7 @@ export default function UserCreate({ roles }: UserCreateProps) {
                                         <Checkbox
                                             id={`role-${role.id}`}
                                             checked={data.roles.includes(role.id)}
-                                            onCheckedChange={(checked) => 
-                                                handleRoleChange(role.id, checked as boolean)
-                                            }
+                                            onCheckedChange={(checked) => handleRoleChange(role.id, checked as boolean)}
                                         />
                                         <Label htmlFor={`role-${role.id}`} className="font-medium">
                                             {role.name}
@@ -190,9 +177,7 @@ export default function UserCreate({ roles }: UserCreateProps) {
                                     </div>
                                 ))}
                             </div>
-                            {errors.roles && (
-                                <p className="text-sm text-destructive mt-2">{errors.roles}</p>
-                            )}
+                            {errors.roles && <p className="mt-2 text-sm text-destructive">{errors.roles}</p>}
                         </CardContent>
                     </Card>
 

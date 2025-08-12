@@ -5,12 +5,13 @@ namespace App\Services\GitHub;
 use Github\Client;
 use Github\Exception\RuntimeException as GitHubRuntimeException;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class GitHubService
 {
     private Client $client;
+
     private array $config;
 
     public function __construct(?Client $client = null)
@@ -21,14 +22,14 @@ class GitHubService
         if ($client) {
             $this->client = $client;
         } else {
-            $this->client = new Client();
+            $this->client = new Client;
 
             // Authenticate if token is available
-            if (!empty($this->config['api_token'])) {
+            if (! empty($this->config['api_token'])) {
                 $this->client->authenticate($this->config['api_token'], null, Client::AUTH_ACCESS_TOKEN);
 
                 Log::info('GitHub Service: Authenticated with API token', [
-                    'token_prefix' => substr($this->config['api_token'], 0, 7) . '...',
+                    'token_prefix' => substr($this->config['api_token'], 0, 7).'...',
                 ]);
             } else {
                 Log::warning('GitHub Service: No API token configured');
@@ -43,22 +44,22 @@ class GitHubService
     {
         // Clean and normalize URL
         $url = trim($url);
-        
+
         // Remove .git suffix if present
         $url = preg_replace('/\.git$/', '', $url);
-        
+
         // Support various GitHub URL formats
         $patterns = [
             '/^https:\/\/github\.com\/([^\/\?#]+)\/([^\/\?#]+)\/?(\?.*)?$/',
             '/^git@github\.com:([^\/]+)\/([^\/]+)\.git$/',
             '/^([a-zA-Z0-9\-_\.]+)\/([a-zA-Z0-9\-_\.]+)$/', // Simple owner/repo format
         ];
-        
+
         foreach ($patterns as $pattern) {
             if (preg_match($pattern, $url, $matches)) {
                 $owner = $matches[1];
                 $repo = $matches[2];
-                
+
                 // Validate owner and repo names
                 if ($this->isValidGitHubName($owner) && $this->isValidGitHubName($repo)) {
                     return [
@@ -70,7 +71,7 @@ class GitHubService
                 }
             }
         }
-        
+
         throw new \InvalidArgumentException('Invalid GitHub repository URL format');
     }
 
@@ -80,11 +81,11 @@ class GitHubService
     public function getRepositoryInfo(string $owner, string $repo): array
     {
         $cacheKey = "github_repo_info_{$owner}_{$repo}";
-        
+
         return Cache::remember($cacheKey, $this->config['cache_repository_info_minutes'] * 60, function () use ($owner, $repo) {
             try {
                 $repoData = $this->client->api('repo')->show($owner, $repo);
-                
+
                 return [
                     'id' => $repoData['id'],
                     'name' => $repoData['name'],
@@ -118,11 +119,11 @@ class GitHubService
     public function getRepositoryBranches(string $owner, string $repo): array
     {
         $cacheKey = "github_repo_branches_{$owner}_{$repo}";
-        
+
         return Cache::remember($cacheKey, $this->config['cache_branches_minutes'] * 60, function () use ($owner, $repo) {
             try {
                 $branches = $this->client->api('repo')->branches($owner, $repo);
-                
+
                 return array_map(function ($branch) {
                     return [
                         'name' => $branch['name'],
@@ -137,8 +138,8 @@ class GitHubService
                     'repo' => $repo,
                     'error' => $e->getMessage(),
                 ]);
-                
-                throw new \RuntimeException("Failed to fetch repository branches: " . $e->getMessage());
+
+                throw new \RuntimeException('Failed to fetch repository branches: '.$e->getMessage());
             }
         });
     }
@@ -150,6 +151,7 @@ class GitHubService
     {
         try {
             $languages = $this->client->api('repo')->languages($owner, $repo);
+
             return $languages;
         } catch (GitHubRuntimeException $e) {
             Log::warning('Failed to fetch repository languages', [
@@ -157,7 +159,7 @@ class GitHubService
                 'repo' => $repo,
                 'error' => $e->getMessage(),
             ]);
-            
+
             return [];
         }
     }
@@ -185,13 +187,13 @@ class GitHubService
                 'Accept' => 'application/vnd.github.v3+json',
             ];
 
-            if (!empty($this->config['api_token'])) {
-                $headers['Authorization'] = 'token ' . $this->config['api_token'];
+            if (! empty($this->config['api_token'])) {
+                $headers['Authorization'] = 'token '.$this->config['api_token'];
                 Log::info('GitHub API: Using authentication token for tarball download', [
                     'owner' => $owner,
                     'repo' => $repo,
                     'branch' => $branch,
-                    'token_prefix' => substr($this->config['api_token'], 0, 7) . '...',
+                    'token_prefix' => substr($this->config['api_token'], 0, 7).'...',
                 ]);
             } else {
                 Log::warning('GitHub API: No authentication token provided for tarball download', [
@@ -215,7 +217,7 @@ class GitHubService
                         'strict' => true,
                         'referer' => true,
                         'track_redirects' => true,
-                    ]
+                    ],
                 ])
                 ->get($tarballUrl);
 
@@ -228,7 +230,7 @@ class GitHubService
                 'redirect_history' => $response->transferStats?->getHandlerStats()['redirect_url'] ?? null,
             ]);
 
-            if (!$response->successful()) {
+            if (! $response->successful()) {
                 $responseBody = $response->body();
                 $isJson = $this->isJsonResponse($responseBody);
 
@@ -252,13 +254,13 @@ class GitHubService
                     }
                 }
 
-                throw new \RuntimeException("Failed to download repository tarball: HTTP {$response->status()}. Response: " . substr($responseBody, 0, 200));
+                throw new \RuntimeException("Failed to download repository tarball: HTTP {$response->status()}. Response: ".substr($responseBody, 0, 200));
             }
 
             // Validate response content
             $responseBody = $response->body();
             if (empty($responseBody)) {
-                throw new \RuntimeException("Repository tarball download returned empty content");
+                throw new \RuntimeException('Repository tarball download returned empty content');
             }
 
             // Check if we received HTML instead of tarball
@@ -267,17 +269,17 @@ class GitHubService
                     'response_preview' => substr($responseBody, 0, 500),
                     'content_type' => $response->header('Content-Type'),
                 ]);
-                throw new \RuntimeException("Received HTML page instead of repository tarball. This may indicate authentication or access issues.");
+                throw new \RuntimeException('Received HTML page instead of repository tarball. This may indicate authentication or access issues.');
             }
 
             // Save to temporary file
             $tempPath = storage_path('app/temp/github_downloads');
-            if (!is_dir($tempPath)) {
+            if (! is_dir($tempPath)) {
                 mkdir($tempPath, 0755, true);
             }
 
-            $filename = "{$owner}_{$repo}_{$branch}_" . time() . '.tar.gz';
-            $filePath = $tempPath . '/' . $filename;
+            $filename = "{$owner}_{$repo}_{$branch}_".time().'.tar.gz';
+            $filePath = $tempPath.'/'.$filename;
 
             file_put_contents($filePath, $responseBody);
 
@@ -301,7 +303,7 @@ class GitHubService
                 'error_code' => $e->getCode(),
             ]);
 
-            throw new \RuntimeException("Failed to download repository: " . $e->getMessage());
+            throw new \RuntimeException('Failed to download repository: '.$e->getMessage());
         } catch (\Exception $e) {
             Log::error('Unexpected error when downloading repository tarball', [
                 'owner' => $owner,
@@ -312,7 +314,7 @@ class GitHubService
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            throw new \RuntimeException("Failed to download repository: " . $e->getMessage());
+            throw new \RuntimeException('Failed to download repository: '.$e->getMessage());
         }
     }
 
@@ -323,6 +325,7 @@ class GitHubService
     {
         try {
             $this->getRepositoryInfo($owner, $repo);
+
             return true;
         } catch (\Exception) {
             return false;
@@ -349,12 +352,13 @@ class GitHubService
     {
         try {
             $rateLimit = $this->client->api('rate_limit')->getRateLimits();
+
             return $rateLimit['rate'];
         } catch (GitHubRuntimeException $e) {
             Log::warning('Failed to fetch rate limit info', [
                 'error' => $e->getMessage(),
             ]);
-            
+
             return [
                 'limit' => 60, // Default for unauthenticated requests
                 'remaining' => 60,
@@ -388,6 +392,7 @@ class GitHubService
         }
 
         json_decode($content);
+
         return json_last_error() === JSON_ERROR_NONE;
     }
 
@@ -434,11 +439,11 @@ class GitHubService
             }
 
             Log::info('GitHub API: Verifying API token', [
-                'token_prefix' => substr($this->config['api_token'], 0, 7) . '...',
+                'token_prefix' => substr($this->config['api_token'], 0, 7).'...',
             ]);
 
             $response = Http::withHeaders([
-                'Authorization' => 'token ' . $this->config['api_token'],
+                'Authorization' => 'token '.$this->config['api_token'],
                 'User-Agent' => 'ThinkTest-AI/1.0',
                 'Accept' => 'application/vnd.github.v3+json',
             ])->get('https://api.github.com/user');
@@ -450,6 +455,7 @@ class GitHubService
 
             if ($response->successful()) {
                 $userData = $response->json();
+
                 return [
                     'valid' => true,
                     'user' => $userData['login'] ?? 'unknown',
@@ -464,7 +470,7 @@ class GitHubService
 
                 return [
                     'valid' => false,
-                    'error' => "HTTP {$response->status()}: " . $response->body(),
+                    'error' => "HTTP {$response->status()}: ".$response->body(),
                 ];
             }
         } catch (\Exception $e) {

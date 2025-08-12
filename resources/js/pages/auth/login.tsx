@@ -5,10 +5,10 @@ import { FormEventHandler } from 'react';
 import InputError from '@/components/input-error';
 import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import AuthLayout from '@/layouts/auth-layout';
 
 type LoginForm = {
@@ -115,13 +115,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                 </div>
             </div>
 
-            <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={() => window.location.href = route('auth.google')}
-                tabIndex={7}
-            >
+            <Button type="button" variant="outline" className="w-full" onClick={() => (window.location.href = route('auth.google'))} tabIndex={7}>
                 <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                     <path
                         fill="currentColor"
@@ -147,14 +141,16 @@ export default function Login({ status, canResetPassword }: LoginProps) {
             <Card className="mt-6 border-blue-200 bg-blue-50">
                 <CardHeader className="pb-3 text-center">
                     <CardTitle className="text-sm font-medium text-blue-900">Demo Account</CardTitle>
-                    <CardDescription className="text-xs text-blue-700">
-                        Use this test account to explore the application
-                    </CardDescription>
+                    <CardDescription className="text-xs text-blue-700">Use this test account to explore the application</CardDescription>
                 </CardHeader>
                 <CardContent className="text-xs">
-                    <div className="text-center space-y-1">
-                        <p className="font-medium text-blue-900">Email: <span className="font-mono text-blue-700">demo@example.com</span></p>
-                        <p className="font-medium text-blue-900">Password: <span className="font-mono text-blue-700">password</span></p>
+                    <div className="space-y-1 text-center">
+                        <p className="font-medium text-blue-900">
+                            Email: <span className="font-mono text-blue-700">demo@example.com</span>
+                        </p>
+                        <p className="font-medium text-blue-900">
+                            Password: <span className="font-mono text-blue-700">password</span>
+                        </p>
                     </div>
                 </CardContent>
             </Card>

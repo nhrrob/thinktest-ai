@@ -4,8 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class ConsolidatedRequestsTest extends TestCase
@@ -15,7 +15,7 @@ class ConsolidatedRequestsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create permissions
         Permission::create(['name' => 'view roles', 'guard_name' => 'web']);
         Permission::create(['name' => 'create roles', 'guard_name' => 'web']);
@@ -35,7 +35,7 @@ class ConsolidatedRequestsTest extends TestCase
         $adminRole->givePermissionTo([
             'view roles', 'create roles', 'edit roles', 'delete roles',
             'view permissions', 'create permissions', 'edit permissions', 'delete permissions',
-            'view users', 'create users', 'edit users', 'delete users'
+            'view users', 'create users', 'edit users', 'delete users',
         ]);
     }
 
@@ -43,9 +43,9 @@ class ConsolidatedRequestsTest extends TestCase
     {
         $admin = User::factory()->create();
         $admin->assignRole('admin');
-        
+
         Role::create(['name' => 'existing-role', 'guard_name' => 'web']);
-        
+
         $response = $this->actingAs($admin)->post(route('admin.roles.store'), [
             'name' => 'existing-role',
         ]);

@@ -252,15 +252,17 @@
 
     /* Enhanced shadow for better visibility */
     .shadow-lg {
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
-                    0 4px 6px -2px rgba(0, 0, 0, 0.05),
-                    0 0 0 1px rgba(0, 0, 0, 0.05) !important;
+        box-shadow:
+            0 10px 15px -3px rgba(0, 0, 0, 0.1),
+            0 4px 6px -2px rgba(0, 0, 0, 0.05),
+            0 0 0 1px rgba(0, 0, 0, 0.05) !important;
     }
 
     .dark .shadow-lg {
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3),
-                    0 4px 6px -2px rgba(0, 0, 0, 0.2),
-                    0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+        box-shadow:
+            0 10px 15px -3px rgba(0, 0, 0, 0.3),
+            0 4px 6px -2px rgba(0, 0, 0, 0.2),
+            0 0 0 1px rgba(255, 255, 255, 0.1) !important;
     }
 
     /* Ensure ring opacity works properly */
@@ -273,18 +275,18 @@
     }
 
     /* Dialog specific styling to ensure proper background and visibility */
-    [data-slot="dialog-content"] {
+    [data-slot='dialog-content'] {
         background-color: var(--background) !important;
         color: var(--foreground) !important;
         border-color: var(--border) !important;
     }
 
     /* Ensure dialog overlay has proper opacity */
-    [data-slot="dialog-overlay"] {
+    [data-slot='dialog-overlay'] {
         background-color: rgba(0, 0, 0, 0.8) !important;
     }
 
-    .dark [data-slot="dialog-overlay"] {
+    .dark [data-slot='dialog-overlay'] {
         background-color: rgba(0, 0, 0, 0.9) !important;
     }
 }

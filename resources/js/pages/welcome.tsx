@@ -1,12 +1,12 @@
-import { type SharedData } from '@/types';
-import { Head, Link, usePage } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Code, Zap, Shield, Download, Upload, Cpu, CheckCircle } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import AppLogoIcon from '@/components/app-logo-icon';
 import AppearanceToggleDropdown from '@/components/appearance-dropdown';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { type SharedData } from '@/types';
+import { Head, Link, usePage } from '@inertiajs/react';
+import { CheckCircle, Code, Cpu, Download, Shield, Upload, Zap } from 'lucide-react';
 
 export default function Welcome() {
     const { auth } = usePage<SharedData>().props;
@@ -57,12 +57,11 @@ export default function Welcome() {
                                 AI-Powered Testing
                             </Badge>
                             <h1 className="mb-6 text-4xl font-bold tracking-tight lg:text-6xl">
-                                Smarter Unit Tests for{' '}
-                                <span className="text-primary">WordPress Plugins</span>
+                                Smarter Unit Tests for <span className="text-primary">WordPress Plugins</span>
                             </h1>
                             <p className="mb-8 text-xl text-muted-foreground lg:text-2xl">
-                                Generate comprehensive, intelligent test suites for your WordPress plugins using advanced AI. 
-                                Support for PHPUnit and Pest frameworks with OpenAI and Anthropic integration.
+                                Generate comprehensive, intelligent test suites for your WordPress plugins using advanced AI. Support for PHPUnit and
+                                Pest frameworks with OpenAI and Anthropic integration.
                             </p>
                             <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
                                 {auth.user ? (
@@ -90,12 +89,10 @@ export default function Welcome() {
                 </section>
 
                 {/* Features Section */}
-                <section className="py-20 bg-muted/50">
+                <section className="bg-muted/50 py-20">
                     <div className="container">
-                        <div className="mx-auto max-w-2xl text-center mb-16">
-                            <h2 className="mb-4 text-3xl font-bold lg:text-4xl">
-                                Powerful AI-Driven Features
-                            </h2>
+                        <div className="mx-auto mb-16 max-w-2xl text-center">
+                            <h2 className="mb-4 text-3xl font-bold lg:text-4xl">Powerful AI-Driven Features</h2>
                             <p className="text-lg text-muted-foreground">
                                 Everything you need to generate comprehensive test suites for your WordPress plugins
                             </p>
@@ -103,7 +100,7 @@ export default function Welcome() {
                         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
                             <Card>
                                 <CardHeader>
-                                    <Code className="size-10 text-primary mb-2" />
+                                    <Code className="mb-2 size-10 text-primary" />
                                     <CardTitle>AI-Powered Analysis</CardTitle>
                                     <CardDescription>
                                         Advanced code analysis using OpenAI GPT-4 and Anthropic Claude to understand your plugin structure
@@ -112,7 +109,7 @@ export default function Welcome() {
                             </Card>
                             <Card>
                                 <CardHeader>
-                                    <Code className="size-10 text-primary mb-2" />
+                                    <Code className="mb-2 size-10 text-primary" />
                                     <CardTitle>WordPress Expertise</CardTitle>
                                     <CardDescription>
                                         Specialized knowledge of WordPress hooks, filters, actions, and plugin patterns for accurate testing
@@ -121,7 +118,7 @@ export default function Welcome() {
                             </Card>
                             <Card>
                                 <CardHeader>
-                                    <Zap className="size-10 text-primary mb-2" />
+                                    <Zap className="mb-2 size-10 text-primary" />
                                     <CardTitle>Multiple Frameworks</CardTitle>
                                     <CardDescription>
                                         Support for both PHPUnit and Pest testing frameworks with proper WordPress integration
@@ -130,7 +127,7 @@ export default function Welcome() {
                             </Card>
                             <Card>
                                 <CardHeader>
-                                    <Shield className="size-10 text-primary mb-2" />
+                                    <Shield className="mb-2 size-10 text-primary" />
                                     <CardTitle>Security Testing</CardTitle>
                                     <CardDescription>
                                         Automatic generation of security tests for input sanitization and WordPress security best practices
@@ -139,7 +136,7 @@ export default function Welcome() {
                             </Card>
                             <Card>
                                 <CardHeader>
-                                    <Upload className="size-10 text-primary mb-2" />
+                                    <Upload className="mb-2 size-10 text-primary" />
                                     <CardTitle>Easy Upload</CardTitle>
                                     <CardDescription>
                                         Simple drag-and-drop interface for uploading your WordPress plugin files (up to 10MB)
@@ -148,7 +145,7 @@ export default function Welcome() {
                             </Card>
                             <Card>
                                 <CardHeader>
-                                    <Download className="size-10 text-primary mb-2" />
+                                    <Download className="mb-2 size-10 text-primary" />
                                     <CardTitle>Instant Download</CardTitle>
                                     <CardDescription>
                                         Download your generated test files immediately, ready to integrate into your development workflow
@@ -162,13 +159,9 @@ export default function Welcome() {
                 {/* AI Providers Section */}
                 <section className="py-20">
                     <div className="container">
-                        <div className="mx-auto max-w-2xl text-center mb-16">
-                            <h2 className="mb-4 text-3xl font-bold lg:text-4xl">
-                                Powered by Leading AI Models
-                            </h2>
-                            <p className="text-lg text-muted-foreground">
-                                Choose from the best AI providers for your testing needs
-                            </p>
+                        <div className="mx-auto mb-16 max-w-2xl text-center">
+                            <h2 className="mb-4 text-3xl font-bold lg:text-4xl">Powered by Leading AI Models</h2>
+                            <p className="text-lg text-muted-foreground">Choose from the best AI providers for your testing needs</p>
                         </div>
                         <div className="grid gap-8 md:grid-cols-2">
                             <Card>
@@ -182,7 +175,7 @@ export default function Welcome() {
                                     </div>
                                 </CardHeader>
                                 <CardContent>
-                                    <p className="text-muted-foreground mb-4">
+                                    <p className="mb-4 text-muted-foreground">
                                         Advanced language model with deep understanding of code patterns and WordPress development
                                     </p>
                                     <ul className="space-y-2">
@@ -212,7 +205,7 @@ export default function Welcome() {
                                     </div>
                                 </CardHeader>
                                 <CardContent>
-                                    <p className="text-muted-foreground mb-4">
+                                    <p className="mb-4 text-muted-foreground">
                                         Constitutional AI with excellent reasoning capabilities for complex plugin analysis
                                     </p>
                                     <ul className="space-y-2">
@@ -230,21 +223,17 @@ export default function Welcome() {
                                         </li>
                                     </ul>
                                 </CardContent>
-            </Card>
-        </div>
-    </div>
-</section>
+                            </Card>
+                        </div>
+                    </div>
+                </section>
 
                 {/* How It Works Section */}
-                <section className="py-20 bg-muted/50">
+                <section className="bg-muted/50 py-20">
                     <div className="container">
-                        <div className="mx-auto max-w-2xl text-center mb-16">
-                            <h2 className="mb-4 text-3xl font-bold lg:text-4xl">
-                                How It Works
-                            </h2>
-                            <p className="text-lg text-muted-foreground">
-                                Generate comprehensive test suites in three simple steps
-                            </p>
+                        <div className="mx-auto mb-16 max-w-2xl text-center">
+                            <h2 className="mb-4 text-3xl font-bold lg:text-4xl">How It Works</h2>
+                            <p className="text-lg text-muted-foreground">Generate comprehensive test suites in three simple steps</p>
                         </div>
                         <div className="grid gap-8 md:grid-cols-3">
                             <div className="text-center">
@@ -252,27 +241,21 @@ export default function Welcome() {
                                     <Upload className="size-8" />
                                 </div>
                                 <h3 className="mb-2 text-xl font-semibold">1. Upload Plugin</h3>
-                                <p className="text-muted-foreground">
-                                    Upload your WordPress plugin file (PHP, JS, CSS, JSON supported)
-                                </p>
+                                <p className="text-muted-foreground">Upload your WordPress plugin file (PHP, JS, CSS, JSON supported)</p>
                             </div>
                             <div className="text-center">
                                 <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-primary text-primary-foreground">
                                     <Code className="size-8" />
                                 </div>
                                 <h3 className="mb-2 text-xl font-semibold">2. AI Analysis</h3>
-                                <p className="text-muted-foreground">
-                                    Our AI analyzes your code structure, hooks, and WordPress patterns
-                                </p>
+                                <p className="text-muted-foreground">Our AI analyzes your code structure, hooks, and WordPress patterns</p>
                             </div>
                             <div className="text-center">
                                 <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-primary text-primary-foreground">
                                     <Download className="size-8" />
                                 </div>
                                 <h3 className="mb-2 text-xl font-semibold">3. Download Tests</h3>
-                                <p className="text-muted-foreground">
-                                    Get comprehensive test files ready for your development workflow
-                                </p>
+                                <p className="text-muted-foreground">Get comprehensive test files ready for your development workflow</p>
                             </div>
                         </div>
                     </div>
@@ -282,9 +265,7 @@ export default function Welcome() {
                 <section className="py-20">
                     <div className="container">
                         <div className="mx-auto max-w-2xl text-center">
-                            <h2 className="mb-4 text-3xl font-bold lg:text-4xl">
-                                Ready to Improve Your Testing?
-                            </h2>
+                            <h2 className="mb-4 text-3xl font-bold lg:text-4xl">Ready to Improve Your Testing?</h2>
                             <p className="mb-8 text-lg text-muted-foreground">
                                 Join developers who are already using ThinkTest AI to create better, more reliable WordPress plugins.
                             </p>
@@ -319,9 +300,7 @@ export default function Welcome() {
                                 </div>
                                 <span className="font-bold">ThinkTest AI</span>
                             </div>
-                            <p className="text-sm text-muted-foreground">
-                                © 2024 ThinkTest AI. Smarter Unit Tests for WordPress Plugins.
-                            </p>
+                            <p className="text-sm text-muted-foreground">© 2024 ThinkTest AI. Smarter Unit Tests for WordPress Plugins.</p>
                         </div>
                     </div>
                 </footer>

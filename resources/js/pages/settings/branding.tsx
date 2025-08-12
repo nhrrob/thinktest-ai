@@ -1,6 +1,7 @@
 import { Head, useForm } from '@inertiajs/react';
 import { FormEventHandler, useState } from 'react';
 
+import AppLogo from '@/components/app-logo';
 import HeadingSmall from '@/components/heading-small';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,6 @@ import { Separator } from '@/components/ui/separator';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import { type BreadcrumbItem } from '@/types';
-import AppLogo from '@/components/app-logo';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -38,10 +38,9 @@ interface BrandingProps {
     availableLogos: Logo[];
 }
 
-export default function Branding({ currentLogo, availableLogos }: BrandingProps) {
+export default function Branding({ currentLogo }: BrandingProps) {
     const [selectedLogoType, setSelectedLogoType] = useState(currentLogo.type);
-    const [selectedCustomLogo, setSelectedCustomLogo] = useState(currentLogo.path || '');
-    
+
     const { data, setData, post, processing, errors, reset } = useForm({
         logo_type: currentLogo.type,
         logo_file: null as File | null,
@@ -50,10 +49,10 @@ export default function Branding({ currentLogo, availableLogos }: BrandingProps)
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
-        
+
         const formData = new FormData();
         formData.append('logo_type', selectedLogoType);
-        
+
         if (selectedLogoType === 'uploaded' && data.logo_file) {
             formData.append('logo_file', data.logo_file);
         } else if (selectedLogoType === 'custom') {
@@ -81,24 +80,19 @@ export default function Branding({ currentLogo, availableLogos }: BrandingProps)
 
             <SettingsLayout>
                 <div className="space-y-6">
-                    <HeadingSmall 
-                        title="Branding settings" 
-                        description="Customize your application's logo and branding" 
-                    />
+                    <HeadingSmall title="Branding settings" description="Customize your application's logo and branding" />
 
                     <form onSubmit={submit} className="space-y-6">
                         <Card>
                             <CardHeader>
                                 <CardTitle>Application Logo</CardTitle>
-                                <CardDescription>
-                                    Choose how your application logo appears throughout the interface
-                                </CardDescription>
+                                <CardDescription>Choose how your application logo appears throughout the interface</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
                                 {/* Current Logo Display */}
                                 <div className="space-y-4">
                                     <Label className="text-sm font-medium">Current Logo</Label>
-                                    <div className="p-6 border rounded-lg bg-muted/50 flex items-center justify-center">
+                                    <div className="flex items-center justify-center rounded-lg border bg-muted/50 p-6">
                                         <AppLogo variant="auth" iconSize="lg" showText={true} />
                                     </div>
                                 </div>
@@ -112,7 +106,7 @@ export default function Branding({ currentLogo, availableLogos }: BrandingProps)
                                     <div className="grid gap-4">
                                         {/* Default Logo */}
                                         <div
-                                            className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                                            className={`cursor-pointer rounded-lg border p-4 transition-colors ${
                                                 selectedLogoType === 'default'
                                                     ? 'border-primary bg-primary/5'
                                                     : 'border-border hover:border-primary/50'
@@ -130,8 +124,8 @@ export default function Branding({ currentLogo, availableLogos }: BrandingProps)
                                                     </p>
                                                 </div>
                                                 {selectedLogoType === 'default' && (
-                                                    <div className="w-4 h-4 rounded-full bg-primary flex items-center justify-center">
-                                                        <div className="w-2 h-2 rounded-full bg-white"></div>
+                                                    <div className="flex h-4 w-4 items-center justify-center rounded-full bg-primary">
+                                                        <div className="h-2 w-2 rounded-full bg-white"></div>
                                                     </div>
                                                 )}
                                             </div>
@@ -139,7 +133,7 @@ export default function Branding({ currentLogo, availableLogos }: BrandingProps)
 
                                         {/* Upload Custom Logo */}
                                         <div
-                                            className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                                            className={`cursor-pointer rounded-lg border p-4 transition-colors ${
                                                 selectedLogoType === 'uploaded'
                                                     ? 'border-primary bg-primary/5'
                                                     : 'border-border hover:border-primary/50'
@@ -162,26 +156,22 @@ export default function Branding({ currentLogo, availableLogos }: BrandingProps)
                                                                 type="file"
                                                                 accept=".png,.jpg,.jpeg,.svg"
                                                                 onChange={handleFileChange}
-                                                                className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                                                                className="file:mr-4 file:rounded-full file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary-foreground hover:file:bg-primary/90"
                                                             />
                                                             <InputError message={errors.logo_file} />
 
                                                             {currentLogo.type === 'uploaded' && currentLogo.url && (
-                                                                <div className="p-3 border rounded bg-background">
-                                                                    <p className="text-xs text-muted-foreground mb-2">Current uploaded logo:</p>
-                                                                    <img
-                                                                        src={currentLogo.url}
-                                                                        alt="Current logo"
-                                                                        className="h-8 w-auto"
-                                                                    />
+                                                                <div className="rounded border bg-background p-3">
+                                                                    <p className="mb-2 text-xs text-muted-foreground">Current uploaded logo:</p>
+                                                                    <img src={currentLogo.url} alt="Current logo" className="h-8 w-auto" />
                                                                 </div>
                                                             )}
                                                         </div>
                                                     )}
                                                 </div>
                                                 {selectedLogoType === 'uploaded' && (
-                                                    <div className="w-4 h-4 rounded-full bg-primary flex items-center justify-center">
-                                                        <div className="w-2 h-2 rounded-full bg-white"></div>
+                                                    <div className="flex h-4 w-4 items-center justify-center rounded-full bg-primary">
+                                                        <div className="h-2 w-2 rounded-full bg-white"></div>
                                                     </div>
                                                 )}
                                             </div>

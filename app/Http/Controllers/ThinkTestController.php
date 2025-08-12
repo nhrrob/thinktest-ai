@@ -3,18 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Models\AIConversationState;
-use App\Models\PluginAnalysisResult;
 use App\Models\GitHubRepository;
+use App\Models\PluginAnalysisResult;
 use App\Services\AI\AIProviderService;
+use App\Services\FileProcessing\FileProcessingService;
+use App\Services\GitHub\GitHubErrorHandler;
+use App\Services\GitHub\GitHubRepositoryService;
+use App\Services\GitHub\GitHubService;
+use App\Services\GitHub\GitHubValidationService;
 use App\Services\WordPress\PluginAnalysisService;
+use App\Services\WordPress\TestConfigurationTemplateService;
 use App\Services\WordPress\TestInfrastructureDetectionService;
 use App\Services\WordPress\TestSetupInstructionsService;
-use App\Services\WordPress\TestConfigurationTemplateService;
-use App\Services\FileProcessing\FileProcessingService;
-use App\Services\GitHub\GitHubService;
-use App\Services\GitHub\GitHubRepositoryService;
-use App\Services\GitHub\GitHubValidationService;
-use App\Services\GitHub\GitHubErrorHandler;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -25,13 +25,21 @@ use Inertia\Inertia;
 class ThinkTestController extends Controller
 {
     private AIProviderService $aiService;
+
     private PluginAnalysisService $analysisService;
+
     private TestInfrastructureDetectionService $testDetectionService;
+
     private TestSetupInstructionsService $testInstructionsService;
+
     private TestConfigurationTemplateService $testTemplateService;
+
     private FileProcessingService $fileService;
+
     private GitHubService $githubService;
+
     private GitHubRepositoryService $githubRepositoryService;
+
     private GitHubValidationService $githubValidationService;
 
     public function __construct(
@@ -67,7 +75,7 @@ class ThinkTestController extends Controller
     public function index()
     {
         $user = Auth::user();
-        
+
         // Get recent conversations
         $recentConversations = AIConversationState::where('user_id', $user->id)
             ->orderBy('created_at', 'desc')
@@ -100,7 +108,7 @@ class ThinkTestController extends Controller
 
         try {
             $user = Auth::user();
-            
+
             // Process uploaded file
             $fileData = $this->fileService->processUploadedFile(
                 $request->file('plugin_file'),
@@ -197,7 +205,7 @@ class ThinkTestController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Upload failed: ' . $e->getMessage(),
+                'message' => 'Upload failed: '.$e->getMessage(),
             ], 422);
         }
     }
@@ -215,7 +223,7 @@ class ThinkTestController extends Controller
 
         try {
             $user = Auth::user();
-            
+
             // Find conversation
             $conversation = AIConversationState::where('conversation_id', $request->conversation_id)
                 ->where('user_id', $user->id)
@@ -272,7 +280,7 @@ class ThinkTestController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Test generation failed: ' . $e->getMessage(),
+                'message' => 'Test generation failed: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -288,7 +296,7 @@ class ThinkTestController extends Controller
 
         try {
             $user = Auth::user();
-            
+
             // Find conversation
             $conversation = AIConversationState::where('conversation_id', $request->conversation_id)
                 ->where('user_id', $user->id)
@@ -302,12 +310,12 @@ class ThinkTestController extends Controller
             }
 
             // Create downloadable file
-            $filename = 'thinktest_' . $conversation->context['filename'] . '_tests.php';
+            $filename = 'thinktest_'.$conversation->context['filename'].'_tests.php';
             $content = $conversation->generated_tests;
 
             return response($content)
                 ->header('Content-Type', 'application/octet-stream')
-                ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+                ->header('Content-Disposition', 'attachment; filename="'.$filename.'"');
 
         } catch (\Exception $e) {
             Log::error('Test download failed', [
@@ -318,7 +326,7 @@ class ThinkTestController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Download failed: ' . $e->getMessage(),
+                'message' => 'Download failed: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -333,7 +341,7 @@ class ThinkTestController extends Controller
         ]);
 
         $user = Auth::user();
-        
+
         $conversation = AIConversationState::where('conversation_id', $request->conversation_id)
             ->where('user_id', $user->id)
             ->firstOrFail();
@@ -344,7 +352,7 @@ class ThinkTestController extends Controller
             'step' => $conversation->step,
             'total_steps' => $conversation->total_steps,
             'progress' => $conversation->getProgressPercentage(),
-            'has_tests' => !empty($conversation->generated_tests),
+            'has_tests' => ! empty($conversation->generated_tests),
             'provider' => $conversation->provider,
             'context' => $conversation->context,
         ]);
@@ -369,7 +377,7 @@ class ThinkTestController extends Controller
             );
 
             // Check if repository is accessible
-            if (!$this->githubService->isRepositoryAccessible($repoData['owner'], $repoData['repo'])) {
+            if (! $this->githubService->isRepositoryAccessible($repoData['owner'], $repoData['repo'])) {
                 $this->githubValidationService->logSecurityEvent('Repository access denied', [
                     'user_id' => $user->id,
                     'repository_url' => $request->repository_url,
@@ -506,7 +514,7 @@ class ThinkTestController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to fetch branches: ' . $e->getMessage(),
+                'message' => 'Failed to fetch branches: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -524,7 +532,7 @@ class ThinkTestController extends Controller
             'user_id' => Auth::id(),
             'ip' => $request->ip(),
             'user_agent' => $request->userAgent(),
-            'request_data' => $request->only(['owner', 'repo', 'branch', 'provider', 'framework'])
+            'request_data' => $request->only(['owner', 'repo', 'branch', 'provider', 'framework']),
         ]);
 
         $request->validate([
@@ -538,7 +546,7 @@ class ThinkTestController extends Controller
         try {
             $user = Auth::user();
 
-            if (!$user) {
+            if (! $user) {
                 Log::error('GitHub repository processing: User not authenticated', [
                     'request_id' => $requestId,
                     'ip' => $request->ip(),
@@ -590,7 +598,7 @@ class ThinkTestController extends Controller
                 ->where('branch', $request->branch)
                 ->first();
 
-            if (!$githubRepo) {
+            if (! $githubRepo) {
                 Log::info('GitHub repository processing: Creating new repository record', [
                     'request_id' => $requestId,
                     'user_id' => $user->id,
@@ -822,7 +830,7 @@ class ThinkTestController extends Controller
         } catch (\JsonException $e) {
             // JSON parsing errors
             if (isset($githubRepo)) {
-                $githubRepo->markAsFailed('JSON parsing error: ' . $e->getMessage());
+                $githubRepo->markAsFailed('JSON parsing error: '.$e->getMessage());
             }
 
             Log::error('GitHub repository processing: JSON parsing error', [
@@ -881,7 +889,7 @@ class ThinkTestController extends Controller
                 $userMessage = 'Repository processing failed: GitHub authentication error. Please verify your API token is valid and has the necessary permissions.';
                 $errorCode = 'AUTH_ERROR';
             } else {
-                $userMessage = 'Repository processing failed: ' . $errorMessage;
+                $userMessage = 'Repository processing failed: '.$errorMessage;
                 $errorCode = 'GENERAL_ERROR';
             }
 
@@ -907,8 +915,8 @@ class ThinkTestController extends Controller
             $config = config('thinktest_ai.github');
             $debugInfo['configuration'] = [
                 'enabled' => $config['enabled'] ?? false,
-                'api_token_configured' => !empty($config['api_token']),
-                'api_token_prefix' => !empty($config['api_token']) ? substr($config['api_token'], 0, 7) . '...' : 'Not configured',
+                'api_token_configured' => ! empty($config['api_token']),
+                'api_token_prefix' => ! empty($config['api_token']) ? substr($config['api_token'], 0, 7).'...' : 'Not configured',
                 'max_repository_size' => $config['max_repository_size'] ?? 'Not configured',
                 'clone_timeout' => $config['clone_timeout'] ?? 'Not configured',
             ];
@@ -964,7 +972,7 @@ class ThinkTestController extends Controller
 
             // 6. Check environment variables
             $debugInfo['environment'] = [
-                'github_api_token_set' => !empty(env('GITHUB_API_TOKEN')),
+                'github_api_token_set' => ! empty(env('GITHUB_API_TOKEN')),
                 'github_integration_enabled' => env('GITHUB_INTEGRATION_ENABLED', false),
                 'app_env' => env('APP_ENV'),
                 'app_debug' => env('APP_DEBUG', false),
@@ -999,7 +1007,7 @@ class ThinkTestController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Debug endpoint failed: ' . $e->getMessage(),
+                'message' => 'Debug endpoint failed: '.$e->getMessage(),
                 'timestamp' => now()->toISOString(),
             ], 500);
         }
@@ -1011,7 +1019,7 @@ class ThinkTestController extends Controller
     private function calculateComplexityScore(array $analysis): int
     {
         $score = 0;
-        
+
         // Add points for various complexity factors
         $score += count($analysis['functions']) * 1;
         $score += count($analysis['classes']) * 2;
@@ -1020,7 +1028,7 @@ class ThinkTestController extends Controller
         $score += count($analysis['ajax_handlers']) * 2;
         $score += count($analysis['rest_endpoints']) * 2;
         $score += count($analysis['database_operations']) * 1;
-        
+
         return min($score, 100); // Cap at 100
     }
 
@@ -1043,7 +1051,7 @@ class ThinkTestController extends Controller
                 ->where('user_id', Auth::id())
                 ->first();
 
-            if (!$conversation) {
+            if (! $conversation) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Conversation not found',
@@ -1051,7 +1059,7 @@ class ThinkTestController extends Controller
             }
 
             // Get plugin content from file path
-            if (!$conversation->plugin_file_path) {
+            if (! $conversation->plugin_file_path) {
                 Log::error('No plugin file path in conversation', [
                     'conversation_id' => $conversationId,
                     'user_id' => Auth::id(),
@@ -1104,7 +1112,7 @@ class ThinkTestController extends Controller
 
             $instructions = $this->testInstructionsService->generateInstructions($detection, [
                 'framework' => $framework,
-                'plugin_name' => $pluginName
+                'plugin_name' => $pluginName,
             ]);
 
             return response()->json([
@@ -1122,7 +1130,7 @@ class ThinkTestController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Detection failed: ' . $e->getMessage(),
+                'message' => 'Detection failed: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -1146,8 +1154,8 @@ class ThinkTestController extends Controller
             $options = [
                 'framework' => $framework,
                 'plugin_name' => $pluginName,
-                'plugin_description' => "A WordPress plugin with automated testing setup",
-                'namespace' => str_replace([' ', '-'], '', ucwords($pluginName, ' -'))
+                'plugin_description' => 'A WordPress plugin with automated testing setup',
+                'namespace' => str_replace([' ', '-'], '', ucwords($pluginName, ' -')),
             ];
 
             $content = '';
@@ -1183,7 +1191,7 @@ class ThinkTestController extends Controller
 
             return response($content)
                 ->header('Content-Type', 'application/octet-stream')
-                ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+                ->header('Content-Disposition', 'attachment; filename="'.$filename.'"');
 
         } catch (\Exception $e) {
             Log::error('Template download failed', [
@@ -1194,7 +1202,7 @@ class ThinkTestController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Template generation failed: ' . $e->getMessage(),
+                'message' => 'Template generation failed: '.$e->getMessage(),
             ], 500);
         }
     }

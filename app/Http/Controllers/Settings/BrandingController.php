@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\File;
@@ -19,7 +19,7 @@ class BrandingController extends Controller
     public function edit(Request $request): Response
     {
         // Ensure code-themed logo is set as default if no preference exists
-        if (!session()->has('app_logo_type')) {
+        if (! session()->has('app_logo_type')) {
             session(['app_logo_type' => 'custom', 'app_logo_path' => 'thinktest_code']);
         }
 

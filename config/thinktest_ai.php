@@ -95,11 +95,11 @@ return [
             'sandbox_enabled' => true, // Application constant
             'allowed_functions' => [
                 'file_get_contents', 'json_decode', 'preg_match', 'preg_match_all',
-                'str_replace', 'substr', 'strlen', 'strpos', 'explode', 'implode'
+                'str_replace', 'substr', 'strlen', 'strpos', 'explode', 'implode',
             ],
             'blocked_functions' => [
                 'exec', 'shell_exec', 'system', 'passthru', 'eval', 'file_put_contents',
-                'fopen', 'fwrite', 'unlink', 'rmdir', 'mkdir'
+                'fopen', 'fwrite', 'unlink', 'rmdir', 'mkdir',
             ],
         ],
         'static_analysis' => [

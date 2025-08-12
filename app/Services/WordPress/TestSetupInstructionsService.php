@@ -33,13 +33,13 @@ class TestSetupInstructionsService
             'commands' => $this->getCommands($detection, $framework),
             'troubleshooting' => $this->getTroubleshootingTips(),
             'next_steps' => $this->getNextSteps($framework),
-            'resources' => $this->getResources($framework)
+            'resources' => $this->getResources($framework),
         ];
 
         Log::info('Generated test setup instructions', [
             'framework' => $framework,
             'difficulty' => $difficulty,
-            'steps_count' => count($instructions['steps'])
+            'steps_count' => count($instructions['steps']),
         ]);
 
         return $instructions;
@@ -51,7 +51,7 @@ class TestSetupInstructionsService
     private function determineDifficulty(array $detection): string
     {
         $missingCount = count($detection['missing_components']);
-        
+
         if ($missingCount >= 4) {
             return 'beginner'; // Complete setup needed
         } elseif ($missingCount >= 2) {
@@ -67,7 +67,7 @@ class TestSetupInstructionsService
     private function estimateTime(array $detection): string
     {
         $missingCount = count($detection['missing_components']);
-        
+
         if ($missingCount >= 4) {
             return '15-20 minutes';
         } elseif ($missingCount >= 2) {
@@ -86,19 +86,19 @@ class TestSetupInstructionsService
             [
                 'title' => 'PHP 7.4 or higher',
                 'description' => 'Required for modern testing frameworks',
-                'check_command' => 'php --version'
+                'check_command' => 'php --version',
             ],
             [
                 'title' => 'Composer',
                 'description' => 'PHP dependency manager for installing test frameworks',
                 'check_command' => 'composer --version',
-                'install_url' => 'https://getcomposer.org/download/'
+                'install_url' => 'https://getcomposer.org/download/',
             ],
             [
                 'title' => 'WordPress Development Environment',
                 'description' => 'Local WordPress installation for testing',
-                'options' => ['Local by Flywheel', 'XAMPP', 'MAMP', 'Docker']
-            ]
+                'options' => ['Local by Flywheel', 'XAMPP', 'MAMP', 'Docker'],
+            ],
         ];
     }
 
@@ -118,26 +118,26 @@ class TestSetupInstructionsService
                 'description' => 'Set up Composer for dependency management in your plugin directory',
                 'commands' => [
                     'cd /path/to/your/plugin',
-                    'composer init --no-interaction --name="your-vendor/' . strtolower(str_replace(' ', '-', $pluginName)) . '"'
+                    'composer init --no-interaction --name="your-vendor/'.strtolower(str_replace(' ', '-', $pluginName)).'"',
                 ],
                 'explanation' => 'This creates a composer.json file that will manage your test dependencies.',
-                'files_created' => ['composer.json']
+                'files_created' => ['composer.json'],
             ];
         }
 
         // Step 2: Install test dependencies
         if (in_array('test_dependencies', $detection['missing_components'])) {
             $dependencies = $this->getTestDependencies($framework);
-            
+
             $steps[] = [
                 'number' => $stepNumber++,
                 'title' => 'Install Test Dependencies',
                 'description' => "Install {$framework} and WordPress testing utilities",
                 'commands' => [
-                    'composer require --dev ' . implode(' ', $dependencies)
+                    'composer require --dev '.implode(' ', $dependencies),
                 ],
                 'explanation' => "This installs the {$framework} testing framework and WordPress-specific testing tools.",
-                'files_created' => ['composer.lock', 'vendor/']
+                'files_created' => ['composer.lock', 'vendor/'],
             ];
         }
 
@@ -150,10 +150,10 @@ class TestSetupInstructionsService
                 'commands' => [
                     'mkdir -p tests/Unit',
                     'mkdir -p tests/Integration',
-                    'mkdir -p tests/bootstrap'
+                    'mkdir -p tests/bootstrap',
                 ],
                 'explanation' => 'Organizing tests into Unit and Integration directories helps maintain clean test structure.',
-                'files_created' => ['tests/', 'tests/Unit/', 'tests/Integration/', 'tests/bootstrap/']
+                'files_created' => ['tests/', 'tests/Unit/', 'tests/Integration/', 'tests/bootstrap/'],
             ];
         }
 
@@ -165,7 +165,7 @@ class TestSetupInstructionsService
                     'title' => 'Create Pest Configuration',
                     'description' => 'Set up Pest configuration for WordPress plugin testing',
                     'explanation' => 'The Pest.php file configures how Pest runs your tests and sets up WordPress mocking.',
-                    'files_created' => ['tests/Pest.php']
+                    'files_created' => ['tests/Pest.php'],
                 ];
             } else {
                 $steps[] = [
@@ -173,7 +173,7 @@ class TestSetupInstructionsService
                     'title' => 'Create PHPUnit Configuration',
                     'description' => 'Set up PHPUnit configuration for WordPress plugin testing',
                     'explanation' => 'The phpunit.xml file tells PHPUnit how to run your tests and where to find them.',
-                    'files_created' => ['phpunit.xml']
+                    'files_created' => ['phpunit.xml'],
                 ];
             }
         }
@@ -184,7 +184,7 @@ class TestSetupInstructionsService
             'title' => 'Create Bootstrap File',
             'description' => 'Set up the test bootstrap to initialize WordPress environment',
             'explanation' => 'The bootstrap file loads WordPress functions and your plugin for testing.',
-            'files_created' => ['tests/bootstrap/bootstrap.php']
+            'files_created' => ['tests/bootstrap/bootstrap.php'],
         ];
 
         // Step 6: Create sample test
@@ -194,7 +194,7 @@ class TestSetupInstructionsService
             'description' => 'Generate a sample test file to verify everything works',
             'commands' => $framework === 'pest' ? ['./vendor/bin/pest'] : ['./vendor/bin/phpunit'],
             'explanation' => 'Running this sample test confirms your testing environment is properly configured.',
-            'files_created' => ['tests/SampleTest.php']
+            'files_created' => ['tests/SampleTest.php'],
         ];
 
         return $steps;
@@ -210,7 +210,7 @@ class TestSetupInstructionsService
                 'pestphp/pest:^2.0',
                 'pestphp/pest-plugin-wordpress:^2.0',
                 'brain/monkey:^2.6',
-                'mockery/mockery:^1.5'
+                'mockery/mockery:^1.5',
             ];
         }
 
@@ -218,7 +218,7 @@ class TestSetupInstructionsService
             'phpunit/phpunit:^10.0',
             'brain/monkey:^2.6',
             'yoast/phpunit-polyfills:^2.0',
-            'mockery/mockery:^1.5'
+            'mockery/mockery:^1.5',
         ];
     }
 
@@ -233,7 +233,7 @@ class TestSetupInstructionsService
             $files[] = [
                 'name' => 'composer.json',
                 'description' => 'Composer configuration with test dependencies',
-                'template' => 'composer_json'
+                'template' => 'composer_json',
             ];
         }
 
@@ -242,13 +242,13 @@ class TestSetupInstructionsService
                 $files[] = [
                     'name' => 'tests/Pest.php',
                     'description' => 'Pest configuration file',
-                    'template' => 'pest_config'
+                    'template' => 'pest_config',
                 ];
             } else {
                 $files[] = [
                     'name' => 'phpunit.xml',
                     'description' => 'PHPUnit configuration file',
-                    'template' => 'phpunit_config'
+                    'template' => 'phpunit_config',
                 ];
             }
         }
@@ -256,13 +256,13 @@ class TestSetupInstructionsService
         $files[] = [
             'name' => 'tests/bootstrap/bootstrap.php',
             'description' => 'WordPress test bootstrap file',
-            'template' => 'bootstrap'
+            'template' => 'bootstrap',
         ];
 
         $files[] = [
             'name' => 'tests/SampleTest.php',
             'description' => 'Sample test file to get started',
-            'template' => 'sample_test'
+            'template' => 'sample_test',
         ];
 
         return $files;
@@ -279,7 +279,7 @@ class TestSetupInstructionsService
             $commands[] = [
                 'title' => 'Initialize Composer',
                 'command' => 'composer init --no-interaction',
-                'description' => 'Creates composer.json file'
+                'description' => 'Creates composer.json file',
             ];
         }
 
@@ -288,14 +288,14 @@ class TestSetupInstructionsService
             $commands[] = [
                 'title' => 'Install Dependencies',
                 'command' => "composer require --dev {$dependencies}",
-                'description' => 'Installs testing framework and utilities'
+                'description' => 'Installs testing framework and utilities',
             ];
         }
 
         $commands[] = [
             'title' => 'Run Tests',
             'command' => $framework === 'pest' ? './vendor/bin/pest' : './vendor/bin/phpunit',
-            'description' => 'Execute your test suite'
+            'description' => 'Execute your test suite',
         ];
 
         return $commands;
@@ -310,23 +310,23 @@ class TestSetupInstructionsService
             [
                 'issue' => 'Composer command not found',
                 'solution' => 'Install Composer from https://getcomposer.org/download/',
-                'details' => 'Make sure Composer is in your system PATH'
+                'details' => 'Make sure Composer is in your system PATH',
             ],
             [
                 'issue' => 'PHP version too old',
                 'solution' => 'Update PHP to version 7.4 or higher',
-                'details' => 'Modern testing frameworks require PHP 7.4+'
+                'details' => 'Modern testing frameworks require PHP 7.4+',
             ],
             [
                 'issue' => 'Tests fail with WordPress function errors',
                 'solution' => 'Check that Brain Monkey is properly configured in bootstrap',
-                'details' => 'Brain Monkey mocks WordPress functions for testing'
+                'details' => 'Brain Monkey mocks WordPress functions for testing',
             ],
             [
                 'issue' => 'Permission denied errors',
                 'solution' => 'Make sure you have write permissions in the plugin directory',
-                'details' => 'Use chmod or run commands with appropriate permissions'
-            ]
+                'details' => 'Use chmod or run commands with appropriate permissions',
+            ],
         ];
     }
 
@@ -341,7 +341,7 @@ class TestSetupInstructionsService
             'Test database operations and options',
             'Set up continuous integration (CI) with GitHub Actions',
             'Configure code coverage reporting',
-            'Add integration tests for complex workflows'
+            'Add integration tests for complex workflows',
         ];
     }
 
@@ -354,13 +354,13 @@ class TestSetupInstructionsService
             [
                 'title' => 'Brain Monkey Documentation',
                 'url' => 'https://brain-wp.github.io/BrainMonkey/',
-                'description' => 'WordPress function mocking for tests'
+                'description' => 'WordPress function mocking for tests',
             ],
             [
                 'title' => 'WordPress Plugin Testing Guide',
                 'url' => 'https://developer.wordpress.org/plugins/testing/',
-                'description' => 'Official WordPress testing documentation'
-            ]
+                'description' => 'Official WordPress testing documentation',
+            ],
         ];
 
         if ($framework === 'pest') {
@@ -368,13 +368,13 @@ class TestSetupInstructionsService
                 [
                     'title' => 'Pest Documentation',
                     'url' => 'https://pestphp.com/',
-                    'description' => 'Official Pest testing framework docs'
+                    'description' => 'Official Pest testing framework docs',
                 ],
                 [
                     'title' => 'Pest WordPress Plugin',
                     'url' => 'https://github.com/pestphp/pest-plugin-wordpress',
-                    'description' => 'WordPress-specific Pest utilities'
-                ]
+                    'description' => 'WordPress-specific Pest utilities',
+                ],
             ]);
         }
 
@@ -382,13 +382,13 @@ class TestSetupInstructionsService
             [
                 'title' => 'PHPUnit Documentation',
                 'url' => 'https://phpunit.de/documentation.html',
-                'description' => 'Official PHPUnit testing framework docs'
+                'description' => 'Official PHPUnit testing framework docs',
             ],
             [
                 'title' => 'PHPUnit Polyfills',
                 'url' => 'https://github.com/Yoast/PHPUnit-Polyfills',
-                'description' => 'Compatibility layer for different PHPUnit versions'
-            ]
+                'description' => 'Compatibility layer for different PHPUnit versions',
+            ],
         ]);
     }
 }

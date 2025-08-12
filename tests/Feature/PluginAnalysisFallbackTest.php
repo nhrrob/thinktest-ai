@@ -12,7 +12,7 @@ class PluginAnalysisFallbackTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new PluginAnalysisService();
+        $this->service = new PluginAnalysisService;
     }
 
     public function test_fallback_analysis_handles_syntax_errors(): void
@@ -65,13 +65,13 @@ function broken_function() {
         $this->assertArrayHasKey('parsed_files', $result);
         $this->assertArrayHasKey('failed_files', $result);
         $this->assertArrayHasKey('wordpress_patterns', $result);
-        
+
         // Should have processed at least one file successfully and one with fallback
         $this->assertGreaterThanOrEqual(1, $result['parsed_files'] + $result['failed_files']);
-        
+
         // Should still find WordPress patterns from both files
         $this->assertGreaterThan(0, count($result['wordpress_patterns']));
-        
+
         $foundFunctions = array_column($result['wordpress_patterns'], 'function');
         $this->assertContains('add_action', $foundFunctions);
     }
@@ -101,7 +101,7 @@ function broken_function() {
         $this->assertArrayHasKey('wordpress_patterns', $result);
         $this->assertArrayHasKey('functions', $result);
         $this->assertArrayHasKey('classes', $result);
-        
+
         $this->assertGreaterThan(0, count($result['wordpress_patterns']));
         $this->assertGreaterThan(0, count($result['functions']));
         $this->assertGreaterThan(0, count($result['classes']));

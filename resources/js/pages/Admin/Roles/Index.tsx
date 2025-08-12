@@ -1,14 +1,14 @@
-import { type BreadcrumbItem, type Role } from '@/types';
-import { Head, Link, router } from '@inertiajs/react';
-import { PlusIcon, PencilIcon, TrashIcon, EyeIcon } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { ConfirmationDialog, useConfirmationDialog } from '@/components/confirmation-dialog';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import AppLayout from '@/layouts/app-layout';
-import { useConfirmationDialog, ConfirmationDialog } from '@/components/confirmation-dialog';
 import { useToast } from '@/hooks/use-toast';
+import AppLayout from '@/layouts/app-layout';
+import { type BreadcrumbItem, type Role } from '@/types';
+import { Head, Link, router } from '@inertiajs/react';
+import { EyeIcon, PencilIcon, PlusIcon, TrashIcon } from 'lucide-react';
 import React from 'react';
+import toast from 'react-hot-toast';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: route('dashboard') },
@@ -45,7 +45,7 @@ export default function RolesIndex({ roles }: RolesIndexProps) {
             console.log('Modal closed, clearing loading state');
             setIsDeleting(false);
         }
-    }, [isOpen]);
+    }, [isOpen, isDeleting]);
 
     const handleDelete = (role: Role) => {
         let loadingToast: string | undefined;
@@ -53,11 +53,11 @@ export default function RolesIndex({ roles }: RolesIndexProps) {
         console.log('Opening delete dialog for role:', role.name, 'ID:', role.id);
 
         openDialog({
-            title: "Delete Role",
+            title: 'Delete Role',
             description: `Are you sure you want to delete the role "${role.name}"? This action cannot be undone.`,
-            confirmText: "Delete",
-            cancelText: "Cancel",
-            variant: "destructive",
+            confirmText: 'Delete',
+            cancelText: 'Cancel',
+            variant: 'destructive',
             loading: isDeleting,
             onConfirm: () => {
                 console.log('Delete confirmed for role:', role.name, 'ID:', role.id);
@@ -74,19 +74,19 @@ export default function RolesIndex({ roles }: RolesIndexProps) {
                     onSuccess: () => {
                         console.log('Role deletion successful for:', role.name);
                         if (loadingToast) toast.dismiss(loadingToast);
-                        
+
                         // Close dialog and let effect clear loading once closed
                         closeDialog();
                     },
                     onError: (errors: Record<string, string>) => {
                         console.log('Role deletion failed for:', role.name, 'Errors:', errors);
                         if (loadingToast) toast.dismiss(loadingToast);
-                        
+
                         // Handle validation errors from the backend
                         if (errors && typeof errors === 'object' && Object.keys(errors).length > 0) {
                             // Get the error message from the 'role' field or any other field
                             let errorMessage = 'Failed to delete role. Please try again.';
-                            
+
                             if (errors.role) {
                                 errorMessage = errors.role;
                             } else if (errors.error) {
@@ -98,11 +98,11 @@ export default function RolesIndex({ roles }: RolesIndexProps) {
                                     errorMessage = firstError;
                                 }
                             }
-                            
+
                             // Show error toast using useToast hook for proper styling
                             showError(errorMessage);
                         }
-                        
+
                         // Close dialog and let effect clear loading once closed
                         closeDialog();
                     },
@@ -119,14 +119,12 @@ export default function RolesIndex({ roles }: RolesIndexProps) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Roles Management" />
-            
-            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
+
+            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-semibold tracking-tight">Roles</h1>
-                        <p className="text-muted-foreground">
-                            Manage user roles and their permissions
-                        </p>
+                        <p className="text-muted-foreground">Manage user roles and their permissions</p>
                     </div>
                     <Link href={route('admin.roles.create')}>
                         <Button>
@@ -139,30 +137,23 @@ export default function RolesIndex({ roles }: RolesIndexProps) {
                 <Card>
                     <CardHeader>
                         <CardTitle>All Roles</CardTitle>
-                        <CardDescription>
-                            A list of all roles in the system with their assigned permissions.
-                        </CardDescription>
+                        <CardDescription>A list of all roles in the system with their assigned permissions.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
                             {roles.data.length === 0 ? (
-                                <div className="text-center py-8">
+                                <div className="py-8 text-center">
                                     <p className="text-muted-foreground">No roles found.</p>
                                 </div>
                             ) : (
                                 roles.data.map((role) => (
-                                    <div
-                                        key={role.id}
-                                        className="flex items-center justify-between p-4 border rounded-lg"
-                                    >
+                                    <div key={role.id} className="flex items-center justify-between rounded-lg border p-4">
                                         <div className="flex-1">
                                             <div className="flex items-center gap-3">
                                                 <h3 className="font-medium">{role.name}</h3>
-                                                <Badge variant="secondary">
-                                                    {role.permissions?.length || 0} permissions
-                                                </Badge>
+                                                <Badge variant="secondary">{role.permissions?.length || 0} permissions</Badge>
                                             </div>
-                                            <p className="text-sm text-muted-foreground mt-1">
+                                            <p className="mt-1 text-sm text-muted-foreground">
                                                 Created {new Date(role.created_at).toLocaleDateString()}
                                             </p>
                                         </div>
@@ -195,17 +186,16 @@ export default function RolesIndex({ roles }: RolesIndexProps) {
 
                         {/* Pagination */}
                         {roles.last_page > 1 && (
-                            <div className="flex items-center justify-between mt-6">
+                            <div className="mt-6 flex items-center justify-between">
                                 <div className="text-sm text-muted-foreground">
-                                    Showing {((roles.current_page - 1) * roles.per_page) + 1} to{' '}
-                                    {Math.min(roles.current_page * roles.per_page, roles.total)} of{' '}
-                                    {roles.total} results
+                                    Showing {(roles.current_page - 1) * roles.per_page + 1} to{' '}
+                                    {Math.min(roles.current_page * roles.per_page, roles.total)} of {roles.total} results
                                 </div>
                                 <div className="flex items-center gap-2">
                                     {roles.links.map((link, index) => (
                                         <Button
                                             key={index}
-                                            variant={link.active ? "default" : "outline"}
+                                            variant={link.active ? 'default' : 'outline'}
                                             size="sm"
                                             disabled={!link.url}
                                             onClick={() => link.url && router.get(link.url)}

@@ -1,25 +1,118 @@
-import { useState, useRef } from 'react';
-import { Head, useForm } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
-import SourceToggle, { SourceType } from '@/components/github/SourceToggle';
-import GitHubRepositoryInput from '@/components/github/GitHubRepositoryInput';
 import GitHubBranchSelector from '@/components/github/GitHubBranchSelector';
+import GitHubRepositoryInput from '@/components/github/GitHubRepositoryInput';
+import SourceToggle, { SourceType } from '@/components/github/SourceToggle';
 import TestSetupWizard from '@/components/TestSetupWizard';
+import AppLayout from '@/layouts/app-layout';
+import { Head, useForm } from '@inertiajs/react';
+import { useRef, useState } from 'react';
+
+interface Conversation {
+    id: number;
+    title: string;
+    created_at: string;
+    updated_at: string;
+}
+
+interface Analysis {
+    id: number;
+    file_name: string;
+    analysis_type: string;
+    created_at: string;
+    updated_at: string;
+}
+
+interface UploadResult {
+    success: boolean;
+    message: string;
+    data?: unknown;
+}
+
+interface GeneratedTests {
+    tests: string;
+    conversation_id: string;
+}
+
+interface Repository {
+    owner: string;
+    repo: string;
+    url: string;
+}
+
+interface Branch {
+    name: string;
+    commit: {
+        sha: string;
+        url: string;
+    };
+}
+
+interface TestInfrastructureDetection {
+    has_phpunit_config: boolean;
+    has_pest_config: boolean;
+    has_composer_json: boolean;
+    has_test_directory: boolean;
+    has_test_dependencies: boolean;
+    missing_components: string[];
+    recommendations: Array<{
+        type: string;
+        title: string;
+        description: string;
+        action: string;
+    }>;
+    setup_priority: string;
+}
+
+interface TestSetupInstructions {
+    framework: string;
+    plugin_name: string;
+    difficulty: string;
+    estimated_time: string;
+    prerequisites: Array<{
+        title: string;
+        description: string;
+        check_command?: string;
+        install_url?: string;
+        options?: string[];
+    }>;
+    steps: Array<{
+        number: number;
+        title: string;
+        description: string;
+        commands?: string[];
+        explanation: string;
+        files_created: string[];
+    }>;
+    files_to_create: Array<{
+        name: string;
+        description: string;
+        template: string;
+    }>;
+    commands: Array<{
+        title: string;
+        command: string;
+        description: string;
+    }>;
+    troubleshooting: Array<{
+        issue: string;
+        solution: string;
+        commands?: string[];
+    }>;
+}
 
 interface ThinkTestProps {
-    recentConversations: any[];
-    recentAnalyses: any[];
+    recentConversations: Conversation[];
+    recentAnalyses: Analysis[];
     availableProviders: string[];
 }
 
 // Helper function to handle API responses with proper error checking
-const handleApiResponse = async (response: Response): Promise<any> => {
+const handleApiResponse = async (response: Response): Promise<unknown> => {
     console.log('API Response received:', {
         status: response.status,
         statusText: response.statusText,
         redirected: response.redirected,
         url: response.url,
-        headers: Object.fromEntries(response.headers.entries())
+        headers: Object.fromEntries(response.headers.entries()),
     });
 
     // Check if response is redirected (authentication issue)
@@ -27,7 +120,7 @@ const handleApiResponse = async (response: Response): Promise<any> => {
         console.error('Authentication redirect detected:', {
             status: response.status,
             redirected: response.redirected,
-            url: response.url
+            url: response.url,
         });
         alert('Authentication required. Please refresh the page and log in again.');
         window.location.reload();
@@ -61,7 +154,7 @@ const handleApiResponse = async (response: Response): Promise<any> => {
             if (errorData.message) {
                 errorMessage = errorData.message;
             }
-        } catch (e) {
+        } catch {
             // If we can't parse JSON, use the default error message
         }
 
@@ -106,7 +199,7 @@ const validateAuthentication = async (): Promise<boolean> => {
             status: response.status,
             statusText: response.statusText,
             redirected: response.redirected,
-            url: response.url
+            url: response.url,
         });
 
         if (response.ok) {
@@ -114,7 +207,7 @@ const validateAuthentication = async (): Promise<boolean> => {
             console.log('Authentication data received:', {
                 authenticated: data.authenticated,
                 user: data.user ? { id: data.user.id, name: data.user.name } : null,
-                csrf_token_present: !!data.csrf_token
+                csrf_token_present: !!data.csrf_token,
             });
 
             if (data.authenticated) {
@@ -137,7 +230,7 @@ const validateAuthentication = async (): Promise<boolean> => {
 
         console.error('Authentication validation failed:', {
             status: response.status,
-            statusText: response.statusText
+            statusText: response.statusText,
         });
         return false;
     } catch (error) {
@@ -146,27 +239,27 @@ const validateAuthentication = async (): Promise<boolean> => {
     }
 };
 
-export default function Index({ recentConversations, recentAnalyses, availableProviders }: ThinkTestProps) {
+export default function Index({ recentConversations, recentAnalyses }: ThinkTestProps) {
     const [sourceType, setSourceType] = useState<SourceType>('file');
     const [isUploading, setIsUploading] = useState<boolean>(false);
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
-    const [uploadResult, setUploadResult] = useState<any>(null);
-    const [generatedTests, setGeneratedTests] = useState<any>(null);
+    const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
+    const [generatedTests, setGeneratedTests] = useState<GeneratedTests | null>(null);
     const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // GitHub-related state
-    const [validatedRepository, setValidatedRepository] = useState<any>(null);
-    const [selectedBranch, setSelectedBranch] = useState<any>(null);
+    const [validatedRepository, setValidatedRepository] = useState<Repository | null>(null);
+    const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
     const [isProcessingRepository, setIsProcessingRepository] = useState<boolean>(false);
     const [processingProgress, setProcessingProgress] = useState<string>('');
 
     // Test setup wizard state
     const [showTestSetupWizard, setShowTestSetupWizard] = useState<boolean>(false);
-    const [testInfrastructureDetection, setTestInfrastructureDetection] = useState<any>(null);
-    const [testSetupInstructions, setTestSetupInstructions] = useState<any>(null);
+    const [testInfrastructureDetection, setTestInfrastructureDetection] = useState<TestInfrastructureDetection | null>(null);
+    const [testSetupInstructions, setTestSetupInstructions] = useState<TestSetupInstructions | null>(null);
 
-    const { data, setData, post, processing, errors, reset } = useForm<{
+    const { data, setData } = useForm<{
         plugin_file: File | null;
         provider: string;
         framework: string;
@@ -178,7 +271,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
 
     const handleFileUpload = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!data.plugin_file) {
             alert('Please select a file to upload');
             return;
@@ -305,7 +398,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
         }
     };
 
-    const handleRepositoryValidated = (repository: any) => {
+    const handleRepositoryValidated = (repository: Repository) => {
         setValidatedRepository(repository);
         setSelectedBranch(null);
         setUploadResult(null);
@@ -313,7 +406,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
         setCurrentConversationId(null);
     };
 
-    const handleBranchSelected = (branch: any) => {
+    const handleBranchSelected = (branch: Branch) => {
         setSelectedBranch(branch);
     };
 
@@ -378,7 +471,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                     conversation_id: result.conversation_id,
                     analysis_id: result.analysis_id,
                     file_count: result.repository?.file_count,
-                    processing_time_ms: result.processing_time_ms
+                    processing_time_ms: result.processing_time_ms,
                 });
             } else {
                 console.error('Repository processing failed:', result);
@@ -541,9 +634,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
         // You could also show a toast notification here
     };
 
-    const breadcrumbs = [
-        { title: 'ThinkTest AI', href: '/thinktest' },
-    ];
+    const breadcrumbs = [{ title: 'ThinkTest AI', href: '/thinktest' }];
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -553,7 +644,6 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                     <div className="overflow-hidden bg-white shadow-lg sm:rounded-lg">
                         <div className="p-6 text-gray-900">
-                            
                             {/* Source Selection */}
                             <div className="mb-8">
                                 <SourceToggle
@@ -566,74 +656,64 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                             {/* File Upload Section */}
                             {sourceType === 'file' && (
                                 <div className="mb-8">
-                                    <h3 className="text-lg font-medium text-gray-900 mb-4">
-                                        Upload WordPress Plugin
-                                    </h3>
+                                    <h3 className="mb-4 text-lg font-medium text-gray-900">Upload WordPress Plugin</h3>
 
                                     <form onSubmit={handleFileUpload} className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700">
-                                            Plugin File (.php or .zip)
-                                        </label>
-                                        <input
-                                            ref={fileInputRef}
-                                            type="file"
-                                            accept=".php,.zip"
-                                            onChange={(e) => setData('plugin_file', e.target.files?.[0] || null)}
-                                            className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                        />
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700">
-                                                AI Provider
-                                            </label>
-                                            <select
-                                                value={data.provider}
-                                                onChange={(e) => setData('provider', e.target.value)}
-                                                className="mt-1 p-1 block w-full rounded-md border-gray-300 shadow-sm border focus:border-indigo-500 focus:ring-indigo-500"
-                                            >
-                                                <option value="openai-gpt5">OpenAI GPT-5</option>
-                                                <option value="anthropic-claude">Anthropic Claude 3.5 Sonnet</option>
-                                                {/* Legacy support - will be removed in future version */}
-                                                <option value="chatgpt-5">ChatGPT-5 (Legacy)</option>
-                                                <option value="anthropic">Anthropic (Claude) (Legacy)</option>
-                                            </select>
+                                            <label className="block text-sm font-medium text-gray-700">Plugin File (.php or .zip)</label>
+                                            <input
+                                                ref={fileInputRef}
+                                                type="file"
+                                                accept=".php,.zip"
+                                                onChange={(e) => setData('plugin_file', e.target.files?.[0] || null)}
+                                                className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:rounded-full file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100"
+                                            />
                                         </div>
 
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700">
-                                                Test Framework
-                                            </label>
-                                            <select
-                                                value={data.framework}
-                                                onChange={(e) => setData('framework', e.target.value)}
-                                                className="mt-1 p-1 block w-full rounded-md border-gray-300 shadow-sm border focus:border-indigo-500 focus:ring-indigo-500"
-                                            >
-                                                <option value="phpunit">PHPUnit</option>
-                                                <option value="pest">Pest</option>
-                                            </select>
-                                        </div>
-                                    </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700">AI Provider</label>
+                                                <select
+                                                    value={data.provider}
+                                                    onChange={(e) => setData('provider', e.target.value)}
+                                                    className="mt-1 block w-full rounded-md border border-gray-300 p-1 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                                >
+                                                    <option value="openai-gpt5">OpenAI GPT-5</option>
+                                                    <option value="anthropic-claude">Anthropic Claude 3.5 Sonnet</option>
+                                                    {/* Legacy support - will be removed in future version */}
+                                                    <option value="chatgpt-5">ChatGPT-5 (Legacy)</option>
+                                                    <option value="anthropic">Anthropic (Claude) (Legacy)</option>
+                                                </select>
+                                            </div>
 
-                                    <button
-                                        type="submit"
-                                        disabled={isUploading || !data.plugin_file}
-                                        className="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
-                                    >
-                                        {isUploading ? 'Uploading...' : 'Upload & Analyze'}
-                                    </button>
-                                </form>
-                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700">Test Framework</label>
+                                                <select
+                                                    value={data.framework}
+                                                    onChange={(e) => setData('framework', e.target.value)}
+                                                    className="mt-1 block w-full rounded-md border border-gray-300 p-1 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                                >
+                                                    <option value="phpunit">PHPUnit</option>
+                                                    <option value="pest">Pest</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            type="submit"
+                                            disabled={isUploading || !data.plugin_file}
+                                            className="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none disabled:opacity-50"
+                                        >
+                                            {isUploading ? 'Uploading...' : 'Upload & Analyze'}
+                                        </button>
+                                    </form>
+                                </div>
                             )}
 
                             {/* GitHub Repository Section */}
                             {sourceType === 'github' && (
                                 <div className="mb-8 space-y-6">
-                                    <h3 className="text-lg font-medium text-gray-900">
-                                        GitHub Repository
-                                    </h3>
+                                    <h3 className="text-lg font-medium text-gray-900">GitHub Repository</h3>
 
                                     <GitHubRepositoryInput
                                         onRepositoryValidated={handleRepositoryValidated}
@@ -654,14 +734,12 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                                         <div className="space-y-4">
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700">
-                                                        AI Provider
-                                                    </label>
+                                                    <label className="block text-sm font-medium text-gray-700">AI Provider</label>
                                                     <select
                                                         value={data.provider}
                                                         onChange={(e) => setData('provider', e.target.value)}
                                                         disabled={isProcessingRepository || isGenerating}
-                                                        className="mt-1 p-1 block w-full rounded-md border-gray-300 shadow-sm border focus:border-indigo-500 focus:ring-indigo-500 disabled:opacity-50"
+                                                        className="mt-1 block w-full rounded-md border border-gray-300 p-1 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:opacity-50"
                                                     >
                                                         <option value="openai-gpt5">OpenAI GPT-5</option>
                                                         <option value="anthropic-claude">Anthropic Claude 3.5 Sonnet</option>
@@ -672,14 +750,12 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                                                 </div>
 
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700">
-                                                        Test Framework
-                                                    </label>
+                                                    <label className="block text-sm font-medium text-gray-700">Test Framework</label>
                                                     <select
                                                         value={data.framework}
                                                         onChange={(e) => setData('framework', e.target.value)}
                                                         disabled={isProcessingRepository || isGenerating}
-                                                        className="mt-1 p-1 block w-full rounded-md border-gray-300 shadow-sm border focus:border-indigo-500 focus:ring-indigo-500 disabled:opacity-50"
+                                                        className="mt-1 block w-full rounded-md border border-gray-300 p-1 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:opacity-50"
                                                     >
                                                         <option value="phpunit">PHPUnit</option>
                                                         <option value="pest">Pest</option>
@@ -690,32 +766,64 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                                             <button
                                                 onClick={handleProcessRepository}
                                                 disabled={isProcessingRepository || isGenerating}
-                                                className="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
+                                                className="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none disabled:opacity-50"
                                             >
                                                 {isProcessingRepository ? (
                                                     <div className="flex items-center">
-                                                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                        <svg
+                                                            className="mr-3 -ml-1 h-5 w-5 animate-spin text-white"
+                                                            xmlns="http://www.w3.org/2000/svg"
+                                                            fill="none"
+                                                            viewBox="0 0 24 24"
+                                                        >
+                                                            <circle
+                                                                className="opacity-25"
+                                                                cx="12"
+                                                                cy="12"
+                                                                r="10"
+                                                                stroke="currentColor"
+                                                                strokeWidth="4"
+                                                            ></circle>
+                                                            <path
+                                                                className="opacity-75"
+                                                                fill="currentColor"
+                                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                                            ></path>
                                                         </svg>
                                                         Processing...
                                                     </div>
-                                                ) : 'Process Repository & Analyze'}
+                                                ) : (
+                                                    'Process Repository & Analyze'
+                                                )}
                                             </button>
 
                                             {/* Processing Progress Indicator */}
                                             {isProcessingRepository && processingProgress && (
-                                                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                                                <div className="mt-4 rounded-md border border-blue-200 bg-blue-50 p-3">
                                                     <div className="flex items-center">
-                                                        <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                        <svg
+                                                            className="mr-3 -ml-1 h-4 w-4 animate-spin text-blue-600"
+                                                            xmlns="http://www.w3.org/2000/svg"
+                                                            fill="none"
+                                                            viewBox="0 0 24 24"
+                                                        >
+                                                            <circle
+                                                                className="opacity-25"
+                                                                cx="12"
+                                                                cy="12"
+                                                                r="10"
+                                                                stroke="currentColor"
+                                                                strokeWidth="4"
+                                                            ></circle>
+                                                            <path
+                                                                className="opacity-75"
+                                                                fill="currentColor"
+                                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                                            ></path>
                                                         </svg>
                                                         <div>
-                                                            <p className="text-sm font-medium text-blue-800">
-                                                                {processingProgress}
-                                                            </p>
-                                                            <p className="text-xs text-blue-600 mt-1">
+                                                            <p className="text-sm font-medium text-blue-800">{processingProgress}</p>
+                                                            <p className="mt-1 text-xs text-blue-600">
                                                                 This may take a few moments depending on repository size...
                                                             </p>
                                                         </div>
@@ -729,20 +837,18 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
 
                             {/* Analysis Results */}
                             {uploadResult && (
-                                <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-md">
-                                    <h4 className="text-lg font-medium text-green-800 mb-2">
-                                        Analysis Complete
-                                    </h4>
-                                    <p className="text-green-700 mb-4">
-                                        Plugin analyzed successfully. Found {uploadResult.analysis.functions?.length || 0} functions,
-                                        {' '}{uploadResult.analysis.classes?.length || 0} classes, and
-                                        {' '}{uploadResult.analysis.wordpress_patterns?.length || 0} WordPress patterns.
+                                <div className="mb-8 rounded-md border border-green-200 bg-green-50 p-4">
+                                    <h4 className="mb-2 text-lg font-medium text-green-800">Analysis Complete</h4>
+                                    <p className="mb-4 text-green-700">
+                                        Plugin analyzed successfully. Found {uploadResult.analysis.functions?.length || 0} functions,{' '}
+                                        {uploadResult.analysis.classes?.length || 0} classes, and{' '}
+                                        {uploadResult.analysis.wordpress_patterns?.length || 0} WordPress patterns.
                                     </p>
 
                                     <div className="flex space-x-4">
                                         <button
                                             onClick={handleDetectTestInfrastructure}
-                                            className="inline-flex justify-center rounded-md border border-orange-300 bg-orange-50 py-2 px-4 text-sm font-medium text-orange-700 shadow-sm hover:bg-orange-100 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+                                            className="inline-flex justify-center rounded-md border border-orange-300 bg-orange-50 px-4 py-2 text-sm font-medium text-orange-700 shadow-sm hover:bg-orange-100 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:outline-none"
                                         >
                                             🔧 Setup Test Environment
                                         </button>
@@ -750,7 +856,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                                         <button
                                             onClick={handleGenerateTests}
                                             disabled={isGenerating}
-                                            className="inline-flex justify-center rounded-md border border-transparent bg-green-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
+                                            className="inline-flex justify-center rounded-md border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none disabled:opacity-50"
                                         >
                                             {isGenerating ? 'Generating Tests...' : 'Generate Tests with AI'}
                                         </button>
@@ -760,47 +866,35 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
 
                             {/* Generated Tests */}
                             {generatedTests && (
-                                <div className="mb-8 p-4 bg-blue-50 border border-blue-200 rounded-md">
-                                    <h4 className="text-lg font-medium text-blue-800 mb-2">
-                                        Tests Generated Successfully
-                                    </h4>
-                                    <p className="text-blue-700 mb-4">
-                                        AI has generated comprehensive tests for your WordPress plugin.
-                                    </p>
-                                    
+                                <div className="mb-8 rounded-md border border-blue-200 bg-blue-50 p-4">
+                                    <h4 className="mb-2 text-lg font-medium text-blue-800">Tests Generated Successfully</h4>
+                                    <p className="mb-4 text-blue-700">AI has generated comprehensive tests for your WordPress plugin.</p>
+
                                     <div className="flex space-x-4">
                                         <button
                                             onClick={handleDownloadTests}
-                                            className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                            className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
                                         >
                                             Download Tests
                                         </button>
                                     </div>
 
                                     <details className="mt-4">
-                                        <summary className="cursor-pointer text-blue-800 font-medium">
-                                            Preview Generated Tests
-                                        </summary>
-                                        <pre className="mt-2 p-4 bg-gray-100 rounded text-sm overflow-x-auto">
-                                            {generatedTests}
-                                        </pre>
+                                        <summary className="cursor-pointer font-medium text-blue-800">Preview Generated Tests</summary>
+                                        <pre className="mt-2 overflow-x-auto rounded bg-gray-100 p-4 text-sm">{generatedTests}</pre>
                                     </details>
                                 </div>
                             )}
 
                             {/* Recent Activity */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                 <div>
-                                    <h4 className="text-lg font-medium text-gray-900 mb-4">
-                                        Recent Conversations
-                                    </h4>
+                                    <h4 className="mb-4 text-lg font-medium text-gray-900">Recent Conversations</h4>
                                     {recentConversations?.length > 0 ? (
                                         <div className="space-y-2">
                                             {recentConversations.map((conversation) => (
-                                                <div key={conversation.id} className="p-3 bg-gray-50 rounded">
-                                                    <div className="text-sm font-medium">
-                                                        {conversation.context?.filename || 'Unknown file'}
-                                                    </div>
+                                                <div key={conversation.id} className="rounded bg-gray-50 p-3">
+                                                    <div className="text-sm font-medium">{conversation.context?.filename || 'Unknown file'}</div>
                                                     <div className="text-xs text-gray-500">
                                                         {conversation.status} • {conversation.provider}
                                                     </div>
@@ -813,19 +907,13 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                                 </div>
 
                                 <div>
-                                    <h4 className="text-lg font-medium text-gray-900 mb-4">
-                                        Recent Analyses
-                                    </h4>
+                                    <h4 className="mb-4 text-lg font-medium text-gray-900">Recent Analyses</h4>
                                     {recentAnalyses?.length > 0 ? (
                                         <div className="space-y-2">
                                             {recentAnalyses.map((analysis) => (
-                                                <div key={analysis.id} className="p-3 bg-gray-50 rounded">
-                                                    <div className="text-sm font-medium">
-                                                        {analysis.filename}
-                                                    </div>
-                                                    <div className="text-xs text-gray-500">
-                                                        Complexity: {analysis.complexity_score || 'N/A'}
-                                                    </div>
+                                                <div key={analysis.id} className="rounded bg-gray-50 p-3">
+                                                    <div className="text-sm font-medium">{analysis.filename}</div>
+                                                    <div className="text-xs text-gray-500">Complexity: {analysis.complexity_score || 'N/A'}</div>
                                                 </div>
                                             ))}
                                         </div>

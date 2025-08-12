@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Models\PluginAnalysisResult;
 use App\Models\GitHubRepository;
+use App\Models\PluginAnalysisResult;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
@@ -18,14 +18,14 @@ class GitHubRepositoryDuplicateHandlingTest extends TestCase
     {
         parent::setUp();
         Storage::fake('local');
-        
+
         // Set up configuration
         $this->app['config']->set('thinktest_ai.wordpress.analysis.max_file_size', 1024 * 1024);
         $this->app['config']->set('thinktest_ai.wordpress.analysis.allowed_extensions', ['php', 'zip']);
         $this->app['config']->set('thinktest_ai.security.file_validation.blocked_php_functions', [
-            'exec', 'shell_exec', 'system', 'passthru', 'eval'
+            'exec', 'shell_exec', 'system', 'passthru', 'eval',
         ]);
-        
+
         // Create required permissions
         Permission::create(['name' => 'upload files']);
         Permission::create(['name' => 'generate tests']);
@@ -35,7 +35,7 @@ class GitHubRepositoryDuplicateHandlingTest extends TestCase
     {
         $user1 = User::factory()->create();
         $user1->givePermissionTo('upload files');
-        
+
         $user2 = User::factory()->create();
         $user2->givePermissionTo('upload files');
 
@@ -61,10 +61,10 @@ class GitHubRepositoryDuplicateHandlingTest extends TestCase
         $analysisData = [
             'filename' => 'testowner/test-repo@main',
             'wordpress_patterns' => [
-                ['type' => 'hook', 'function' => 'add_action', 'line' => 10]
+                ['type' => 'hook', 'function' => 'add_action', 'line' => 10],
             ],
             'functions' => [
-                ['name' => 'test_function', 'line' => 20]
+                ['name' => 'test_function', 'line' => 20],
             ],
             'classes' => [],
             'hooks' => [],
@@ -92,14 +92,14 @@ class GitHubRepositoryDuplicateHandlingTest extends TestCase
 
         // Simulate the duplicate handling logic from the controller
         $existingAnalysis = PluginAnalysisResult::where('file_hash', $fileHash)->first();
-        
+
         if ($existingAnalysis) {
             // Update existing analysis result (simulating the controller logic)
             $updatedAnalysisData = array_merge($analysisData, [
                 'functions' => [
                     ['name' => 'test_function', 'line' => 20],
-                    ['name' => 'new_function', 'line' => 30] // Added new function
-                ]
+                    ['name' => 'new_function', 'line' => 30], // Added new function
+                ],
             ]);
 
             $existingAnalysis->update([
@@ -113,13 +113,13 @@ class GitHubRepositoryDuplicateHandlingTest extends TestCase
 
         // Verify that the record was updated, not duplicated
         $this->assertDatabaseCount('plugin_analysis_results', 1);
-        
+
         $updatedAnalysis = PluginAnalysisResult::first();
         $this->assertEquals($firstAnalysis->id, $updatedAnalysis->id); // Same record ID
         $this->assertEquals($user2->id, $updatedAnalysis->user_id); // Updated user
         $this->assertEquals(25, $updatedAnalysis->complexity_score); // Updated complexity
         $this->assertEquals($fileHash, $updatedAnalysis->file_hash); // Same file hash
-        
+
         // Verify analysis data was updated
         $this->assertCount(2, $updatedAnalysis->analysis_data['functions']); // Should have 2 functions now
     }
@@ -157,7 +157,7 @@ class GitHubRepositoryDuplicateHandlingTest extends TestCase
     public function test_plugin_analysis_result_unique_constraint_exists(): void
     {
         $user = User::factory()->create();
-        
+
         // Create first analysis result
         PluginAnalysisResult::create([
             'user_id' => $user->id,
