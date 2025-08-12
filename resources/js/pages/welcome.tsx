@@ -30,10 +30,10 @@ export default function Welcome() {
                             <AppearanceToggleDropdown />
                             {auth.user ? (
                                 <>
-                                    <Link href={route('thinktest.index')}>
+                                    <Link href={route('dashboard')}>
                                         <Button variant="ghost">Dashboard</Button>
                                     </Link>
-                                    <Link href={route('dashboard')}>
+                                    <Link href={route('profile.edit')}>
                                         <Button variant="outline">Settings</Button>
                                     </Link>
                                 </>

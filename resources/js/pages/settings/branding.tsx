@@ -24,7 +24,7 @@ interface Logo {
     id: string;
     name: string;
     description: string;
-    preview: string;
+    preview: string | null;
 }
 
 interface CurrentLogo {

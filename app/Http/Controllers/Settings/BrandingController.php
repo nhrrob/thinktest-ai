@@ -108,19 +108,19 @@ class BrandingController extends Controller
                 'id' => 'thinktest_code',
                 'name' => 'ThinkTest AI (Code)',
                 'description' => 'Code/testing themed logo with brackets and checkmark',
-                'preview' => '/images/logos/thinktest-code-preview.png',
+                'preview' => null,
             ],
             [
                 'id' => 'thinktest_minimal',
                 'name' => 'ThinkTest AI (Minimal)',
                 'description' => 'Minimal text-only version',
-                'preview' => '/images/logos/thinktest-minimal-preview.png',
+                'preview' => null,
             ],
             [
                 'id' => 'thinktest_dark',
                 'name' => 'ThinkTest AI (Dark)',
                 'description' => 'Dark theme optimized version',
-                'preview' => '/images/logos/thinktest-dark-preview.png',
+                'preview' => null,
             ],
         ];
     }
