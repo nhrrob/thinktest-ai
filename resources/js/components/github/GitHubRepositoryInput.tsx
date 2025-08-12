@@ -33,7 +33,7 @@ export default function GitHubRepositoryInput({ onRepositoryValidated, onError, 
     const [error, setError] = useState<string | null>(null);
 
     // Demo repository for evaluation purposes
-    const demoRepository = 'https://github.com/WordPress/hello-dolly';
+    const demoRepository = 'https://github.com/nhrrob/nhrrob-core-contributions';
 
     const handleValidateRepository = async () => {
         if (!repositoryUrl.trim()) {
