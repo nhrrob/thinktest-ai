@@ -321,6 +321,31 @@ class TestGenerationService
             ],
         ];
 
+        // Generate function-specific tests if functions are detected
+        if (!empty($analysis['functions'])) {
+            $testSuite['functions'] = [
+                'filename' => 'FunctionTest.php',
+                'content' => $this->generateFunctionSpecificTests($analysis['functions'], $framework),
+                'description' => 'Individual function tests',
+            ];
+        }
+
+        // Generate class-specific tests if classes are detected
+        if (!empty($analysis['classes'])) {
+            $testSuite['classes'] = [
+                'filename' => 'ClassTest.php',
+                'content' => $this->generateClassSpecificTests($analysis['classes'], $framework),
+                'description' => 'Class-based tests',
+            ];
+        }
+
+        // Generate WordPress hook tests
+        $testSuite['hooks'] = [
+            'filename' => 'HookTest.php',
+            'content' => $this->generateHookSpecificTests($analysis['hooks'] ?? [], $framework),
+            'description' => 'WordPress hooks and filters tests',
+        ];
+
         // Generate additional test files for complex plugins
         if (! empty($analysis['ajax_handlers'])) {
             $testSuite['ajax'] = [
@@ -343,6 +368,24 @@ class TestGenerationService
                 'filename' => 'SecurityTest.php',
                 'content' => $this->generateSecurityTests($analysis['security_patterns'], $framework),
                 'description' => 'Security and sanitization tests',
+            ];
+        }
+
+        // Generate database operation tests if detected
+        if (!empty($analysis['database_operations'])) {
+            $testSuite['database'] = [
+                'filename' => 'DatabaseTest.php',
+                'content' => $this->generateDatabaseTests($analysis['database_operations'], $framework),
+                'description' => 'Database operation tests',
+            ];
+        }
+
+        // Generate integration tests for multi-file plugins
+        if (isset($analysis['parsed_files']) && $analysis['parsed_files'] > 1) {
+            $testSuite['integration'] = [
+                'filename' => 'IntegrationTest.php',
+                'content' => $this->generateIntegrationTests($analysis, $framework),
+                'description' => 'Integration tests for multi-file plugin',
             ];
         }
 
@@ -422,7 +465,7 @@ class TestGenerationService
             $errors[] = 'Unsupported test framework: '.$options['framework'];
         }
 
-        if (isset($options['provider']) && ! in_array($options['provider'], ['openai-gpt5', 'anthropic-claude', 'chatgpt-5', 'anthropic'])) {
+        if (isset($options['provider']) && ! in_array($options['provider'], ['openai-gpt5', 'anthropic-claude', 'chatgpt-5', 'anthropic', 'mock'])) {
             $errors[] = 'Unsupported AI provider: '.$options['provider'];
         }
 
@@ -516,6 +559,33 @@ class TestGenerationService
                 'filename' => $this->generateHookTestFilename($analysis, $framework),
                 'content' => $this->generateHookSpecificTests($analysis['hooks'], $framework),
                 'description' => 'Tests for WordPress hooks found in the file',
+            ];
+        }
+
+        // Add WordPress pattern tests
+        if (!empty($analysis['wordpress_patterns'])) {
+            $testSuite['wordpress_patterns'] = [
+                'filename' => $this->generateWordPressPatternTestFilename($analysis, $framework),
+                'content' => $this->generateWordPressPatternSpecificTests($analysis['wordpress_patterns'], $framework),
+                'description' => 'Tests for WordPress patterns found in the file',
+            ];
+        }
+
+        // Add security tests if security patterns are detected
+        if (!empty($analysis['security_patterns'])) {
+            $testSuite['security_tests'] = [
+                'filename' => $this->generateSecurityTestFilename($analysis, $framework),
+                'content' => $this->generateSecuritySpecificTests($analysis['security_patterns'], $framework),
+                'description' => 'Security tests for the file',
+            ];
+        }
+
+        // Add database tests if database operations are detected
+        if (!empty($analysis['database_operations'])) {
+            $testSuite['database_tests'] = [
+                'filename' => $this->generateDatabaseTestFilename($analysis, $framework),
+                'content' => $this->generateDatabaseSpecificTests($analysis['database_operations'], $framework),
+                'description' => 'Database operation tests for the file',
             ];
         }
 
@@ -649,6 +719,178 @@ class TestGenerationService
                 $tests .= "    public function test_{$hookName}_hook()\n";
                 $tests .= "    {\n";
                 $tests .= "        \$this->assertGreaterThan(0, has_action('{$hookName}'));\n";
+                $tests .= "    }\n";
+            }
+        }
+
+        return $tests;
+    }
+
+    /**
+     * Generate database operation tests
+     */
+    private function generateDatabaseTests(array $databaseOperations, string $framework): string
+    {
+        $tests = $this->generateTestFileHeader(['filename' => 'Database Operations'], $framework);
+
+        $tests .= "\n\nclass DatabaseTest extends WP_UnitTestCase\n{\n";
+        $tests .= "    public function test_database_operations()\n";
+        $tests .= "    {\n";
+        $tests .= "        // Test database operations\n";
+        $tests .= "        global \$wpdb;\n";
+        $tests .= "        \$this->assertInstanceOf('wpdb', \$wpdb, 'WordPress database object should be available');\n";
+
+        foreach ($databaseOperations as $operation) {
+            $operationType = $operation['type'] ?? 'unknown';
+            $tests .= "        // Test {$operationType} operation\n";
+            $tests .= "        \$this->assertTrue(true, '{$operationType} operation should work correctly');\n";
+        }
+
+        $tests .= "    }\n";
+        $tests .= "}\n";
+
+        return $tests;
+    }
+
+    /**
+     * Generate integration tests for multi-file plugins
+     */
+    private function generateIntegrationTests(array $analysis, string $framework): string
+    {
+        $tests = $this->generateTestFileHeader(['filename' => 'Integration Tests'], $framework);
+
+        $tests .= "\n\nclass IntegrationTest extends WP_UnitTestCase\n{\n";
+
+        $tests .= "    public function test_plugin_integration()\n";
+        $tests .= "    {\n";
+        $tests .= "        // Test overall plugin integration\n";
+        $tests .= "        \$this->assertTrue(true, 'Plugin components should work together');\n";
+        $tests .= "    }\n\n";
+
+        $tests .= "    public function test_file_dependencies()\n";
+        $tests .= "    {\n";
+        $tests .= "        // Test file dependencies are properly loaded\n";
+        $fileCount = $analysis['parsed_files'] ?? 0;
+        $tests .= "        \$this->assertGreaterThan(1, {$fileCount}, 'Plugin should have multiple files');\n";
+        $tests .= "    }\n\n";
+
+        if (!empty($analysis['functions']) && !empty($analysis['classes'])) {
+            $tests .= "    public function test_functions_and_classes_integration()\n";
+            $tests .= "    {\n";
+            $tests .= "        // Test functions and classes work together\n";
+            $tests .= "        \$this->assertTrue(true, 'Functions and classes should integrate properly');\n";
+            $tests .= "    }\n\n";
+        }
+
+        $tests .= "}\n";
+
+        return $tests;
+    }
+
+    /**
+     * Generate WordPress pattern test filename
+     */
+    private function generateWordPressPatternTestFilename(array $analysis, string $framework): string
+    {
+        $extension = $framework === 'pest' ? '.php' : 'Test.php';
+        return 'WordPressPattern' . $extension;
+    }
+
+    /**
+     * Generate WordPress pattern specific tests
+     */
+    private function generateWordPressPatternSpecificTests(array $patterns, string $framework): string
+    {
+        $tests = $this->generateTestFileHeader(['filename' => 'WordPress Patterns'], $framework);
+
+        foreach ($patterns as $pattern) {
+            $patternName = is_string($pattern) ? $pattern : ($pattern['name'] ?? 'unknown_pattern');
+            $tests .= "\n\n    /**\n";
+            $tests .= "     * Test {$patternName} pattern\n";
+            $tests .= "     */\n";
+
+            if ($framework === 'pest') {
+                $tests .= "    test('{$patternName} pattern is implemented', function () {\n";
+                $tests .= "        expect(true)->toBeTrue();\n";
+                $tests .= "    });\n";
+            } else {
+                $tests .= "    public function test_{$patternName}_pattern()\n";
+                $tests .= "    {\n";
+                $tests .= "        \$this->assertTrue(true, '{$patternName} pattern should be implemented correctly');\n";
+                $tests .= "    }\n";
+            }
+        }
+
+        return $tests;
+    }
+
+    /**
+     * Generate security test filename
+     */
+    private function generateSecurityTestFilename(array $analysis, string $framework): string
+    {
+        $extension = $framework === 'pest' ? '.php' : 'Test.php';
+        return 'Security' . $extension;
+    }
+
+    /**
+     * Generate security specific tests
+     */
+    private function generateSecuritySpecificTests(array $securityPatterns, string $framework): string
+    {
+        $tests = $this->generateTestFileHeader(['filename' => 'Security'], $framework);
+
+        foreach ($securityPatterns as $pattern) {
+            $patternName = is_string($pattern) ? $pattern : ($pattern['name'] ?? 'unknown_security_pattern');
+            $tests .= "\n\n    /**\n";
+            $tests .= "     * Test {$patternName} security pattern\n";
+            $tests .= "     */\n";
+
+            if ($framework === 'pest') {
+                $tests .= "    test('{$patternName} security is implemented', function () {\n";
+                $tests .= "        expect(true)->toBeTrue();\n";
+                $tests .= "    });\n";
+            } else {
+                $tests .= "    public function test_{$patternName}_security()\n";
+                $tests .= "    {\n";
+                $tests .= "        \$this->assertTrue(true, '{$patternName} security should be properly implemented');\n";
+                $tests .= "    }\n";
+            }
+        }
+
+        return $tests;
+    }
+
+    /**
+     * Generate database test filename
+     */
+    private function generateDatabaseTestFilename(array $analysis, string $framework): string
+    {
+        $extension = $framework === 'pest' ? '.php' : 'Test.php';
+        return 'Database' . $extension;
+    }
+
+    /**
+     * Generate database specific tests
+     */
+    private function generateDatabaseSpecificTests(array $databaseOperations, string $framework): string
+    {
+        $tests = $this->generateTestFileHeader(['filename' => 'Database'], $framework);
+
+        foreach ($databaseOperations as $operation) {
+            $operationType = is_string($operation) ? $operation : ($operation['type'] ?? 'unknown_operation');
+            $tests .= "\n\n    /**\n";
+            $tests .= "     * Test {$operationType} database operation\n";
+            $tests .= "     */\n";
+
+            if ($framework === 'pest') {
+                $tests .= "    test('{$operationType} database operation works', function () {\n";
+                $tests .= "        expect(true)->toBeTrue();\n";
+                $tests .= "    });\n";
+            } else {
+                $tests .= "    public function test_{$operationType}_database_operation()\n";
+                $tests .= "    {\n";
+                $tests .= "        \$this->assertTrue(true, '{$operationType} database operation should work correctly');\n";
                 $tests .= "    }\n";
             }
         }

@@ -108,7 +108,7 @@ class ThinkTestController extends Controller
     {
         $request->validate([
             'plugin_file' => 'required|file|max:10240', // 10MB max
-            'provider' => 'sometimes|string|in:openai-gpt5,anthropic-claude,chatgpt-5,anthropic',
+            'provider' => 'sometimes|string|in:openai-gpt5,anthropic-claude,chatgpt-5,anthropic,mock',
             'framework' => 'sometimes|string|in:phpunit,pest',
         ]);
 
@@ -223,7 +223,7 @@ class ThinkTestController extends Controller
     {
         $request->validate([
             'conversation_id' => 'required|string',
-            'provider' => 'sometimes|string|in:openai-gpt5,anthropic-claude,chatgpt-5,anthropic',
+            'provider' => 'sometimes|string|in:openai-gpt5,anthropic-claude,chatgpt-5,anthropic,mock',
             'framework' => 'sometimes|string|in:phpunit,pest',
         ]);
 
@@ -301,7 +301,7 @@ class ThinkTestController extends Controller
             'repo' => 'required|string|max:100|regex:/^[a-zA-Z0-9\-_\.]+$/',
             'file_path' => 'required|string|max:500',
             'branch' => 'sometimes|string|max:100|regex:/^[a-zA-Z0-9\-_\.\/]+$/',
-            'provider' => 'sometimes|string|in:openai-gpt5,anthropic-claude,chatgpt-5,anthropic',
+            'provider' => 'sometimes|string|in:openai-gpt5,anthropic-claude,chatgpt-5,anthropic,mock',
             'framework' => 'sometimes|string|in:phpunit,pest',
         ]);
 
