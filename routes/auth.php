@@ -40,6 +40,13 @@ Route::middleware('guest')->group(function () {
 
     Route::get('auth/google/callback', [SocialAuthController::class, 'handleGoogleCallback'])
         ->name('auth.google.callback');
+
+    // GitHub OAuth routes
+    Route::get('auth/github', [SocialAuthController::class, 'redirectToGitHub'])
+        ->name('auth.github');
+
+    Route::get('auth/github/callback', [SocialAuthController::class, 'handleGitHubCallback'])
+        ->name('auth.github.callback');
 });
 
 Route::middleware('auth')->group(function () {

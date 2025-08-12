@@ -267,7 +267,7 @@ const validateAuthentication = async (): Promise<boolean> => {
 };
 
 export default function Index({ recentConversations, recentAnalyses }: ThinkTestProps) {
-    const [sourceType, setSourceType] = useState<SourceType>('file');
+    const [sourceType, setSourceType] = useState<SourceType>('github');
     const [isUploading, setIsUploading] = useState<boolean>(false);
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
     const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);

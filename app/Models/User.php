@@ -24,6 +24,7 @@ class User extends Authenticatable
         'email',
         'password',
         'google_id',
+        'github_id',
         'avatar',
     ];
 
@@ -157,20 +158,32 @@ class User extends Authenticatable
 
         if ($user) {
             // Update existing user with OAuth data
-            $user->update([
-                'google_id' => $providerUser->getId(),
-                'avatar' => $providerUser->getAvatar(),
-            ]);
+            $updateData = ['avatar' => $providerUser->getAvatar()];
+
+            if ($provider === 'google') {
+                $updateData['google_id'] = $providerUser->getId();
+            } elseif ($provider === 'github') {
+                $updateData['github_id'] = $providerUser->getId();
+            }
+
+            $user->update($updateData);
         } else {
             // Create new user from OAuth data
-            $user = static::create([
+            $createData = [
                 'name' => $providerUser->getName(),
                 'email' => $providerUser->getEmail(),
-                'google_id' => $providerUser->getId(),
                 'avatar' => $providerUser->getAvatar(),
                 'email_verified_at' => now(),
                 'password' => bcrypt(str()->random(32)), // Generate random password for OAuth users
-            ]);
+            ];
+
+            if ($provider === 'google') {
+                $createData['google_id'] = $providerUser->getId();
+            } elseif ($provider === 'github') {
+                $createData['github_id'] = $providerUser->getId();
+            }
+
+            $user = static::create($createData);
 
             // Assign default role to new OAuth users
             $user->assignRole('user');

@@ -50,11 +50,13 @@ class RolePermissionSeeder extends Seeder
                     $roleUser->givePermissionTo($permission);
                 }
 
-                // Demo: Role 4 - Limited access
+                // Demo: Role 4 - Limited access with ThinkTest functionality
                 if (
                     $permissionGroup == 'dashboard' ||
                     $permissionGroup == 'demo-features' ||
-                    $permissionGroup == 'user-profile'
+                    $permissionGroup == 'user-profile' ||
+                    $permissionGroup == 'ai-test-generation' ||
+                    $permissionGroup == 'github-integration'
                 ) {
                     $roleDemoUser->givePermissionTo($permission);
                 }
@@ -65,7 +67,7 @@ class RolePermissionSeeder extends Seeder
         $this->command->info('Super Admin role: Full access via Gate::before() (see AppServiceProvider)');
         $this->command->info('Admin role: Full access to all features');
         $this->command->info('User role: Standard access with test generation and GitHub integration');
-        $this->command->info('Demo role: Limited access for demonstration purposes');
+        $this->command->info('Demo role: Access to ThinkTest functionality for demonstration purposes');
     }
 
     public function permissionItem($groupName, $permissions = null)
