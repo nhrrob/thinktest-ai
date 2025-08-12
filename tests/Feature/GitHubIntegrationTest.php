@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\User;
 use App\Models\GitHubRepository;
+use App\Models\User;
 use App\Services\GitHub\GitHubService;
 use App\Services\GitHub\GitHubValidationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -20,7 +20,7 @@ test('github validate endpoint requires authentication', function () {
     $this->post('/logout');
 
     $response = $this->postJson('/thinktest/github/validate', [
-        'repository_url' => 'https://github.com/owner/repo'
+        'repository_url' => 'https://github.com/owner/repo',
     ]);
 
     $response->assertStatus(401);
@@ -51,7 +51,7 @@ test('github validate endpoint works with proper csrf token', function () {
     });
 
     $response = $this->postJson('/thinktest/github/validate', [
-        'repository_url' => 'https://github.com/owner/repo'
+        'repository_url' => 'https://github.com/owner/repo',
     ]);
 
     $response->assertStatus(200)
@@ -70,29 +70,29 @@ test('github validate endpoint works with proper csrf token', function () {
                 'default_branch',
                 'size',
                 'language',
-            ]
+            ],
         ]);
 });
 
 test('github validate endpoint rejects invalid urls', function () {
     $response = $this->postJson('/thinktest/github/validate', [
-        'repository_url' => 'invalid-url'
+        'repository_url' => 'invalid-url',
     ]);
 
     $response->assertStatus(422);
     $response->assertJsonStructure([
         'success',
-        'message'
+        'message',
     ]);
     $response->assertJson([
-        'success' => false
+        'success' => false,
     ]);
 });
 
 test('github branches endpoint requires valid owner and repo', function () {
     $response = $this->postJson('/thinktest/github/branches', [
         'owner' => 'invalid-owner!',
-        'repo' => 'invalid-repo!'
+        'repo' => 'invalid-repo!',
     ]);
 
     $response->assertStatus(422);
@@ -109,7 +109,7 @@ test('github process endpoint rejects invalid branch names', function () {
     $response = $this->postJson('/thinktest/github/process', [
         'owner' => 'owner',
         'repo' => 'repo',
-        'branch' => 'invalid..branch'
+        'branch' => 'invalid..branch',
     ]);
 
     $response->assertStatus(422);
@@ -123,14 +123,14 @@ test('github process endpoint requires authentication', function () {
     $response = $this->postJson('/thinktest/github/process', [
         'owner' => 'octocat',
         'repo' => 'Hello-World',
-        'branch' => 'master'
+        'branch' => 'master',
     ]);
 
     // Should get 401 from the rate limiting middleware since no user is authenticated
     $response->assertStatus(401);
     $response->assertJson([
         'success' => false,
-        'message' => 'Authentication required'
+        'message' => 'Authentication required',
     ]);
 });
 
@@ -144,7 +144,7 @@ test('authenticated user can access github process endpoint with proper validati
     $response = $this->actingAs($user)->postJson('/thinktest/github/process', [
         'owner' => 'octocat',
         'repo' => 'Hello-World',
-        'branch' => 'master'
+        'branch' => 'master',
     ]);
 
     // Should get validation error or other error, not authentication error
@@ -166,7 +166,7 @@ test('github process endpoint maintains session during request', function () {
     $response = $this->actingAs($user)->postJson('/thinktest/github/process', [
         'owner' => 'octocat',
         'repo' => 'Hello-World',
-        'branch' => 'master'
+        'branch' => 'master',
     ]);
 
     // Should not get authentication error
@@ -204,7 +204,7 @@ test('session persistence with csrf token validation', function () {
         ->postJson('/thinktest/github/process', [
             'owner' => 'octocat',
             'repo' => 'Hello-World',
-            'branch' => 'master'
+            'branch' => 'master',
         ]);
 
     // Should not get CSRF or authentication errors
@@ -225,12 +225,12 @@ test('auth check endpoint works correctly', function () {
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
-        ]
+        ],
     ]);
     $response->assertJsonStructure([
         'authenticated',
         'user' => ['id', 'name', 'email'],
-        'csrf_token'
+        'csrf_token',
     ]);
 });
 
@@ -277,7 +277,7 @@ test('github repository model status methods work correctly', function () {
         'repo' => 'test-repo',
         'full_name' => 'test-owner/test-repo',
         'branch' => 'main',
-        'processing_status' => 'pending'
+        'processing_status' => 'pending',
     ]);
 
     expect($repo->isPending())->toBeTrue();
@@ -301,7 +301,7 @@ test('github repository model relationships work', function () {
         'repo' => 'test-repo',
         'full_name' => 'test-owner/test-repo',
         'branch' => 'main',
-        'processing_status' => 'pending'
+        'processing_status' => 'pending',
     ]);
 
     expect($repo->user)->toBeInstanceOf(User::class);
@@ -335,7 +335,7 @@ test('github service rejects invalid repository urls', function () {
     ];
 
     foreach ($invalidUrls as $url) {
-        expect(fn() => $this->githubService->validateRepositoryUrl($url))
+        expect(fn () => $this->githubService->validateRepositoryUrl($url))
             ->toThrow(InvalidArgumentException::class);
     }
 });
@@ -352,7 +352,7 @@ test('validation service validates github names', function () {
             'url' => "https://github.com/{$name}/{$name}",
         ];
 
-        expect(fn() => $this->validationService->validateRepositoryComponents($repoData))
+        expect(fn () => $this->validationService->validateRepositoryComponents($repoData))
             ->not->toThrow(Exception::class);
     }
 });
@@ -377,7 +377,7 @@ test('validation service rejects invalid names', function () {
             'url' => "https://github.com/{$name}/valid-repo",
         ];
 
-        expect(fn() => $this->validationService->validateRepositoryComponents($repoData))
+        expect(fn () => $this->validationService->validateRepositoryComponents($repoData))
             ->toThrow(InvalidArgumentException::class);
     }
 });
@@ -386,7 +386,7 @@ test('validation service validates branch names', function () {
     $validBranches = ['main', 'develop', 'feature/new-feature', 'hotfix-1.0', 'v1.0.0'];
 
     foreach ($validBranches as $branch) {
-        expect(fn() => $this->validationService->validateBranchName($branch))
+        expect(fn () => $this->validationService->validateBranchName($branch))
             ->not->toThrow(Exception::class);
     }
 });
@@ -403,7 +403,7 @@ test('validation service rejects invalid branch names', function () {
     ];
 
     foreach ($invalidBranches as $branch) {
-        expect(fn() => $this->validationService->validateBranchName($branch))
+        expect(fn () => $this->validationService->validateBranchName($branch))
             ->toThrow(InvalidArgumentException::class);
     }
 });
@@ -411,24 +411,24 @@ test('validation service rejects invalid branch names', function () {
 test('validation service validates repository size', function () {
     // Valid size (under 50MB)
     $validSize = 1024 * 1024 * 10; // 10MB
-    expect(fn() => $this->validationService->validateRepositorySize($validSize))
+    expect(fn () => $this->validationService->validateRepositorySize($validSize))
         ->not->toThrow(Exception::class);
 
     // Invalid size (over 50MB)
     $invalidSize = 1024 * 1024 * 60; // 60MB
-    expect(fn() => $this->validationService->validateRepositorySize($invalidSize))
+    expect(fn () => $this->validationService->validateRepositorySize($invalidSize))
         ->toThrow(RuntimeException::class);
 });
 
 test('validation service validates file count', function () {
     // Valid file count
     $validCount = 500;
-    expect(fn() => $this->validationService->validateFileCount($validCount))
+    expect(fn () => $this->validationService->validateFileCount($validCount))
         ->not->toThrow(Exception::class);
 
     // Invalid file count
     $invalidCount = 1500;
-    expect(fn() => $this->validationService->validateFileCount($invalidCount))
+    expect(fn () => $this->validationService->validateFileCount($invalidCount))
         ->toThrow(RuntimeException::class);
 });
 
@@ -437,6 +437,6 @@ test('validation service sanitizes content', function () {
     $sanitized = $this->validationService->sanitizeFileContent($content);
 
     expect($sanitized)->not->toContain("\0");
-    expect($sanitized)->toContain("<?php");
-    expect($sanitized)->toContain("Hello World");
+    expect($sanitized)->toContain('<?php');
+    expect($sanitized)->toContain('Hello World');
 });

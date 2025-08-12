@@ -2,12 +2,12 @@
 
 namespace App\Providers;
 
-use App\Services\GitHub\GitHubService;
 use App\Services\GitHub\GitHubRepositoryService;
+use App\Services\GitHub\GitHubService;
 use App\Services\GitHub\GitHubValidationService;
 use Github\Client;
-use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\ServiceProvider;
 
 class GitHubServiceProvider extends ServiceProvider
 {
@@ -19,33 +19,30 @@ class GitHubServiceProvider extends ServiceProvider
         // Register GitHub Client
         $this->app->singleton(Client::class, function ($app) {
             try {
-                $client = new Client();
-                
+                $client = new Client;
+
                 $config = config('thinktest_ai.github');
-                if (!empty($config['api_token'])) {
+                if (! empty($config['api_token'])) {
                     $client->authenticate($config['api_token'], null, Client::AUTH_ACCESS_TOKEN);
-                    
-                    Log::info('GitHub Client: Authenticated with API token', [
-                        'token_prefix' => substr($config['api_token'], 0, 7) . '...',
-                    ]);
+                    // Remove verbose authentication log
                 } else {
                     Log::warning('GitHub Client: No API token configured, using unauthenticated access');
                 }
-                
+
                 return $client;
             } catch (\Exception $e) {
                 Log::error('GitHub Client: Failed to create client instance', [
                     'error' => $e->getMessage(),
                     'trace' => $e->getTraceAsString(),
                 ]);
-                
+
                 throw $e;
             }
         });
 
         // Register GitHub Service
         $this->app->singleton(GitHubService::class, function ($app) {
-            return new GitHubService();
+            return new GitHubService;
         });
 
         // Register GitHub Repository Service
@@ -55,7 +52,7 @@ class GitHubServiceProvider extends ServiceProvider
 
         // Register GitHub Validation Service
         $this->app->singleton(GitHubValidationService::class, function ($app) {
-            return new GitHubValidationService();
+            return new GitHubValidationService;
         });
     }
 
@@ -77,28 +74,27 @@ class GitHubServiceProvider extends ServiceProvider
     {
         try {
             $config = config('thinktest_ai.github');
-            
+
             $issues = [];
-            
+
             if (empty($config['api_token'])) {
                 $issues[] = 'GitHub API token not configured';
             }
-            
+
             if (empty($config['max_repository_size'])) {
                 $issues[] = 'Maximum repository size not configured';
             }
-            
+
             if (empty($config['clone_timeout'])) {
                 $issues[] = 'Clone timeout not configured';
             }
-            
-            if (!empty($issues)) {
+
+            if (! empty($issues)) {
                 Log::warning('GitHub Integration: Configuration issues detected', [
                     'issues' => $issues,
                 ]);
-            } else {
-                Log::info('GitHub Integration: Configuration verified successfully');
             }
+            // Remove success log to reduce noise
         } catch (\Exception $e) {
             Log::error('GitHub Integration: Configuration verification failed', [
                 'error' => $e->getMessage(),

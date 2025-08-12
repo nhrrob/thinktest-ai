@@ -20,7 +20,7 @@ class GitHubRateLimitMiddleware
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             Log::warning('GitHub rate limit middleware: User not authenticated', [
                 'ip' => $request->ip(),
                 'user_agent' => $request->userAgent(),
@@ -44,6 +44,7 @@ class GitHubRateLimitMiddleware
         // Check per-minute limit
         if (RateLimiter::tooManyAttempts($perMinuteKey, $minuteLimit)) {
             $seconds = RateLimiter::availableIn($perMinuteKey);
+
             return response()->json([
                 'success' => false,
                 'message' => "Too many requests. Try again in {$seconds} seconds.",
@@ -55,6 +56,7 @@ class GitHubRateLimitMiddleware
         if (RateLimiter::tooManyAttempts($globalKey, $globalLimit)) {
             $seconds = RateLimiter::availableIn($globalKey);
             $minutes = ceil($seconds / 60);
+
             return response()->json([
                 'success' => false,
                 'message' => "Hourly rate limit exceeded. Try again in {$minutes} minutes.",

@@ -52,6 +52,15 @@ return [
                 'timeout' => env('AI_TIMEOUT', 60), // May vary by environment
                 'wordpress_system_prompt' => 'You are an expert WordPress plugin developer specializing in intelligent PHPUnit test generation. You understand WordPress hooks, filters, actions, plugin patterns, and WordPress testing best practices.',
             ],
+            'mock' => [
+                'api_key' => 'mock-key', // Mock provider doesn't need real API key
+                'model' => 'mock-comprehensive', // Mock model identifier
+                'display_name' => 'Mock Provider (Comprehensive)', // User-facing display name
+                'provider_company' => 'ThinkTest AI', // Provider company name
+                'max_tokens' => 4000, // Application constant
+                'timeout' => 5, // Fast response for mock
+                'wordpress_system_prompt' => 'Mock provider that generates comprehensive test suites based on plugin analysis.',
+            ],
         ],
         'default_provider' => 'openai-gpt5', // Application constant
         'fallback_provider' => 'anthropic-claude', // Application constant
@@ -95,11 +104,11 @@ return [
             'sandbox_enabled' => true, // Application constant
             'allowed_functions' => [
                 'file_get_contents', 'json_decode', 'preg_match', 'preg_match_all',
-                'str_replace', 'substr', 'strlen', 'strpos', 'explode', 'implode'
+                'str_replace', 'substr', 'strlen', 'strpos', 'explode', 'implode',
             ],
             'blocked_functions' => [
                 'exec', 'shell_exec', 'system', 'passthru', 'eval', 'file_put_contents',
-                'fopen', 'fwrite', 'unlink', 'rmdir', 'mkdir'
+                'fopen', 'fwrite', 'unlink', 'rmdir', 'mkdir',
             ],
         ],
         'static_analysis' => [
@@ -313,8 +322,8 @@ return [
         'max_files_per_repo' => env('GITHUB_MAX_FILES_PER_REPO', 1000),
 
         // Rate limiting
-        'rate_limit_requests_per_hour' => env('GITHUB_RATE_LIMIT_PER_HOUR', 5000),
-        'rate_limit_requests_per_minute' => env('GITHUB_RATE_LIMIT_PER_MINUTE', 100),
+        'rate_limit_requests_per_hour' => env('GITHUB_RATE_LIMIT_PER_HOUR', 500),
+        'rate_limit_requests_per_minute' => env('GITHUB_RATE_LIMIT_PER_MINUTE', 30),
 
         // Cache settings
         'cache_repository_info_minutes' => env('GITHUB_CACHE_REPO_INFO_MINUTES', 60),

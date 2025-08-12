@@ -2,10 +2,8 @@
 
 namespace App\Services\GitHub;
 
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Http\Request;
 
 class GitHubValidationService
 {
@@ -19,25 +17,25 @@ class GitHubValidationService
     /**
      * Validate GitHub repository URL with comprehensive security checks
      */
-    public function validateRepositoryUrl(string $url, int $userId = null): array
+    public function validateRepositoryUrl(string $url, ?int $userId = null): array
     {
         // Basic URL validation
         $this->validateUrlFormat($url);
-        
+
         // Security validation
         $this->validateUrlSecurity($url);
-        
+
         // Rate limiting validation
         if ($userId) {
             $this->validateRateLimit($userId);
         }
-        
+
         // Extract and validate repository components
         $repoData = $this->extractRepositoryData($url);
-        
+
         // Validate repository name components
         $this->validateRepositoryComponents($repoData);
-        
+
         return $repoData;
     }
 
@@ -55,7 +53,7 @@ class GitHubValidationService
         }
 
         // Check for valid URL format
-        if (!filter_var($url, FILTER_VALIDATE_URL) && !preg_match('/^[a-zA-Z0-9\-_]+\/[a-zA-Z0-9\-_\.]+$/', $url)) {
+        if (! filter_var($url, FILTER_VALIDATE_URL) && ! preg_match('/^[a-zA-Z0-9\-_]+\/[a-zA-Z0-9\-_\.]+$/', $url)) {
             throw new \InvalidArgumentException('Invalid URL format');
         }
     }
@@ -67,13 +65,13 @@ class GitHubValidationService
     {
         // Check for allowed domains
         $allowedDomains = $this->config['allowed_domains'] ?? ['github.com'];
-        
+
         if (filter_var($url, FILTER_VALIDATE_URL)) {
             $parsedUrl = parse_url($url);
             $domain = $parsedUrl['host'] ?? '';
-            
-            if (!in_array($domain, $allowedDomains)) {
-                throw new \InvalidArgumentException("Domain '{$domain}' is not allowed. Only " . implode(', ', $allowedDomains) . " are permitted");
+
+            if (! in_array($domain, $allowedDomains)) {
+                throw new \InvalidArgumentException("Domain '{$domain}' is not allowed. Only ".implode(', ', $allowedDomains).' are permitted');
             }
         }
 
@@ -107,14 +105,14 @@ class GitHubValidationService
     {
         $hourlyKey = "github_requests_hourly_{$userId}";
         $minuteKey = "github_requests_minute_{$userId}";
-        
+
         $hourlyLimit = $this->config['rate_limit_requests_per_hour'] ?? 100;
         $minuteLimit = $this->config['rate_limit_requests_per_minute'] ?? 10;
 
         // Check hourly limit
         if (RateLimiter::tooManyAttempts($hourlyKey, $hourlyLimit)) {
             $seconds = RateLimiter::availableIn($hourlyKey);
-            throw new \RuntimeException("Too many requests. Try again in " . ceil($seconds / 60) . " minutes.");
+            throw new \RuntimeException('Too many requests. Try again in '.ceil($seconds / 60).' minutes.');
         }
 
         // Check minute limit
@@ -136,19 +134,19 @@ class GitHubValidationService
         // Clean and normalize URL
         $url = trim($url);
         $url = preg_replace('/\.git$/', '', $url);
-        
+
         // Support various GitHub URL formats
         $patterns = [
             '/^https:\/\/github\.com\/([^\/]+)\/([^\/\?#]+)\/?(\?.*)?$/',
             '/^git@github\.com:([^\/]+)\/([^\/]+)\.git$/',
             '/^([a-zA-Z0-9\-_]+)\/([a-zA-Z0-9\-_\.]+)$/', // Simple owner/repo format
         ];
-        
+
         foreach ($patterns as $pattern) {
             if (preg_match($pattern, $url, $matches)) {
                 $owner = $matches[1];
                 $repo = $matches[2];
-                
+
                 return [
                     'owner' => $owner,
                     'repo' => $repo,
@@ -157,7 +155,7 @@ class GitHubValidationService
                 ];
             }
         }
-        
+
         throw new \InvalidArgumentException('Invalid GitHub repository URL format');
     }
 
@@ -170,12 +168,12 @@ class GitHubValidationService
         $repo = $repoData['repo'];
 
         // Validate owner name
-        if (!$this->isValidGitHubName($owner)) {
+        if (! $this->isValidGitHubName($owner)) {
             throw new \InvalidArgumentException("Invalid repository owner name: {$owner}");
         }
 
         // Validate repository name
-        if (!$this->isValidGitHubName($repo)) {
+        if (! $this->isValidGitHubName($repo)) {
             throw new \InvalidArgumentException("Invalid repository name: {$repo}");
         }
 
@@ -196,7 +194,7 @@ class GitHubValidationService
         // - Cannot start or end with hyphen or dot
         // - Cannot contain consecutive hyphens
         // - Maximum 39 characters for usernames, 100 for repositories
-        
+
         if (strlen($name) > 100) {
             return false;
         }
@@ -206,7 +204,7 @@ class GitHubValidationService
         }
 
         // Check valid characters and patterns
-        if (!preg_match('/^[a-zA-Z0-9]([a-zA-Z0-9\-\._]{0,98}[a-zA-Z0-9])?$/', $name)) {
+        if (! preg_match('/^[a-zA-Z0-9]([a-zA-Z0-9\-\._]{0,98}[a-zA-Z0-9])?$/', $name)) {
             return false;
         }
 
@@ -224,7 +222,7 @@ class GitHubValidationService
     public function validateRepositorySize(int $sizeBytes): void
     {
         $maxSize = $this->config['max_repository_size'] ?? 52428800; // 50MB
-        
+
         if ($sizeBytes > $maxSize) {
             $maxSizeMB = round($maxSize / 1024 / 1024, 1);
             $currentSizeMB = round($sizeBytes / 1024 / 1024, 1);
@@ -238,7 +236,7 @@ class GitHubValidationService
     public function validateFileCount(int $fileCount): void
     {
         $maxFiles = $this->config['max_files_per_repo'] ?? 1000;
-        
+
         if ($fileCount > $maxFiles) {
             throw new \RuntimeException("Repository contains too many files ({$fileCount}). Maximum allowed: {$maxFiles}");
         }
@@ -282,13 +280,13 @@ class GitHubValidationService
     {
         // Remove null bytes
         $content = str_replace("\0", '', $content);
-        
+
         // Limit content size
         $maxSize = $this->config['max_repository_size'] ?? 52428800;
         if (strlen($content) > $maxSize) {
             throw new \RuntimeException('Content size exceeds maximum allowed size');
         }
-        
+
         return $content;
     }
 

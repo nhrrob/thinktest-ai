@@ -1,13 +1,13 @@
-import { type BreadcrumbItem, type User, type Role } from '@/types';
+import { useToast } from '@/hooks/use-toast';
+import { type BreadcrumbItem, type Role, type User } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { ArrowLeftIcon, SaveIcon } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import AppLayout from '@/layouts/app-layout';
 
 interface UserEditProps {
@@ -44,7 +44,7 @@ export default function UserEdit({ user, roles }: UserEditProps) {
         email: user.email,
         password: '',
         password_confirmation: '',
-        roles: user.roles.map(r => r.id),
+        roles: user.roles.map((r) => r.id),
     });
 
     const toast = useToast();
@@ -53,7 +53,10 @@ export default function UserEdit({ user, roles }: UserEditProps) {
         if (checked) {
             setData('roles', [...data.roles, roleId]);
         } else {
-            setData('roles', data.roles.filter(id => id !== roleId));
+            setData(
+                'roles',
+                data.roles.filter((id) => id !== roleId),
+            );
         }
     };
 
@@ -77,14 +80,12 @@ export default function UserEdit({ user, roles }: UserEditProps) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`Edit User: ${user.name}`} />
-            
-            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
+
+            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-semibold tracking-tight">Edit User</h1>
-                        <p className="text-muted-foreground">
-                            Update user information and role assignments
-                        </p>
+                        <p className="text-muted-foreground">Update user information and role assignments</p>
                     </div>
                     <Link href={route('admin.users.index')}>
                         <Button variant="outline">
@@ -98,12 +99,10 @@ export default function UserEdit({ user, roles }: UserEditProps) {
                     <Card>
                         <CardHeader>
                             <CardTitle>User Information</CardTitle>
-                            <CardDescription>
-                                Update the user's basic information.
-                            </CardDescription>
+                            <CardDescription>Update the user's basic information.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <div className="space-y-2">
                                     <Label htmlFor="name">Name</Label>
                                     <Input
@@ -114,9 +113,7 @@ export default function UserEdit({ user, roles }: UserEditProps) {
                                         placeholder="Enter user name"
                                         className={errors.name ? 'border-destructive' : ''}
                                     />
-                                    {errors.name && (
-                                        <p className="text-sm text-destructive">{errors.name}</p>
-                                    )}
+                                    {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
                                 </div>
 
                                 <div className="space-y-2">
@@ -129,9 +126,7 @@ export default function UserEdit({ user, roles }: UserEditProps) {
                                         placeholder="Enter email address"
                                         className={errors.email ? 'border-destructive' : ''}
                                     />
-                                    {errors.email && (
-                                        <p className="text-sm text-destructive">{errors.email}</p>
-                                    )}
+                                    {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
                                 </div>
 
                                 <div className="space-y-2">
@@ -144,9 +139,7 @@ export default function UserEdit({ user, roles }: UserEditProps) {
                                         placeholder="Leave blank to keep current password"
                                         className={errors.password ? 'border-destructive' : ''}
                                     />
-                                    {errors.password && (
-                                        <p className="text-sm text-destructive">{errors.password}</p>
-                                    )}
+                                    {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
                                 </div>
 
                                 <div className="space-y-2">
@@ -159,9 +152,7 @@ export default function UserEdit({ user, roles }: UserEditProps) {
                                         placeholder="Confirm new password"
                                         className={errors.password_confirmation ? 'border-destructive' : ''}
                                     />
-                                    {errors.password_confirmation && (
-                                        <p className="text-sm text-destructive">{errors.password_confirmation}</p>
-                                    )}
+                                    {errors.password_confirmation && <p className="text-sm text-destructive">{errors.password_confirmation}</p>}
                                 </div>
                             </div>
                         </CardContent>
@@ -170,9 +161,7 @@ export default function UserEdit({ user, roles }: UserEditProps) {
                     <Card>
                         <CardHeader>
                             <CardTitle>Role Assignment</CardTitle>
-                            <CardDescription>
-                                Update the roles assigned to this user.
-                            </CardDescription>
+                            <CardDescription>Update the roles assigned to this user.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-3">
@@ -181,9 +170,7 @@ export default function UserEdit({ user, roles }: UserEditProps) {
                                         <Checkbox
                                             id={`role-${role.id}`}
                                             checked={data.roles.includes(role.id)}
-                                            onCheckedChange={(checked) => 
-                                                handleRoleChange(role.id, checked as boolean)
-                                            }
+                                            onCheckedChange={(checked) => handleRoleChange(role.id, checked as boolean)}
                                         />
                                         <Label htmlFor={`role-${role.id}`} className="font-medium">
                                             {role.name}
@@ -191,9 +178,7 @@ export default function UserEdit({ user, roles }: UserEditProps) {
                                     </div>
                                 ))}
                             </div>
-                            {errors.roles && (
-                                <p className="text-sm text-destructive mt-2">{errors.roles}</p>
-                            )}
+                            {errors.roles && <p className="mt-2 text-sm text-destructive">{errors.roles}</p>}
                         </CardContent>
                     </Card>
 

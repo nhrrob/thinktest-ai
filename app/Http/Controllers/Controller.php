@@ -9,8 +9,8 @@ abstract class Controller extends BaseController
     /**
      * Constructor with permission-based middleware support
      *
-     * @param string $permissionGroup The permission group name (e.g., 'user', 'role', 'permission')
-     * @param int $isApi Whether this is an API controller (0 = web, 1 = api)
+     * @param  string  $permissionGroup  The permission group name (e.g., 'user', 'role', 'permission')
+     * @param  int  $isApi  Whether this is an API controller (0 = web, 1 = api)
      */
     public function __construct($permissionGroup = '', $isApi = 0)
     {

@@ -3,8 +3,8 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class RolePermissionSeeder extends Seeder
 {
@@ -31,7 +31,7 @@ class RolePermissionSeeder extends Seeder
             for ($j = 0; $j < count($permissions[$i]['permissions']); $j++) {
                 $permission = Permission::create([
                     'name' => $permissions[$i]['permissions'][$j],
-                    'group_name' => $permissionGroup
+                    'group_name' => $permissionGroup,
                 ]);
 
                 // Super Admin: Role 1
@@ -50,11 +50,13 @@ class RolePermissionSeeder extends Seeder
                     $roleUser->givePermissionTo($permission);
                 }
 
-                // Demo: Role 4 - Limited access
+                // Demo: Role 4 - Limited access with ThinkTest functionality
                 if (
                     $permissionGroup == 'dashboard' ||
                     $permissionGroup == 'demo-features' ||
-                    $permissionGroup == 'user-profile'
+                    $permissionGroup == 'user-profile' ||
+                    $permissionGroup == 'ai-test-generation' ||
+                    $permissionGroup == 'github-integration'
                 ) {
                     $roleDemoUser->givePermissionTo($permission);
                 }
@@ -65,7 +67,7 @@ class RolePermissionSeeder extends Seeder
         $this->command->info('Super Admin role: Full access via Gate::before() (see AppServiceProvider)');
         $this->command->info('Admin role: Full access to all features');
         $this->command->info('User role: Standard access with test generation and GitHub integration');
-        $this->command->info('Demo role: Limited access for demonstration purposes');
+        $this->command->info('Demo role: Access to ThinkTest functionality for demonstration purposes');
     }
 
     public function permissionItem($groupName, $permissions = null)
@@ -82,7 +84,7 @@ class RolePermissionSeeder extends Seeder
 
         $permissionItem = [
             'group_name' => "$groupName",
-            'permissions' => $permissions
+            'permissions' => $permissions,
         ];
 
         return $permissionItem;
@@ -96,41 +98,41 @@ class RolePermissionSeeder extends Seeder
         // Dashboard permissions (view only)
         $permissions[] = $this->permissionItem('dashboard', [
             'access dashboard',
-            'view dashboard analytics'
+            'view dashboard analytics',
         ]);
 
         // AI Test Generation permissions
         $permissions[] = $this->permissionItem('ai-test-generation', [
             'generate tests',
             'upload files',
-            'download test results'
+            'download test results',
         ]);
 
         // GitHub Integration permissions
         $permissions[] = $this->permissionItem('github-integration', [
             'connect github',
             'create pull requests',
-            'manage repositories'
+            'manage repositories',
         ]);
 
         // Admin permissions
         $permissions[] = $this->permissionItem('admin', [
             'view system health',
             'manage feature flags',
-            'access admin panel'
+            'access admin panel',
         ]);
 
         // User Profile permissions
         $permissions[] = $this->permissionItem('user-profile', [
             'edit profile',
             'change password',
-            'view conversation history'
+            'view conversation history',
         ]);
 
         // Demo Features permissions (limited access)
         $permissions[] = $this->permissionItem('demo-features', [
             'demo access',
-            'limited test generation'
+            'limited test generation',
         ]);
 
         // Granular CRUD permissions for admin resources
@@ -138,21 +140,21 @@ class RolePermissionSeeder extends Seeder
             'view users',
             'create users',
             'edit users',
-            'delete users'
+            'delete users',
         ]);
 
         $permissions[] = $this->permissionItem('role', [
             'view roles',
             'create roles',
             'edit roles',
-            'delete roles'
+            'delete roles',
         ]);
 
         $permissions[] = $this->permissionItem('permission', [
             'view permissions',
             'create permissions',
             'edit permissions',
-            'delete permissions'
+            'delete permissions',
         ]);
 
         return $permissions;

@@ -103,8 +103,8 @@ GITHUB_MAX_FILES_PER_REPO=1000         # Maximum files to process
 GITHUB_CLONE_TIMEOUT=300               # 5 minutes timeout
 
 # Rate Limiting
-GITHUB_RATE_LIMIT_PER_HOUR=100         # Requests per hour per user
-GITHUB_RATE_LIMIT_PER_MINUTE=10        # Requests per minute per user
+GITHUB_RATE_LIMIT_PER_HOUR=500         # Requests per hour per user
+GITHUB_RATE_LIMIT_PER_MINUTE=30        # Requests per minute per user
 
 # Caching
 GITHUB_CACHE_REPO_INFO_MINUTES=60      # Cache repository info
@@ -129,8 +129,8 @@ The main configuration is in `config/thinktest_ai.php`:
     'ignored_directories' => ['node_modules', 'vendor', '.git', '.github', 'tests'],
     
     // Rate limiting
-    'rate_limit_requests_per_hour' => env('GITHUB_RATE_LIMIT_PER_HOUR', 100),
-    'rate_limit_requests_per_minute' => env('GITHUB_RATE_LIMIT_PER_MINUTE', 10),
+    'rate_limit_requests_per_hour' => env('GITHUB_RATE_LIMIT_PER_HOUR', 500),
+    'rate_limit_requests_per_minute' => env('GITHUB_RATE_LIMIT_PER_MINUTE', 30),
 ],
 ```
 

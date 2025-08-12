@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\File;
@@ -19,7 +19,7 @@ class BrandingController extends Controller
     public function edit(Request $request): Response
     {
         // Ensure code-themed logo is set as default if no preference exists
-        if (!session()->has('app_logo_type')) {
+        if (! session()->has('app_logo_type')) {
             session(['app_logo_type' => 'custom', 'app_logo_path' => 'thinktest_code']);
         }
 
@@ -108,19 +108,19 @@ class BrandingController extends Controller
                 'id' => 'thinktest_code',
                 'name' => 'ThinkTest AI (Code)',
                 'description' => 'Code/testing themed logo with brackets and checkmark',
-                'preview' => '/images/logos/thinktest-code-preview.png',
+                'preview' => null,
             ],
             [
                 'id' => 'thinktest_minimal',
                 'name' => 'ThinkTest AI (Minimal)',
                 'description' => 'Minimal text-only version',
-                'preview' => '/images/logos/thinktest-minimal-preview.png',
+                'preview' => null,
             ],
             [
                 'id' => 'thinktest_dark',
                 'name' => 'ThinkTest AI (Dark)',
                 'description' => 'Dark theme optimized version',
-                'preview' => '/images/logos/thinktest-dark-preview.png',
+                'preview' => null,
             ],
         ];
     }

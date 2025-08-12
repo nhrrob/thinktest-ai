@@ -66,7 +66,7 @@ class UserController extends Controller
                 ->with('success', 'User created successfully.');
         } catch (\Exception $e) {
             return Redirect::route('admin.users.index')
-                ->with('error', 'Failed to create user: ' . $e->getMessage());
+                ->with('error', 'Failed to create user: '.$e->getMessage());
         }
     }
 
@@ -125,7 +125,7 @@ class UserController extends Controller
                 ->with('success', 'User updated successfully.');
         } catch (\Exception $e) {
             return Redirect::route('admin.users.index')
-                ->with('error', 'Failed to update user: ' . $e->getMessage());
+                ->with('error', 'Failed to update user: '.$e->getMessage());
         }
     }
 
@@ -153,7 +153,7 @@ class UserController extends Controller
                 ->with('success', 'User deleted successfully.');
         } catch (\Exception $e) {
             return Redirect::route('admin.users.index')
-                ->with('error', 'Failed to delete user: ' . $e->getMessage());
+                ->with('error', 'Failed to delete user: '.$e->getMessage());
         }
     }
 }

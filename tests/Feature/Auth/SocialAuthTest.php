@@ -14,7 +14,7 @@ beforeEach(function () {
 
 test('google oauth redirect works', function () {
     $response = $this->get(route('auth.google'));
-    
+
     $response->assertStatus(302);
     $response->assertRedirect();
 });

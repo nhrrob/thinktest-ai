@@ -5,13 +5,11 @@ import { Link, usePage } from '@inertiajs/react';
 export function NavAdmin({ items = [] }: { items: NavItem[] }) {
     const { auth } = usePage<SharedData>().props;
     const page = usePage();
-    
+
     // Check if user has admin permissions
-    const canAccessAdmin = auth.user.roles?.some(role => 
-        role.name === 'super-admin' || role.name === 'admin'
-    ) || auth.user.permissions?.some(permission => 
-        permission.name === 'access admin panel'
-    );
+    const canAccessAdmin =
+        auth.user.roles?.some((role) => role.name === 'super-admin' || role.name === 'admin') ||
+        auth.user.permissions?.some((permission) => permission.name === 'access admin panel');
 
     // Don't render admin navigation if user doesn't have access
     if (!canAccessAdmin) {
@@ -25,25 +23,28 @@ export function NavAdmin({ items = [] }: { items: NavItem[] }) {
                 {items.map((item) => {
                     // Check specific permissions for each admin item
                     let hasPermission = true;
-                    
+
                     if (item.href.includes('/roles')) {
-                        hasPermission = auth.user.permissions?.some(permission =>
-                            ['view roles', 'create roles', 'edit roles', 'delete roles'].includes(permission.name)
-                        ) || auth.user.roles?.some(role =>
-                            role.name === 'super-admin' || role.name === 'admin'
-                        ) || false;
+                        hasPermission =
+                            auth.user.permissions?.some((permission) =>
+                                ['view roles', 'create roles', 'edit roles', 'delete roles'].includes(permission.name),
+                            ) ||
+                            auth.user.roles?.some((role) => role.name === 'super-admin' || role.name === 'admin') ||
+                            false;
                     } else if (item.href.includes('/permissions')) {
-                        hasPermission = auth.user.permissions?.some(permission =>
-                            ['view permissions', 'create permissions', 'edit permissions', 'delete permissions'].includes(permission.name)
-                        ) || auth.user.roles?.some(role =>
-                            role.name === 'super-admin' || role.name === 'admin'
-                        ) || false;
+                        hasPermission =
+                            auth.user.permissions?.some((permission) =>
+                                ['view permissions', 'create permissions', 'edit permissions', 'delete permissions'].includes(permission.name),
+                            ) ||
+                            auth.user.roles?.some((role) => role.name === 'super-admin' || role.name === 'admin') ||
+                            false;
                     } else if (item.href.includes('/users')) {
-                        hasPermission = auth.user.permissions?.some(permission =>
-                            ['view users', 'create users', 'edit users', 'delete users'].includes(permission.name)
-                        ) || auth.user.roles?.some(role =>
-                            role.name === 'super-admin' || role.name === 'admin'
-                        ) || false;
+                        hasPermission =
+                            auth.user.permissions?.some((permission) =>
+                                ['view users', 'create users', 'edit users', 'delete users'].includes(permission.name),
+                            ) ||
+                            auth.user.roles?.some((role) => role.name === 'super-admin' || role.name === 'admin') ||
+                            false;
                     }
 
                     if (!hasPermission) {

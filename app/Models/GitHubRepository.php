@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class GitHubRepository extends Model
 {
@@ -171,7 +171,7 @@ class GitHubRepository extends Model
      */
     public function getFormattedSizeAttribute(): string
     {
-        if (!$this->size_bytes) {
+        if (! $this->size_bytes) {
             return 'Unknown';
         }
 
@@ -184,6 +184,30 @@ class GitHubRepository extends Model
             $i++;
         }
 
-        return round($bytes, 2) . ' ' . $units[$i];
+        return round($bytes, 2).' '.$units[$i];
+    }
+
+    /**
+     * Get the file test generations for this repository
+     */
+    public function fileTestGenerations(): HasMany
+    {
+        return $this->hasMany(GitHubFileTestGeneration::class, 'github_repository_id');
+    }
+
+    /**
+     * Get successful file test generations
+     */
+    public function successfulFileTestGenerations(): HasMany
+    {
+        return $this->hasMany(GitHubFileTestGeneration::class, 'github_repository_id')->successful();
+    }
+
+    /**
+     * Get file test generations for a specific file
+     */
+    public function fileTestGenerationsForFile(string $filePath): HasMany
+    {
+        return $this->hasMany(GitHubFileTestGeneration::class, 'github_repository_id')->forFile($filePath);
     }
 }

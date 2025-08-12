@@ -1,11 +1,11 @@
+import { NavAdmin } from '@/components/nav-admin';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
-import { NavAdmin } from '@/components/nav-admin';
 import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Code, Home, Shield, Users, Key } from 'lucide-react';
+import { BookOpen, Code, Folder, Home, Key, LayoutGrid, Shield, Users } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
@@ -47,12 +47,12 @@ const adminNavItems: NavItem[] = [
 const footerNavItems: NavItem[] = [
     {
         title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
+        href: 'https://github.com/nhrrob/thinktest-ai',
         icon: Folder,
     },
     {
         title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
+        href: 'https://github.com/nhrrob/thinktest-ai/blob/main/README.md',
         icon: BookOpen,
     },
 ];

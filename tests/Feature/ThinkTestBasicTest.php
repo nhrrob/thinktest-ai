@@ -21,8 +21,8 @@ class ThinkTestBasicTest extends TestCase
 
     public function test_plugin_analysis_service_works(): void
     {
-        $service = new PluginAnalysisService();
-        
+        $service = new PluginAnalysisService;
+
         $simplePlugin = '<?php
         function my_plugin_init() {
             add_action("init", "my_plugin_setup");
@@ -31,9 +31,9 @@ class ThinkTestBasicTest extends TestCase
         function my_plugin_setup() {
             wp_enqueue_script("my-script", "script.js");
         }';
-        
+
         $analysis = $service->analyzePlugin($simplePlugin, 'test-plugin.php');
-        
+
         $this->assertIsArray($analysis);
         $this->assertArrayHasKey('functions', $analysis);
         $this->assertArrayHasKey('wordpress_patterns', $analysis);
@@ -42,16 +42,16 @@ class ThinkTestBasicTest extends TestCase
 
     public function test_ai_provider_service_mock_works(): void
     {
-        $service = new AIProviderService();
-        
+        $service = new AIProviderService;
+
         $simplePlugin = '<?php
         function test_function() {
             return "test";
         }';
-        
+
         // This should use the mock provider since no API keys are configured
         $result = $service->generateWordPressTests($simplePlugin);
-        
+
         $this->assertIsArray($result);
         $this->assertTrue($result['success']);
         $this->assertEquals('mock', $result['provider']);
@@ -67,7 +67,7 @@ class ThinkTestBasicTest extends TestCase
     public function test_authenticated_user_can_access_thinktest(): void
     {
         $user = User::factory()->create();
-        
+
         $response = $this->actingAs($user)->get('/thinktest');
         $response->assertStatus(200);
     }

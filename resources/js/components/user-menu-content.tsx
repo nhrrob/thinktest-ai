@@ -3,8 +3,7 @@ import { UserInfo } from '@/components/user-info';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
 import { type User } from '@/types';
 import { Link, router } from '@inertiajs/react';
-import { LogOut, Settings, Palette } from 'lucide-react';
-import AppearanceToggleDropdown from '@/components/appearance-dropdown';
+import { LogOut, Palette, Settings } from 'lucide-react';
 
 interface UserMenuContentProps {
     user: User;

@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Models\AIConversationState;
+use App\Models\User;
 use App\Services\FileProcessing\FileProcessingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -23,14 +23,14 @@ class TestInfrastructureDetectionTest extends TestCase
         $this->app['config']->set('thinktest_ai.wordpress.analysis.max_file_size', 1024 * 1024); // 1MB
         $this->app['config']->set('thinktest_ai.wordpress.analysis.allowed_extensions', ['php', 'zip']);
         $this->app['config']->set('thinktest_ai.security.file_validation.blocked_php_functions', [
-            'exec', 'shell_exec', 'system', 'passthru', 'eval'
+            'exec', 'shell_exec', 'system', 'passthru', 'eval',
         ]);
     }
 
     public function test_detect_infrastructure_endpoint_works_with_file_upload(): void
     {
         $user = User::factory()->create();
-        
+
         // Create a simple plugin file
         $pluginContent = '<?php
 /*
@@ -43,7 +43,7 @@ function test_init() {
 
         // Create a fake uploaded file with proper size
         $file = UploadedFile::fake()->createWithContent('test-plugin.php', $pluginContent);
-        
+
         // Store the file content using the file service
         $fileService = app(FileProcessingService::class);
         $fileData = $fileService->processUploadedFile($file, $user->id);
@@ -79,7 +79,7 @@ function test_init() {
         $responseData = $response->json();
         $this->assertArrayHasKey('detection', $responseData);
         $this->assertArrayHasKey('instructions', $responseData);
-        
+
         // Check that detection results are properly structured
         $detection = $responseData['detection'];
         $this->assertArrayHasKey('has_phpunit_config', $detection);

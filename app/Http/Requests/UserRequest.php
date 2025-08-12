@@ -45,7 +45,7 @@ class UserRequest extends FormRequest
                 'string',
                 'email',
                 'max:255',
-                Rule::unique('users')->ignore($this->route('user'))
+                Rule::unique('users')->ignore($this->route('user')),
             ];
             $rules['password'] = 'nullable|string|min:8|confirmed';
         }

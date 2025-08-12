@@ -197,24 +197,24 @@ PHP;
             'pestphp/pest' => '^2.0',
             'pestphp/pest-plugin-wordpress' => '^2.0',
             'brain/monkey' => '^2.6',
-            'mockery/mockery' => '^1.5'
+            'mockery/mockery' => '^1.5',
         ] : [
             'phpunit/phpunit' => '^10.0',
             'brain/monkey' => '^2.6',
             'yoast/phpunit-polyfills' => '^2.0',
-            'mockery/mockery' => '^1.5'
+            'mockery/mockery' => '^1.5',
         ];
 
         $scripts = $framework === 'pest' ? [
             'test' => 'pest',
             'test:unit' => 'pest --group=unit',
             'test:integration' => 'pest --group=integration',
-            'test:coverage' => 'pest --coverage --coverage-html=coverage'
+            'test:coverage' => 'pest --coverage --coverage-html=coverage',
         ] : [
             'test' => 'phpunit',
             'test:unit' => 'phpunit --testsuite="Unit Tests"',
             'test:integration' => 'phpunit --testsuite="Integration Tests"',
-            'test:coverage' => 'phpunit --coverage-html=coverage'
+            'test:coverage' => 'phpunit --coverage-html=coverage',
         ];
 
         $config = [
@@ -224,28 +224,28 @@ PHP;
             'license' => 'GPL-2.0-or-later',
             'autoload' => [
                 'psr-4' => [
-                    $namespace . '\\' => 'src/'
-                ]
+                    $namespace.'\\' => 'src/',
+                ],
             ],
             'autoload-dev' => [
                 'psr-4' => [
-                    $namespace . '\\Tests\\' => 'tests/'
-                ]
+                    $namespace.'\\Tests\\' => 'tests/',
+                ],
             ],
             'require' => [
-                'php' => '>=7.4'
+                'php' => '>=7.4',
             ],
             'require-dev' => $testDependencies,
             'scripts' => $scripts,
             'config' => [
                 'allow-plugins' => [
-                    'pestphp/pest-plugin' => true
+                    'pestphp/pest-plugin' => true,
                 ],
                 'optimize-autoloader' => true,
-                'sort-packages' => true
+                'sort-packages' => true,
             ],
             'minimum-stability' => 'stable',
-            'prefer-stable' => true
+            'prefer-stable' => true,
         ];
 
         return json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
@@ -499,28 +499,28 @@ PHP;
             'phpunit_config' => [
                 'name' => 'phpunit.xml',
                 'description' => 'PHPUnit configuration file',
-                'framework' => 'phpunit'
+                'framework' => 'phpunit',
             ],
             'pest_config' => [
                 'name' => 'tests/Pest.php',
                 'description' => 'Pest configuration file',
-                'framework' => 'pest'
+                'framework' => 'pest',
             ],
             'composer_json' => [
                 'name' => 'composer.json',
                 'description' => 'Composer configuration with test dependencies',
-                'framework' => 'both'
+                'framework' => 'both',
             ],
             'bootstrap' => [
                 'name' => 'tests/bootstrap/bootstrap.php',
                 'description' => 'WordPress test bootstrap file',
-                'framework' => 'both'
+                'framework' => 'both',
             ],
             'sample_test' => [
                 'name' => 'tests/SampleTest.php',
                 'description' => 'Sample test file to get started',
-                'framework' => 'both'
-            ]
+                'framework' => 'both',
+            ],
         ];
     }
 }

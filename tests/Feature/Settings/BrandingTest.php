@@ -26,7 +26,7 @@ test('branding settings can be updated with default logo', function () {
 
     $response->assertRedirect();
     $response->assertSessionHas('success', 'Branding settings updated successfully.');
-    
+
     // Check that the session has the correct logo type
     expect(session('app_logo_type'))->toBe('default');
 });

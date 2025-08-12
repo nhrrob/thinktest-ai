@@ -112,7 +112,7 @@ class AIConversationState extends Model
         if ($this->total_steps === 0) {
             return 0;
         }
-        
+
         return round(($this->step / $this->total_steps) * 100, 2);
     }
 

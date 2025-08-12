@@ -3,18 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Models\AIConversationState;
-use App\Models\PluginAnalysisResult;
+use App\Models\GitHubFileTestGeneration;
 use App\Models\GitHubRepository;
+use App\Models\PluginAnalysisResult;
 use App\Services\AI\AIProviderService;
+use App\Services\FileProcessing\FileProcessingService;
+use App\Services\GitHub\GitHubErrorHandler;
+use App\Services\GitHub\GitHubRepositoryService;
+use App\Services\GitHub\GitHubService;
+use App\Services\GitHub\GitHubValidationService;
+use App\Services\TestGeneration\TestGenerationService;
 use App\Services\WordPress\PluginAnalysisService;
+use App\Services\WordPress\TestConfigurationTemplateService;
 use App\Services\WordPress\TestInfrastructureDetectionService;
 use App\Services\WordPress\TestSetupInstructionsService;
-use App\Services\WordPress\TestConfigurationTemplateService;
-use App\Services\FileProcessing\FileProcessingService;
-use App\Services\GitHub\GitHubService;
-use App\Services\GitHub\GitHubRepositoryService;
-use App\Services\GitHub\GitHubValidationService;
-use App\Services\GitHub\GitHubErrorHandler;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -25,14 +27,24 @@ use Inertia\Inertia;
 class ThinkTestController extends Controller
 {
     private AIProviderService $aiService;
+
     private PluginAnalysisService $analysisService;
+
     private TestInfrastructureDetectionService $testDetectionService;
+
     private TestSetupInstructionsService $testInstructionsService;
+
     private TestConfigurationTemplateService $testTemplateService;
+
     private FileProcessingService $fileService;
+
     private GitHubService $githubService;
+
     private GitHubRepositoryService $githubRepositoryService;
+
     private GitHubValidationService $githubValidationService;
+
+    private TestGenerationService $testGenerationService;
 
     public function __construct(
         AIProviderService $aiService,
@@ -43,7 +55,8 @@ class ThinkTestController extends Controller
         FileProcessingService $fileService,
         GitHubService $githubService,
         GitHubRepositoryService $githubRepositoryService,
-        GitHubValidationService $githubValidationService
+        GitHubValidationService $githubValidationService,
+        TestGenerationService $testGenerationService
     ) {
         $this->aiService = $aiService;
         $this->analysisService = $analysisService;
@@ -54,6 +67,7 @@ class ThinkTestController extends Controller
         $this->githubService = $githubService;
         $this->githubRepositoryService = $githubRepositoryService;
         $this->githubValidationService = $githubValidationService;
+        $this->testGenerationService = $testGenerationService;
 
         // Apply permission-based middleware for ThinkTest AI functionality
         $this->middleware('permission:generate tests|limited test generation')->only(['index', 'generateTests']);
@@ -67,7 +81,7 @@ class ThinkTestController extends Controller
     public function index()
     {
         $user = Auth::user();
-        
+
         // Get recent conversations
         $recentConversations = AIConversationState::where('user_id', $user->id)
             ->orderBy('created_at', 'desc')
@@ -84,6 +98,8 @@ class ThinkTestController extends Controller
             'recentConversations' => $recentConversations,
             'recentAnalyses' => $recentAnalyses,
             'availableProviders' => $this->aiService->getAvailableProviders(),
+            'userHasApiTokens' => $this->aiService->userHasApiTokens(),
+            'demoCreditStatus' => $this->aiService->getDemoCreditStatus(),
         ]);
     }
 
@@ -94,13 +110,13 @@ class ThinkTestController extends Controller
     {
         $request->validate([
             'plugin_file' => 'required|file|max:10240', // 10MB max
-            'provider' => 'sometimes|string|in:openai-gpt5,anthropic-claude,chatgpt-5,anthropic',
+            'provider' => 'sometimes|string|in:openai-gpt5,anthropic-claude,chatgpt-5,anthropic,mock',
             'framework' => 'sometimes|string|in:phpunit,pest',
         ]);
 
         try {
             $user = Auth::user();
-            
+
             // Process uploaded file
             $fileData = $this->fileService->processUploadedFile(
                 $request->file('plugin_file'),
@@ -197,7 +213,7 @@ class ThinkTestController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Upload failed: ' . $e->getMessage(),
+                'message' => 'Upload failed: '.$e->getMessage(),
             ], 422);
         }
     }
@@ -209,13 +225,13 @@ class ThinkTestController extends Controller
     {
         $request->validate([
             'conversation_id' => 'required|string',
-            'provider' => 'sometimes|string|in:openai-gpt5,anthropic-claude,chatgpt-5,anthropic',
+            'provider' => 'sometimes|string|in:openai-gpt5,anthropic-claude,chatgpt-5,anthropic,mock',
             'framework' => 'sometimes|string|in:phpunit,pest',
         ]);
 
         try {
             $user = Auth::user();
-            
+
             // Find conversation
             $conversation = AIConversationState::where('conversation_id', $request->conversation_id)
                 ->where('user_id', $user->id)
@@ -272,6 +288,261 @@ class ThinkTestController extends Controller
 
             return response()->json([
                 'success' => false,
+                'message' => 'Test generation failed: '.$e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Generate tests for a single file from GitHub repository
+     */
+    public function generateTestsForSingleFile(Request $request)
+    {
+        $request->validate([
+            'owner' => 'required|string|max:100|regex:/^[a-zA-Z0-9\-_\.]+$/',
+            'repo' => 'required|string|max:100|regex:/^[a-zA-Z0-9\-_\.]+$/',
+            'file_path' => 'required|string|max:500',
+            'branch' => 'sometimes|string|max:100|regex:/^[a-zA-Z0-9\-_\.\/]+$/',
+            'provider' => 'sometimes|string|in:openai-gpt5,anthropic-claude,chatgpt-5,anthropic,mock',
+            'framework' => 'sometimes|string|in:phpunit,pest',
+        ]);
+
+        try {
+            $user = Auth::user();
+
+            // Validate repository components
+            $repoData = [
+                'owner' => $request->owner,
+                'repo' => $request->repo,
+                'full_name' => "{$request->owner}/{$request->repo}",
+                'url' => "https://github.com/{$request->owner}/{$request->repo}",
+            ];
+            $this->githubValidationService->validateRepositoryComponents($repoData);
+
+            // Validate branch name if provided
+            if ($request->has('branch')) {
+                $this->githubValidationService->validateBranchName($request->branch);
+            }
+
+            $branch = $request->input('branch');
+            $filePath = $request->input('file_path');
+            $provider = $request->input('provider', 'openai-gpt5');
+            $framework = $request->input('framework', 'phpunit');
+
+            // Get file content from GitHub
+            $fileData = $this->githubService->getFileContent(
+                $request->owner,
+                $request->repo,
+                $filePath,
+                $branch
+            );
+
+            // Get repository info for context
+            $repoInfo = $this->githubService->getRepositoryInfo($request->owner, $request->repo);
+
+            // Create repository context
+            $repositoryContext = [
+                'owner' => $request->owner,
+                'repo' => $request->repo,
+                'full_name' => $repoInfo['full_name'],
+                'branch' => $branch ?: $repoInfo['default_branch'],
+                'description' => $repoInfo['description'],
+                'language' => $repoInfo['language'],
+                'html_url' => $repoInfo['html_url'],
+            ];
+
+            // Generate tests for the single file
+            $testResult = $this->testGenerationService->generateTestsForSingleFile(
+                $fileData['content'],
+                [
+                    'filename' => $fileData['name'],
+                    'file_path' => $filePath,
+                    'provider' => $provider,
+                    'framework' => $framework,
+                    'repository_context' => $repositoryContext,
+                ]
+            );
+
+            if (!$testResult['success']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Test generation failed: ' . $testResult['error'],
+                ], 500);
+            }
+
+            // Find or create GitHub repository record
+            $githubRepo = GitHubRepository::firstOrCreate([
+                'owner' => $request->owner,
+                'repo' => $request->repo,
+                'branch' => $branch ?: $repositoryContext['branch'],
+            ], [
+                'full_name' => $repositoryContext['full_name'],
+                'description' => $repositoryContext['description'],
+                'language' => $repositoryContext['language'],
+                'html_url' => $repositoryContext['html_url'],
+                'default_branch' => $repositoryContext['branch'],
+                'is_private' => false, // Assuming public for now
+                'user_id' => $user->id,
+            ]);
+
+            // Create AI conversation for tracking
+            $conversation = AIConversationState::create([
+                'user_id' => $user->id,
+                'conversation_id' => Str::uuid(),
+                'provider' => $provider,
+                'status' => 'completed',
+                'context' => [
+                    'filename' => $fileData['name'],
+                    'file_path' => $filePath,
+                    'repository_info' => $repositoryContext,
+                    'is_single_file' => true,
+                ],
+                'metadata' => [
+                    'framework' => $framework,
+                    'file_size' => $fileData['size'],
+                    'analysis' => $testResult['analysis'],
+                ],
+                'plugin_data' => [
+                    'content' => $fileData['content'],
+                    'analysis' => $testResult['analysis'],
+                ],
+                'generated_tests' => $testResult['main_test_file'],
+                'source_type' => 'github_single_file',
+                'step' => 2,
+                'total_steps' => 2,
+                'started_at' => now(),
+                'completed_at' => now(),
+            ]);
+
+            $conversation->addMessage([
+                'role' => 'user',
+                'content' => "Generate tests for file: {$filePath}",
+                'metadata' => [
+                    'file_path' => $filePath,
+                    'repository' => $repositoryContext['full_name'],
+                    'framework' => $framework,
+                ],
+            ]);
+
+            $conversation->addMessage([
+                'role' => 'assistant',
+                'content' => $testResult['main_test_file'],
+                'provider' => $testResult['provider'],
+                'model' => $testResult['model'],
+            ]);
+
+            // Create or update file test generation record
+            // Use updateOrCreate to handle cases where the same file is regenerated
+            $fileContentHash = hash('sha256', $fileData['content']);
+            $branchName = $branch ?: $repositoryContext['branch'];
+
+            $fileTestGeneration = GitHubFileTestGeneration::updateOrCreate(
+                [
+                    // Unique constraint fields
+                    'github_repository_id' => $githubRepo->id,
+                    'file_path' => $filePath,
+                    'branch' => $branchName,
+                    'file_content_hash' => $fileContentHash,
+                ],
+                [
+                    // Fields to update/create
+                    'user_id' => $user->id,
+                    'ai_conversation_state_id' => $conversation->id,
+                    'file_name' => $fileData['name'],
+                    'file_sha' => $fileData['sha'],
+                    'file_size' => $fileData['size'],
+                    'provider' => $provider,
+                    'framework' => $framework,
+                    'generated_tests' => $testResult['main_test_file'],
+                    'test_suite' => $testResult['tests'],
+                    'analysis_data' => $testResult['analysis'],
+                    'generation_status' => 'completed',
+                    'generation_error' => null, // Clear any previous errors
+                    'generated_at' => now(),
+                ]
+            );
+
+            Log::info('Single-file test generation completed', [
+                'user_id' => $user->id,
+                'repository' => $repositoryContext['full_name'],
+                'file_path' => $filePath,
+                'framework' => $framework,
+                'provider' => $provider,
+                'conversation_id' => $conversation->conversation_id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Tests generated successfully for single file',
+                'tests' => $testResult['main_test_file'],
+                'test_suite' => $testResult['tests'],
+                'provider' => $testResult['provider'],
+                'model' => $testResult['model'],
+                'framework' => $framework,
+                'conversation_id' => $conversation->conversation_id,
+                'file_context' => $testResult['file_context'],
+                'analysis' => $testResult['analysis'],
+            ]);
+
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Handle database constraint violations specifically
+            if (str_contains($e->getMessage(), 'gftg_unique_file')) {
+                Log::warning('Attempted duplicate file test generation', [
+                    'user_id' => Auth::id(),
+                    'owner' => $request->owner,
+                    'repo' => $request->repo,
+                    'file_path' => $request->input('file_path'),
+                    'error' => $e->getMessage(),
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tests for this file have already been generated. Please try regenerating or check existing results.',
+                ], 409);
+            }
+
+            // Handle other database errors
+            Log::error('Database error during single-file test generation', [
+                'user_id' => Auth::id(),
+                'owner' => $request->owner,
+                'repo' => $request->repo,
+                'file_path' => $request->input('file_path'),
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Database error occurred during test generation. Please try again.',
+            ], 500);
+        } catch (\InvalidArgumentException $e) {
+            $this->githubValidationService->logSecurityEvent('Invalid single-file test generation request', [
+                'user_id' => Auth::id(),
+                'owner' => $request->owner,
+                'repo' => $request->repo,
+                'file_path' => $request->input('file_path'),
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 429);
+        } catch (\Exception $e) {
+            Log::error('Single-file test generation failed', [
+                'user_id' => Auth::id(),
+                'owner' => $request->owner,
+                'repo' => $request->repo,
+                'file_path' => $request->input('file_path'),
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
                 'message' => 'Test generation failed: ' . $e->getMessage(),
             ], 500);
         }
@@ -288,7 +559,7 @@ class ThinkTestController extends Controller
 
         try {
             $user = Auth::user();
-            
+
             // Find conversation
             $conversation = AIConversationState::where('conversation_id', $request->conversation_id)
                 ->where('user_id', $user->id)
@@ -302,12 +573,12 @@ class ThinkTestController extends Controller
             }
 
             // Create downloadable file
-            $filename = 'thinktest_' . $conversation->context['filename'] . '_tests.php';
+            $filename = 'thinktest_'.$conversation->context['filename'].'_tests.php';
             $content = $conversation->generated_tests;
 
             return response($content)
                 ->header('Content-Type', 'application/octet-stream')
-                ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+                ->header('Content-Disposition', 'attachment; filename="'.$filename.'"');
 
         } catch (\Exception $e) {
             Log::error('Test download failed', [
@@ -318,7 +589,7 @@ class ThinkTestController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Download failed: ' . $e->getMessage(),
+                'message' => 'Download failed: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -333,7 +604,7 @@ class ThinkTestController extends Controller
         ]);
 
         $user = Auth::user();
-        
+
         $conversation = AIConversationState::where('conversation_id', $request->conversation_id)
             ->where('user_id', $user->id)
             ->firstOrFail();
@@ -344,7 +615,7 @@ class ThinkTestController extends Controller
             'step' => $conversation->step,
             'total_steps' => $conversation->total_steps,
             'progress' => $conversation->getProgressPercentage(),
-            'has_tests' => !empty($conversation->generated_tests),
+            'has_tests' => ! empty($conversation->generated_tests),
             'provider' => $conversation->provider,
             'context' => $conversation->context,
         ]);
@@ -369,7 +640,7 @@ class ThinkTestController extends Controller
             );
 
             // Check if repository is accessible
-            if (!$this->githubService->isRepositoryAccessible($repoData['owner'], $repoData['repo'])) {
+            if (! $this->githubService->isRepositoryAccessible($repoData['owner'], $repoData['repo'])) {
                 $this->githubValidationService->logSecurityEvent('Repository access denied', [
                     'user_id' => $user->id,
                     'repository_url' => $request->repository_url,
@@ -448,9 +719,6 @@ class ThinkTestController extends Controller
         try {
             $user = Auth::user();
 
-            // Rate limiting check
-            $this->githubValidationService->validateRateLimit($user->id);
-
             // Validate repository components
             $repoData = [
                 'owner' => $request->owner,
@@ -506,7 +774,7 @@ class ThinkTestController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to fetch branches: ' . $e->getMessage(),
+                'message' => 'Failed to fetch branches: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -524,7 +792,7 @@ class ThinkTestController extends Controller
             'user_id' => Auth::id(),
             'ip' => $request->ip(),
             'user_agent' => $request->userAgent(),
-            'request_data' => $request->only(['owner', 'repo', 'branch', 'provider', 'framework'])
+            'request_data' => $request->only(['owner', 'repo', 'branch', 'provider', 'framework']),
         ]);
 
         $request->validate([
@@ -538,7 +806,7 @@ class ThinkTestController extends Controller
         try {
             $user = Auth::user();
 
-            if (!$user) {
+            if (! $user) {
                 Log::error('GitHub repository processing: User not authenticated', [
                     'request_id' => $requestId,
                     'ip' => $request->ip(),
@@ -565,8 +833,6 @@ class ThinkTestController extends Controller
                 'branch' => $request->branch,
             ]);
 
-            $this->githubValidationService->validateRateLimit($user->id);
-
             // Validate repository components
             $repoData = [
                 'owner' => $request->owner,
@@ -590,7 +856,7 @@ class ThinkTestController extends Controller
                 ->where('branch', $request->branch)
                 ->first();
 
-            if (!$githubRepo) {
+            if (! $githubRepo) {
                 Log::info('GitHub repository processing: Creating new repository record', [
                     'request_id' => $requestId,
                     'user_id' => $user->id,
@@ -822,7 +1088,7 @@ class ThinkTestController extends Controller
         } catch (\JsonException $e) {
             // JSON parsing errors
             if (isset($githubRepo)) {
-                $githubRepo->markAsFailed('JSON parsing error: ' . $e->getMessage());
+                $githubRepo->markAsFailed('JSON parsing error: '.$e->getMessage());
             }
 
             Log::error('GitHub repository processing: JSON parsing error', [
@@ -881,7 +1147,7 @@ class ThinkTestController extends Controller
                 $userMessage = 'Repository processing failed: GitHub authentication error. Please verify your API token is valid and has the necessary permissions.';
                 $errorCode = 'AUTH_ERROR';
             } else {
-                $userMessage = 'Repository processing failed: ' . $errorMessage;
+                $userMessage = 'Repository processing failed: '.$errorMessage;
                 $errorCode = 'GENERAL_ERROR';
             }
 
@@ -907,8 +1173,8 @@ class ThinkTestController extends Controller
             $config = config('thinktest_ai.github');
             $debugInfo['configuration'] = [
                 'enabled' => $config['enabled'] ?? false,
-                'api_token_configured' => !empty($config['api_token']),
-                'api_token_prefix' => !empty($config['api_token']) ? substr($config['api_token'], 0, 7) . '...' : 'Not configured',
+                'api_token_configured' => ! empty($config['api_token']),
+                'api_token_prefix' => ! empty($config['api_token']) ? substr($config['api_token'], 0, 7).'...' : 'Not configured',
                 'max_repository_size' => $config['max_repository_size'] ?? 'Not configured',
                 'clone_timeout' => $config['clone_timeout'] ?? 'Not configured',
             ];
@@ -964,7 +1230,7 @@ class ThinkTestController extends Controller
 
             // 6. Check environment variables
             $debugInfo['environment'] = [
-                'github_api_token_set' => !empty(env('GITHUB_API_TOKEN')),
+                'github_api_token_set' => ! empty(env('GITHUB_API_TOKEN')),
                 'github_integration_enabled' => env('GITHUB_INTEGRATION_ENABLED', false),
                 'app_env' => env('APP_ENV'),
                 'app_debug' => env('APP_DEBUG', false),
@@ -978,10 +1244,12 @@ class ThinkTestController extends Controller
                 'github_client_registered' => app()->bound(\Github\Client::class),
             ];
 
-            Log::info('GitHub debug information requested', [
-                'user_id' => $user->id,
-                'debug_info' => $debugInfo,
-            ]);
+            // Only log debug requests in debug mode
+            if (config('app.debug')) {
+                Log::debug('GitHub debug information requested', [
+                    'user_id' => $user->id,
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -999,8 +1267,269 @@ class ThinkTestController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Debug endpoint failed: ' . $e->getMessage(),
+                'message' => 'Debug endpoint failed: '.$e->getMessage(),
                 'timestamp' => now()->toISOString(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Browse repository contents (files and directories)
+     */
+    public function browseRepositoryContents(Request $request)
+    {
+        $request->validate([
+            'owner' => 'required|string|max:100|regex:/^[a-zA-Z0-9\-_\.]+$/',
+            'repo' => 'required|string|max:100|regex:/^[a-zA-Z0-9\-_\.]+$/',
+            'path' => 'sometimes|string|max:500',
+            'branch' => 'sometimes|string|max:100|regex:/^[a-zA-Z0-9\-_\.\/]+$/',
+        ]);
+
+        try {
+            $user = Auth::user();
+
+            // Validate repository components
+            $repoData = [
+                'owner' => $request->owner,
+                'repo' => $request->repo,
+                'full_name' => "{$request->owner}/{$request->repo}",
+                'url' => "https://github.com/{$request->owner}/{$request->repo}",
+            ];
+            $this->githubValidationService->validateRepositoryComponents($repoData);
+
+            // Validate branch name if provided
+            if ($request->has('branch')) {
+                $this->githubValidationService->validateBranchName($request->branch);
+            }
+
+            $path = $request->input('path', '');
+            $branch = $request->input('branch');
+
+            $contents = $this->githubService->getRepositoryContents(
+                $request->owner,
+                $request->repo,
+                $path,
+                $branch
+            );
+
+            Log::info('Repository contents browsed successfully', [
+                'user_id' => $user->id,
+                'repository' => "{$request->owner}/{$request->repo}",
+                'path' => $path,
+                'branch' => $branch,
+                'items_count' => count($contents),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'contents' => $contents,
+                'path' => $path,
+                'repository' => $repoData,
+            ]);
+
+        } catch (\InvalidArgumentException $e) {
+            $this->githubValidationService->logSecurityEvent('Invalid repository browse request', [
+                'user_id' => Auth::id(),
+                'owner' => $request->owner,
+                'repo' => $request->repo,
+                'path' => $request->input('path', ''),
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 429);
+        } catch (\Exception $e) {
+            Log::error('Failed to browse repository contents', [
+                'user_id' => Auth::id(),
+                'owner' => $request->owner,
+                'repo' => $request->repo,
+                'path' => $request->input('path', ''),
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to browse repository contents: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Get repository file tree
+     */
+    public function getRepositoryTree(Request $request)
+    {
+        $request->validate([
+            'owner' => 'required|string|max:100|regex:/^[a-zA-Z0-9\-_\.]+$/',
+            'repo' => 'required|string|max:100|regex:/^[a-zA-Z0-9\-_\.]+$/',
+            'branch' => 'sometimes|string|max:100|regex:/^[a-zA-Z0-9\-_\.\/]+$/',
+            'recursive' => 'sometimes|boolean',
+        ]);
+
+        try {
+            $user = Auth::user();
+
+            // Validate repository components
+            $repoData = [
+                'owner' => $request->owner,
+                'repo' => $request->repo,
+                'full_name' => "{$request->owner}/{$request->repo}",
+                'url' => "https://github.com/{$request->owner}/{$request->repo}",
+            ];
+            $this->githubValidationService->validateRepositoryComponents($repoData);
+
+            // Validate branch name if provided
+            if ($request->has('branch')) {
+                $this->githubValidationService->validateBranchName($request->branch);
+            }
+
+            $branch = $request->input('branch');
+            $recursive = $request->input('recursive', true);
+
+            $tree = $this->githubService->getRepositoryTree(
+                $request->owner,
+                $request->repo,
+                $branch,
+                $recursive
+            );
+
+            Log::info('Repository tree fetched successfully', [
+                'user_id' => $user->id,
+                'repository' => "{$request->owner}/{$request->repo}",
+                'branch' => $branch,
+                'recursive' => $recursive,
+                'items_count' => count($tree),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'tree' => $tree,
+                'repository' => $repoData,
+                'recursive' => $recursive,
+            ]);
+
+        } catch (\InvalidArgumentException $e) {
+            $this->githubValidationService->logSecurityEvent('Invalid repository tree request', [
+                'user_id' => Auth::id(),
+                'owner' => $request->owner,
+                'repo' => $request->repo,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 429);
+        } catch (\Exception $e) {
+            Log::error('Failed to fetch repository tree', [
+                'user_id' => Auth::id(),
+                'owner' => $request->owner,
+                'repo' => $request->repo,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch repository tree: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Get file content from repository
+     */
+    public function getFileContent(Request $request)
+    {
+        $request->validate([
+            'owner' => 'required|string|max:100|regex:/^[a-zA-Z0-9\-_\.]+$/',
+            'repo' => 'required|string|max:100|regex:/^[a-zA-Z0-9\-_\.]+$/',
+            'path' => 'required|string|max:500',
+            'branch' => 'sometimes|string|max:100|regex:/^[a-zA-Z0-9\-_\.\/]+$/',
+        ]);
+
+        try {
+            $user = Auth::user();
+
+            // Validate repository components
+            $repoData = [
+                'owner' => $request->owner,
+                'repo' => $request->repo,
+                'full_name' => "{$request->owner}/{$request->repo}",
+                'url' => "https://github.com/{$request->owner}/{$request->repo}",
+            ];
+            $this->githubValidationService->validateRepositoryComponents($repoData);
+
+            // Validate branch name if provided
+            if ($request->has('branch')) {
+                $this->githubValidationService->validateBranchName($request->branch);
+            }
+
+            $path = $request->input('path');
+            $branch = $request->input('branch');
+
+            $fileData = $this->githubService->getFileContent(
+                $request->owner,
+                $request->repo,
+                $path,
+                $branch
+            );
+
+            Log::info('File content fetched successfully', [
+                'user_id' => $user->id,
+                'repository' => "{$request->owner}/{$request->repo}",
+                'path' => $path,
+                'branch' => $branch,
+                'file_size' => $fileData['size'],
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'file' => $fileData,
+                'repository' => $repoData,
+            ]);
+
+        } catch (\InvalidArgumentException $e) {
+            $this->githubValidationService->logSecurityEvent('Invalid file content request', [
+                'user_id' => Auth::id(),
+                'owner' => $request->owner,
+                'repo' => $request->repo,
+                'path' => $request->input('path'),
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 429);
+        } catch (\Exception $e) {
+            Log::error('Failed to fetch file content', [
+                'user_id' => Auth::id(),
+                'owner' => $request->owner,
+                'repo' => $request->repo,
+                'path' => $request->input('path'),
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch file content: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -1011,7 +1540,7 @@ class ThinkTestController extends Controller
     private function calculateComplexityScore(array $analysis): int
     {
         $score = 0;
-        
+
         // Add points for various complexity factors
         $score += count($analysis['functions']) * 1;
         $score += count($analysis['classes']) * 2;
@@ -1020,7 +1549,7 @@ class ThinkTestController extends Controller
         $score += count($analysis['ajax_handlers']) * 2;
         $score += count($analysis['rest_endpoints']) * 2;
         $score += count($analysis['database_operations']) * 1;
-        
+
         return min($score, 100); // Cap at 100
     }
 
@@ -1043,7 +1572,7 @@ class ThinkTestController extends Controller
                 ->where('user_id', Auth::id())
                 ->first();
 
-            if (!$conversation) {
+            if (! $conversation) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Conversation not found',
@@ -1051,7 +1580,7 @@ class ThinkTestController extends Controller
             }
 
             // Get plugin content from file path
-            if (!$conversation->plugin_file_path) {
+            if (! $conversation->plugin_file_path) {
                 Log::error('No plugin file path in conversation', [
                     'conversation_id' => $conversationId,
                     'user_id' => Auth::id(),
@@ -1104,7 +1633,7 @@ class ThinkTestController extends Controller
 
             $instructions = $this->testInstructionsService->generateInstructions($detection, [
                 'framework' => $framework,
-                'plugin_name' => $pluginName
+                'plugin_name' => $pluginName,
             ]);
 
             return response()->json([
@@ -1122,7 +1651,7 @@ class ThinkTestController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Detection failed: ' . $e->getMessage(),
+                'message' => 'Detection failed: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -1146,8 +1675,8 @@ class ThinkTestController extends Controller
             $options = [
                 'framework' => $framework,
                 'plugin_name' => $pluginName,
-                'plugin_description' => "A WordPress plugin with automated testing setup",
-                'namespace' => str_replace([' ', '-'], '', ucwords($pluginName, ' -'))
+                'plugin_description' => 'A WordPress plugin with automated testing setup',
+                'namespace' => str_replace([' ', '-'], '', ucwords($pluginName, ' -')),
             ];
 
             $content = '';
@@ -1183,7 +1712,7 @@ class ThinkTestController extends Controller
 
             return response($content)
                 ->header('Content-Type', 'application/octet-stream')
-                ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+                ->header('Content-Disposition', 'attachment; filename="'.$filename.'"');
 
         } catch (\Exception $e) {
             Log::error('Template download failed', [
@@ -1194,7 +1723,7 @@ class ThinkTestController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Template generation failed: ' . $e->getMessage(),
+                'message' => 'Template generation failed: '.$e->getMessage(),
             ], 500);
         }
     }

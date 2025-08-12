@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
@@ -13,7 +14,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles;
+    use HasFactory, HasRoles, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -25,6 +26,7 @@ class User extends Authenticatable
         'email',
         'password',
         'google_id',
+        'github_id',
         'avatar',
     ];
 
@@ -116,6 +118,7 @@ class User extends Authenticatable
             ->select('group_name')
             ->groupBy('group_name')
             ->get();
+
         return $permissionGroups;
     }
 
@@ -127,6 +130,7 @@ class User extends Authenticatable
         $permissions = DB::table('permissions')
             ->where('group_name', '=', $groupName)
             ->get();
+
         return $permissions;
     }
 
@@ -137,11 +141,13 @@ class User extends Authenticatable
     {
         $hasPermission = true;
         foreach ($permissions as $permission) {
-            if (!$role->hasPermissionTo($permission->name)) {
+            if (! $role->hasPermissionTo($permission->name)) {
                 $hasPermission = false;
+
                 return $hasPermission;
             }
         }
+
         return $hasPermission;
     }
 
@@ -154,25 +160,71 @@ class User extends Authenticatable
 
         if ($user) {
             // Update existing user with OAuth data
-            $user->update([
-                'google_id' => $providerUser->getId(),
-                'avatar' => $providerUser->getAvatar(),
-            ]);
+            $updateData = ['avatar' => $providerUser->getAvatar()];
+
+            if ($provider === 'google') {
+                $updateData['google_id'] = $providerUser->getId();
+            } elseif ($provider === 'github') {
+                $updateData['github_id'] = $providerUser->getId();
+            }
+
+            $user->update($updateData);
         } else {
             // Create new user from OAuth data
-            $user = static::create([
+            $createData = [
                 'name' => $providerUser->getName(),
                 'email' => $providerUser->getEmail(),
-                'google_id' => $providerUser->getId(),
                 'avatar' => $providerUser->getAvatar(),
                 'email_verified_at' => now(),
                 'password' => bcrypt(str()->random(32)), // Generate random password for OAuth users
-            ]);
+            ];
+
+            if ($provider === 'google') {
+                $createData['google_id'] = $providerUser->getId();
+            } elseif ($provider === 'github') {
+                $createData['github_id'] = $providerUser->getId();
+            }
+
+            $user = static::create($createData);
 
             // Assign default role to new OAuth users
             $user->assignRole('user');
         }
 
         return $user;
+    }
+
+    /**
+     * Get the API tokens for the user.
+     */
+    public function apiTokens(): HasMany
+    {
+        return $this->hasMany(UserApiToken::class);
+    }
+
+    /**
+     * Get the demo credits for the user.
+     */
+    public function demoCredit(): HasOne
+    {
+        return $this->hasOne(DemoCredit::class);
+    }
+
+    /**
+     * Check if user has demo credits available.
+     */
+    public function hasDemoCredits(): bool
+    {
+        $demoCredit = $this->demoCredit;
+        return $demoCredit && $demoCredit->hasCreditsRemaining();
+    }
+
+    /**
+     * Get remaining demo credits count.
+     */
+    public function getRemainingDemoCredits(): int
+    {
+        $demoCredit = $this->demoCredit;
+        return $demoCredit ? $demoCredit->getRemainingCredits() : 5;
     }
 }

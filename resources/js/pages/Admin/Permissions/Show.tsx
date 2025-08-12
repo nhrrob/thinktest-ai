@@ -1,10 +1,10 @@
 import { type BreadcrumbItem, type Permission, type Role } from '@/types';
 import { Head, Link } from '@inertiajs/react';
-import { PencilIcon, ArrowLeftIcon } from 'lucide-react';
+import { ArrowLeftIcon, PencilIcon } from 'lucide-react';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import AppLayout from '@/layouts/app-layout';
 
 interface PermissionShowProps {
@@ -30,14 +30,12 @@ export default function PermissionShow({ permission }: PermissionShowProps) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`Permission: ${permission.name}`} />
-            
-            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
+
+            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-semibold tracking-tight">{permission.name}</h1>
-                        <p className="text-muted-foreground">
-                            Permission details and assigned roles
-                        </p>
+                        <p className="text-muted-foreground">Permission details and assigned roles</p>
                     </div>
                     <div className="flex items-center gap-2">
                         <Link href={route('admin.permissions.index')}>
@@ -59,22 +57,18 @@ export default function PermissionShow({ permission }: PermissionShowProps) {
                     <Card>
                         <CardHeader>
                             <CardTitle>Permission Information</CardTitle>
-                            <CardDescription>
-                                Basic information about this permission.
-                            </CardDescription>
+                            <CardDescription>Basic information about this permission.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div>
                                 <Label className="text-sm font-medium">Name</Label>
-                                <p className="text-sm text-muted-foreground mt-1">{permission.name}</p>
+                                <p className="mt-1 text-sm text-muted-foreground">{permission.name}</p>
                             </div>
                             <div>
                                 <Label className="text-sm font-medium">Group</Label>
-                                <p className="text-sm text-muted-foreground mt-1">
+                                <p className="mt-1 text-sm text-muted-foreground">
                                     {permission.group_name ? (
-                                        <Badge variant="outline">
-                                            {permission.group_name.replace('-', ' ')}
-                                        </Badge>
+                                        <Badge variant="outline">{permission.group_name.replace('-', ' ')}</Badge>
                                     ) : (
                                         <span className="text-muted-foreground">No group assigned</span>
                                     )}
@@ -82,29 +76,29 @@ export default function PermissionShow({ permission }: PermissionShowProps) {
                             </div>
                             <div>
                                 <Label className="text-sm font-medium">Guard</Label>
-                                <p className="text-sm text-muted-foreground mt-1">{permission.guard_name}</p>
+                                <p className="mt-1 text-sm text-muted-foreground">{permission.guard_name}</p>
                             </div>
                             <div>
                                 <Label className="text-sm font-medium">Created</Label>
-                                <p className="text-sm text-muted-foreground mt-1">
+                                <p className="mt-1 text-sm text-muted-foreground">
                                     {new Date(permission.created_at).toLocaleDateString('en-US', {
                                         year: 'numeric',
                                         month: 'long',
                                         day: 'numeric',
                                         hour: '2-digit',
-                                        minute: '2-digit'
+                                        minute: '2-digit',
                                     })}
                                 </p>
                             </div>
                             <div>
                                 <Label className="text-sm font-medium">Last Updated</Label>
-                                <p className="text-sm text-muted-foreground mt-1">
+                                <p className="mt-1 text-sm text-muted-foreground">
                                     {new Date(permission.updated_at).toLocaleDateString('en-US', {
                                         year: 'numeric',
                                         month: 'long',
                                         day: 'numeric',
                                         hour: '2-digit',
-                                        minute: '2-digit'
+                                        minute: '2-digit',
                                     })}
                                 </p>
                             </div>
@@ -114,9 +108,7 @@ export default function PermissionShow({ permission }: PermissionShowProps) {
                     <Card>
                         <CardHeader>
                             <CardTitle>Usage Summary</CardTitle>
-                            <CardDescription>
-                                Overview of how this permission is being used.
-                            </CardDescription>
+                            <CardDescription>Overview of how this permission is being used.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-3">
@@ -132,24 +124,18 @@ export default function PermissionShow({ permission }: PermissionShowProps) {
                 <Card>
                     <CardHeader>
                         <CardTitle>Assigned Roles</CardTitle>
-                        <CardDescription>
-                            All roles that currently have this permission assigned.
-                        </CardDescription>
+                        <CardDescription>All roles that currently have this permission assigned.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         {permission.roles.length === 0 ? (
-                            <div className="text-center py-8">
+                            <div className="py-8 text-center">
                                 <p className="text-muted-foreground">This permission is not assigned to any roles.</p>
                             </div>
                         ) : (
                             <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                                 {permission.roles.map((role) => (
-                                    <Link
-                                        key={role.id}
-                                        href={route('admin.roles.show', role.id)}
-                                        className="block"
-                                    >
-                                        <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                                    <Link key={role.id} href={route('admin.roles.show', role.id)} className="block">
+                                        <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
                                             <div>
                                                 <h4 className="font-medium">{role.name}</h4>
                                                 <p className="text-sm text-muted-foreground">

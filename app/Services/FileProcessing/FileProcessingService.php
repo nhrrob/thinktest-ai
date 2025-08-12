@@ -3,8 +3,8 @@
 namespace App\Services\FileProcessing;
 
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use ZipArchive;
 
@@ -63,13 +63,13 @@ class FileProcessingService
 
         // Check file size
         if ($file->getSize() > $maxSize) {
-            throw new \InvalidArgumentException("File size exceeds maximum allowed size of " . ($maxSize / 1024 / 1024) . "MB");
+            throw new \InvalidArgumentException('File size exceeds maximum allowed size of '.($maxSize / 1024 / 1024).'MB');
         }
 
         // Check file extension
         $extension = strtolower($file->getClientOriginalExtension());
-        if (!in_array($extension, $allowedExtensions)) {
-            throw new \InvalidArgumentException("File type '{$extension}' is not allowed. Allowed types: " . implode(', ', $allowedExtensions));
+        if (! in_array($extension, $allowedExtensions)) {
+            throw new \InvalidArgumentException("File type '{$extension}' is not allowed. Allowed types: ".implode(', ', $allowedExtensions));
         }
 
         // Basic security check
@@ -83,17 +83,17 @@ class FileProcessingService
     {
         // Check for malicious file signatures
         $content = file_get_contents($file->getPathname());
-        
+
         // Check for potentially dangerous PHP functions
         $dangerousFunctions = config('thinktest_ai.security.file_validation.blocked_php_functions');
-        
+
         foreach ($dangerousFunctions as $function) {
             if (strpos($content, $function) !== false) {
                 Log::warning('Potentially dangerous function detected in uploaded file', [
                     'function' => $function,
                     'filename' => $file->getClientOriginalName(),
                 ]);
-                
+
                 if (config('thinktest_ai.security.file_validation.scan_for_malicious_code')) {
                     throw new \InvalidArgumentException("File contains potentially dangerous function: {$function}");
                 }
@@ -109,7 +109,7 @@ class FileProcessingService
         $extension = $file->getClientOriginalExtension();
         $timestamp = now()->format('Y-m-d_H-i-s');
         $random = Str::random(8);
-        
+
         return "{$timestamp}_{$random}.{$extension}";
     }
 
@@ -123,10 +123,10 @@ class FileProcessingService
         switch (strtolower($extension)) {
             case 'php':
                 return file_get_contents($fullPath);
-                
+
             case 'zip':
                 return $this->extractZipContent($fullPath);
-                
+
             default:
                 throw new \InvalidArgumentException("Unsupported file extension: {$extension}");
         }
@@ -137,9 +137,9 @@ class FileProcessingService
      */
     private function extractZipContent(string $zipPath): string
     {
-        $zip = new ZipArchive();
-        
-        if ($zip->open($zipPath) !== TRUE) {
+        $zip = new ZipArchive;
+
+        if ($zip->open($zipPath) !== true) {
             throw new \RuntimeException('Failed to open ZIP file');
         }
 
@@ -149,9 +149,9 @@ class FileProcessingService
 
         for ($i = 0; $i < $zip->numFiles; $i++) {
             $filename = $zip->getNameIndex($i);
-            
+
             // Skip directories and non-PHP files
-            if (substr($filename, -1) === '/' || !str_ends_with($filename, '.php')) {
+            if (substr($filename, -1) === '/' || ! str_ends_with($filename, '.php')) {
                 continue;
             }
 
@@ -188,19 +188,19 @@ class FileProcessingService
     {
         $cleanupAfterHours = $this->config['cleanup_after_hours'];
         $cutoffTime = now()->subHours($cleanupAfterHours);
-        
+
         $uploadPath = $this->config['upload_path'];
         $files = Storage::files($uploadPath);
-        
+
         $deletedCount = 0;
-        
+
         foreach ($files as $file) {
             $lastModified = Storage::lastModified($file);
-            
+
             if ($lastModified < $cutoffTime->timestamp) {
                 Storage::delete($file);
                 $deletedCount++;
-                
+
                 Log::info('Cleaned up old file', [
                     'file' => $file,
                     'last_modified' => date('Y-m-d H:i:s', $lastModified),
@@ -216,7 +216,7 @@ class FileProcessingService
      */
     public function getFileContent(string $storedPath): string
     {
-        if (!Storage::exists($storedPath)) {
+        if (! Storage::exists($storedPath)) {
             throw new \RuntimeException("File not found: {$storedPath}");
         }
 
@@ -282,8 +282,9 @@ class FileProcessingService
      */
     private function storeContent(string $content, string $filename): string
     {
-        Storage::put($this->config['upload_path'] . '/' . $filename, $content);
-        return $this->config['upload_path'] . '/' . $filename;
+        Storage::put($this->config['upload_path'].'/'.$filename, $content);
+
+        return $this->config['upload_path'].'/'.$filename;
     }
 
     /**
@@ -315,7 +316,7 @@ class FileProcessingService
         }
 
         // Check for basic PHP content (since we're processing WordPress plugins)
-        if (!str_contains($content, '<?php')) {
+        if (! str_contains($content, '<?php')) {
             return false;
         }
 

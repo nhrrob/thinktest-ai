@@ -1,9 +1,9 @@
 <?php
 
-use App\Http\Controllers\ThinkTestController;
-use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\PermissionController;
+use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\ThinkTestController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -12,9 +12,20 @@ Route::get('/', function () {
     return Inertia::render('welcome');
 })->name('home');
 
+// Favicon route to prevent 404 errors
+Route::get('/favicon.ico', function () {
+    return response()->file(public_path('favicon.ico'));
+});
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
-        return Inertia::render('dashboard');
+        $user = Auth::user();
+        $statsService = new \App\Services\Dashboard\DashboardStatsService();
+        $stats = $statsService->getUserStats($user);
+
+        return Inertia::render('dashboard', [
+            'stats' => $stats,
+        ]);
     })->name('dashboard');
 
     // Test route for toast notifications
@@ -37,14 +48,25 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('Test/ToastTest');
     })->name('test-toast-deduplication');
 
+    // Test route for GitHub error handling
+    Route::get('test-github-error-handling', function () {
+        return Inertia::render('Test/GitHubErrorHandlingTest');
+    })->name('test-github-error-handling');
+
     // Test route for modal toast integration
     Route::get('test-modal-toast', function () {
         return Inertia::render('Test/ModalToastTest');
     })->name('test-modal-toast');
 
+    // Test route for toast function verification
+    Route::get('test-toast-functions', function () {
+        return Inertia::render('Test/ToastFunctionTest');
+    })->name('test-toast-functions');
+
     // Session validation endpoint
     Route::get('auth/check', function () {
         $user = Auth::user();
+
         return response()->json([
             'authenticated' => true,
             'user' => [
@@ -71,6 +93,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('thinktest/github/validate', [ThinkTestController::class, 'validateRepository'])->name('thinktest.github.validate');
         Route::post('thinktest/github/branches', [ThinkTestController::class, 'getRepositoryBranches'])->name('thinktest.github.branches');
         Route::post('thinktest/github/process', [ThinkTestController::class, 'processRepository'])->name('thinktest.github.process');
+
+        // File browsing routes
+        Route::post('thinktest/github/browse', [ThinkTestController::class, 'browseRepositoryContents'])->name('thinktest.github.browse');
+        Route::post('thinktest/github/tree', [ThinkTestController::class, 'getRepositoryTree'])->name('thinktest.github.tree');
+        Route::post('thinktest/github/file', [ThinkTestController::class, 'getFileContent'])->name('thinktest.github.file');
+
+        // Single file test generation
+        Route::post('thinktest/generate-single-file', [ThinkTestController::class, 'generateTestsForSingleFile'])->name('thinktest.generate_single_file');
     });
 
     // GitHub debug route (admin only)
