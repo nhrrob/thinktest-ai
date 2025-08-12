@@ -259,10 +259,11 @@ class GitHubErrorHandler
      */
     public static function logUserAction(string $action, array $context = []): void
     {
-        Log::info("GitHub User Action: {$action}", array_merge($context, [
-            'timestamp' => now()->toISOString(),
-            'user_agent' => request()->userAgent(),
-            'ip_address' => request()->ip(),
-        ]));
+        // Only log user actions in debug mode to reduce noise
+        if (config('app.debug')) {
+            Log::debug("GitHub User Action: {$action}", array_merge($context, [
+                'timestamp' => now()->toISOString(),
+            ]));
+        }
     }
 }

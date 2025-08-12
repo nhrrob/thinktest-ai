@@ -56,11 +56,13 @@ class PluginAnalysisService
             return $analysis;
 
         } catch (Error $e) {
-            Log::warning('PHP parsing error, attempting fallback analysis', [
-                'filename' => $filename,
-                'error' => $e->getMessage(),
-                'line' => $e->getStartLine() ?? 'unknown',
-            ]);
+            // Only log parsing errors in debug mode
+            if (config('app.debug')) {
+                Log::debug('PHP parsing error, attempting fallback analysis', [
+                    'filename' => $filename,
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
             // Fallback to regex-based analysis for files with syntax errors
             return $this->performFallbackAnalysis($pluginCode, $filename, $e->getMessage());

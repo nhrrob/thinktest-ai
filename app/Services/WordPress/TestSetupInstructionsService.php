@@ -36,11 +36,13 @@ class TestSetupInstructionsService
             'resources' => $this->getResources($framework),
         ];
 
-        Log::info('Generated test setup instructions', [
-            'framework' => $framework,
-            'difficulty' => $difficulty,
-            'steps_count' => count($instructions['steps']),
-        ]);
+        // Only log in debug mode to reduce noise
+        if (config('app.debug')) {
+            Log::debug('Generated test setup instructions', [
+                'framework' => $framework,
+                'steps_count' => count($instructions['steps']),
+            ]);
+        }
 
         return $instructions;
     }

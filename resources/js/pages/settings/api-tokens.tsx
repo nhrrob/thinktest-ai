@@ -70,10 +70,11 @@ export default function ApiTokens({ tokens, availableProviders, instructions }: 
     });
 
     const { delete: deleteToken } = useForm();
+    const { patch: patchToken } = useForm();
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
-        
+
         post(route('api-tokens.store'), {
             onSuccess: () => {
                 reset();
@@ -90,7 +91,14 @@ export default function ApiTokens({ tokens, availableProviders, instructions }: 
     };
 
     const toggleToken = (tokenId: number) => {
-        useForm().patch(route('api-tokens.toggle', tokenId));
+        patchToken(route('api-tokens.toggle', tokenId), {
+            onSuccess: () => {
+                // Token state will be updated by the server response
+            },
+            onError: (errors) => {
+                console.error('Failed to toggle token:', errors);
+            }
+        });
     };
 
     const getProviderInstructions = (provider: string) => {

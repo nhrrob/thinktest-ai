@@ -23,12 +23,14 @@ class GitHubRepositoryService
      */
     public function processRepository(string $owner, string $repo, ?string $branch = null, ?int $userId = null): array
     {
-        Log::info('Starting GitHub repository processing', [
-            'owner' => $owner,
-            'repo' => $repo,
-            'branch' => $branch,
-            'user_id' => $userId,
-        ]);
+        // Only log for debugging when needed
+        if (config('app.debug')) {
+            Log::debug('Starting GitHub repository processing', [
+                'owner' => $owner,
+                'repo' => $repo,
+                'branch' => $branch,
+            ]);
+        }
 
         try {
             // Verify GitHub API authentication before processing
@@ -76,14 +78,14 @@ class GitHubRepositoryService
             // Cleanup temporary files
             $this->cleanupTemporaryFiles([$tarballPath, $extractedPath]);
 
-            Log::info('GitHub repository processed successfully', [
-                'owner' => $owner,
-                'repo' => $repo,
-                'branch' => $branch,
-                'stored_path' => $storedPath,
-                'file_hash' => $fileHash,
-                'plugin_files_count' => $processedContent['file_count'],
-            ]);
+            // Only log success in debug mode to reduce noise
+            if (config('app.debug')) {
+                Log::debug('GitHub repository processed successfully', [
+                    'owner' => $owner,
+                    'repo' => $repo,
+                    'file_count' => $processedContent['file_count'],
+                ]);
+            }
 
             return [
                 'filename' => "{$owner}/{$repo}@{$branch}",

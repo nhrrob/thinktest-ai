@@ -24,10 +24,7 @@ class GitHubServiceProvider extends ServiceProvider
                 $config = config('thinktest_ai.github');
                 if (! empty($config['api_token'])) {
                     $client->authenticate($config['api_token'], null, Client::AUTH_ACCESS_TOKEN);
-
-                    Log::info('GitHub Client: Authenticated with API token', [
-                        'token_prefix' => substr($config['api_token'], 0, 7).'...',
-                    ]);
+                    // Remove verbose authentication log
                 } else {
                     Log::warning('GitHub Client: No API token configured, using unauthenticated access');
                 }
@@ -96,9 +93,8 @@ class GitHubServiceProvider extends ServiceProvider
                 Log::warning('GitHub Integration: Configuration issues detected', [
                     'issues' => $issues,
                 ]);
-            } else {
-                Log::info('GitHub Integration: Configuration verified successfully');
             }
+            // Remove success log to reduce noise
         } catch (\Exception $e) {
             Log::error('GitHub Integration: Configuration verification failed', [
                 'error' => $e->getMessage(),

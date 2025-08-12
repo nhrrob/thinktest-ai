@@ -653,20 +653,11 @@ class GitHubService
                 ];
             }
 
-            Log::info('GitHub API: Verifying API token', [
-                'token_prefix' => substr($this->config['api_token'], 0, 7).'...',
-            ]);
-
             $response = Http::withHeaders([
                 'Authorization' => 'token '.$this->config['api_token'],
                 'User-Agent' => 'ThinkTest-AI/1.0',
                 'Accept' => 'application/vnd.github.v3+json',
             ])->get('https://api.github.com/user');
-
-            Log::info('GitHub API: Token verification response', [
-                'status_code' => $response->status(),
-                'headers' => $response->headers(),
-            ]);
 
             if ($response->successful()) {
                 $userData = $response->json();

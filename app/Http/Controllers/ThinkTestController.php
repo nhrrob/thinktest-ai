@@ -1244,10 +1244,12 @@ class ThinkTestController extends Controller
                 'github_client_registered' => app()->bound(\Github\Client::class),
             ];
 
-            Log::info('GitHub debug information requested', [
-                'user_id' => $user->id,
-                'debug_info' => $debugInfo,
-            ]);
+            // Only log debug requests in debug mode
+            if (config('app.debug')) {
+                Log::debug('GitHub debug information requested', [
+                    'user_id' => $user->id,
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
