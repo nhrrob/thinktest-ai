@@ -37,32 +37,6 @@ const CustomToast = ({ message, icon, onClose }: { message: string; icon: React.
 export function useToast() {
     const { props } = usePage<SharedData & FlashMessages>();
 
-    // Auto-display flash messages from Laravel
-    useEffect(() => {
-        const { success, error, warning, info, message } = props;
-
-        if (success) {
-            showSuccess(success);
-        }
-
-        if (error) {
-            showError(error);
-        }
-
-        if (warning) {
-            showWarning(warning);
-        }
-
-        if (info) {
-            showInfo(info);
-        }
-
-        // Legacy support for 'message' flash key
-        if (message && !success && !error && !warning && !info) {
-            showSuccess(message);
-        }
-    }, [props, showSuccess, showError, showWarning, showInfo]);
-
     const showSuccess = (message: string, options?: ToastOptions) => {
         return toast.custom(
             (t) => (
@@ -277,6 +251,32 @@ export function useToast() {
                 throw error;
             });
     };
+
+    // Auto-display flash messages from Laravel
+    useEffect(() => {
+        const { success, error, warning, info, message } = props;
+
+        if (success) {
+            showSuccess(success);
+        }
+
+        if (error) {
+            showError(error);
+        }
+
+        if (warning) {
+            showWarning(warning);
+        }
+
+        if (info) {
+            showInfo(info);
+        }
+
+        // Legacy support for 'message' flash key
+        if (message && !success && !error && !warning && !info) {
+            showSuccess(message);
+        }
+    }, [props, showSuccess, showError, showWarning, showInfo]);
 
     return {
         success: showSuccess,

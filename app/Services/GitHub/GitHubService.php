@@ -368,6 +368,171 @@ class GitHubService
     }
 
     /**
+     * Get repository contents (files and directories) at a specific path
+     */
+    public function getRepositoryContents(string $owner, string $repo, string $path = '', ?string $branch = null): array
+    {
+        $cacheKey = "github_repo_contents_{$owner}_{$repo}_".md5($path)."_{$branch}";
+
+        return Cache::remember($cacheKey, $this->config['cache_repository_info_minutes'] * 60, function () use ($owner, $repo, $path, $branch) {
+            try {
+                $repoInfo = $this->getRepositoryInfo($owner, $repo);
+                $branch = $branch ?: $repoInfo['default_branch'];
+
+                $contents = $this->client->api('repo')->contents()->show($owner, $repo, $path, $branch);
+
+                // If it's a single file, wrap it in an array
+                if (isset($contents['type']) && $contents['type'] === 'file') {
+                    $contents = [$contents];
+                }
+
+                return array_map(function ($item) {
+                    return [
+                        'name' => $item['name'],
+                        'path' => $item['path'],
+                        'type' => $item['type'], // 'file' or 'dir'
+                        'size' => $item['size'] ?? 0,
+                        'sha' => $item['sha'],
+                        'url' => $item['url'],
+                        'html_url' => $item['html_url'],
+                        'download_url' => $item['download_url'] ?? null,
+                    ];
+                }, $contents);
+            } catch (GitHubRuntimeException $e) {
+                $errorInfo = GitHubErrorHandler::handleException($e, [
+                    'owner' => $owner,
+                    'repo' => $repo,
+                    'path' => $path,
+                    'branch' => $branch,
+                    'action' => 'fetch_repository_contents',
+                ]);
+
+                throw new \RuntimeException($errorInfo['user_message']);
+            }
+        });
+    }
+
+    /**
+     * Get file content from repository
+     */
+    public function getFileContent(string $owner, string $repo, string $path, ?string $branch = null): array
+    {
+        $cacheKey = "github_file_content_{$owner}_{$repo}_".md5($path)."_{$branch}";
+
+        return Cache::remember($cacheKey, $this->config['cache_repository_info_minutes'] * 60, function () use ($owner, $repo, $path, $branch) {
+            try {
+                $repoInfo = $this->getRepositoryInfo($owner, $repo);
+                $branch = $branch ?: $repoInfo['default_branch'];
+
+                $fileData = $this->client->api('repo')->contents()->show($owner, $repo, $path, $branch);
+
+                // Ensure it's a file
+                if ($fileData['type'] !== 'file') {
+                    throw new \RuntimeException("Path '{$path}' is not a file");
+                }
+
+                // Decode content if it's base64 encoded
+                $content = $fileData['content'];
+                if ($fileData['encoding'] === 'base64') {
+                    $content = base64_decode($content);
+                }
+
+                return [
+                    'name' => $fileData['name'],
+                    'path' => $fileData['path'],
+                    'content' => $content,
+                    'size' => $fileData['size'],
+                    'sha' => $fileData['sha'],
+                    'encoding' => $fileData['encoding'],
+                    'url' => $fileData['url'],
+                    'html_url' => $fileData['html_url'],
+                    'download_url' => $fileData['download_url'],
+                ];
+            } catch (GitHubRuntimeException $e) {
+                $errorInfo = GitHubErrorHandler::handleException($e, [
+                    'owner' => $owner,
+                    'repo' => $repo,
+                    'path' => $path,
+                    'branch' => $branch,
+                    'action' => 'fetch_file_content',
+                ]);
+
+                throw new \RuntimeException($errorInfo['user_message']);
+            }
+        });
+    }
+
+    /**
+     * Get repository file tree (recursive directory structure)
+     */
+    public function getRepositoryTree(string $owner, string $repo, ?string $branch = null, bool $recursive = false): array
+    {
+        $cacheKey = "github_repo_tree_{$owner}_{$repo}_{$branch}_".($recursive ? 'recursive' : 'flat');
+
+        return Cache::remember($cacheKey, $this->config['cache_repository_info_minutes'] * 60, function () use ($owner, $repo, $branch, $recursive) {
+            try {
+                $repoInfo = $this->getRepositoryInfo($owner, $repo);
+                $branch = $branch ?: $repoInfo['default_branch'];
+
+                // Get the latest commit SHA for the branch
+                $branches = $this->client->api('repo')->branches($owner, $repo);
+                $branchData = collect($branches)->firstWhere('name', $branch);
+
+                if (!$branchData) {
+                    throw new \RuntimeException("Branch '{$branch}' not found");
+                }
+
+                $commitSha = $branchData['commit']['sha'];
+
+                // Get the tree using git data API
+                $tree = $this->client->api('gitData')->trees()->show($owner, $repo, $commitSha, $recursive);
+
+                // Filter and format the tree
+                $supportedExtensions = $this->config['supported_file_extensions'];
+                $ignoredDirectories = $this->config['ignored_directories'];
+
+                $filteredTree = array_filter($tree['tree'], function ($item) use ($supportedExtensions, $ignoredDirectories) {
+                    // Skip ignored directories
+                    foreach ($ignoredDirectories as $ignoredDir) {
+                        if (str_starts_with($item['path'], $ignoredDir.'/') || $item['path'] === $ignoredDir) {
+                            return false;
+                        }
+                    }
+
+                    // For files, check if extension is supported
+                    if ($item['type'] === 'blob') {
+                        $extension = '.'.pathinfo($item['path'], PATHINFO_EXTENSION);
+                        return in_array($extension, $supportedExtensions);
+                    }
+
+                    // Include directories
+                    return $item['type'] === 'tree';
+                });
+
+                return array_map(function ($item) {
+                    return [
+                        'path' => $item['path'],
+                        'type' => $item['type'] === 'blob' ? 'file' : 'dir',
+                        'sha' => $item['sha'],
+                        'size' => $item['size'] ?? 0,
+                        'url' => $item['url'],
+                    ];
+                }, array_values($filteredTree));
+            } catch (GitHubRuntimeException $e) {
+                $errorInfo = GitHubErrorHandler::handleException($e, [
+                    'owner' => $owner,
+                    'repo' => $repo,
+                    'branch' => $branch,
+                    'recursive' => $recursive,
+                    'action' => 'fetch_repository_tree',
+                ]);
+
+                throw new \RuntimeException($errorInfo['user_message']);
+            }
+        });
+    }
+
+    /**
      * Clear repository cache
      */
     public function clearRepositoryCache(string $owner, string $repo): void
@@ -377,8 +542,32 @@ class GitHubService
             "github_repo_branches_{$owner}_{$repo}",
         ];
 
+        // Clear file browsing cache patterns
+        $patterns = [
+            "github_repo_contents_{$owner}_{$repo}_*",
+            "github_file_content_{$owner}_{$repo}_*",
+            "github_repo_tree_{$owner}_{$repo}_*",
+        ];
+
         foreach ($keys as $key) {
             Cache::forget($key);
+        }
+
+        // Clear pattern-based cache keys
+        foreach ($patterns as $pattern) {
+            try {
+                if (Cache::getStore() instanceof \Illuminate\Cache\RedisStore) {
+                    $cacheKeys = Cache::getRedis()->keys($pattern);
+                    foreach ($cacheKeys as $key) {
+                        Cache::forget($key);
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::warning('Failed to clear cache pattern', [
+                    'pattern' => $pattern,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
     }
 

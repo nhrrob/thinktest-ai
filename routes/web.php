@@ -12,6 +12,11 @@ Route::get('/', function () {
     return Inertia::render('welcome');
 })->name('home');
 
+// Favicon route to prevent 404 errors
+Route::get('/favicon.ico', function () {
+    return response()->file(public_path('favicon.ico'));
+});
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
         return Inertia::render('dashboard');
@@ -72,6 +77,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('thinktest/github/validate', [ThinkTestController::class, 'validateRepository'])->name('thinktest.github.validate');
         Route::post('thinktest/github/branches', [ThinkTestController::class, 'getRepositoryBranches'])->name('thinktest.github.branches');
         Route::post('thinktest/github/process', [ThinkTestController::class, 'processRepository'])->name('thinktest.github.process');
+
+        // File browsing routes
+        Route::post('thinktest/github/browse', [ThinkTestController::class, 'browseRepositoryContents'])->name('thinktest.github.browse');
+        Route::post('thinktest/github/tree', [ThinkTestController::class, 'getRepositoryTree'])->name('thinktest.github.tree');
+        Route::post('thinktest/github/file', [ThinkTestController::class, 'getFileContent'])->name('thinktest.github.file');
+
+        // Single file test generation
+        Route::post('thinktest/generate-single-file', [ThinkTestController::class, 'generateTestsForSingleFile'])->name('thinktest.generate_single_file');
     });
 
     // GitHub debug route (admin only)

@@ -24,6 +24,89 @@ class TestGenerationService
     }
 
     /**
+     * Generate tests for a single file from a GitHub repository
+     */
+    public function generateTestsForSingleFile(string $fileContent, array $options = []): array
+    {
+        $framework = $options['framework'] ?? $this->config['default_framework'];
+        $provider = $options['provider'] ?? 'openai';
+        $filename = $options['filename'] ?? 'file.php';
+        $repositoryContext = $options['repository_context'] ?? [];
+
+        Log::info('Starting single-file test generation', [
+            'framework' => $framework,
+            'provider' => $provider,
+            'filename' => $filename,
+            'file_size' => strlen($fileContent),
+            'repository' => $repositoryContext['full_name'] ?? 'unknown',
+        ]);
+
+        try {
+            // Analyze the single file with repository context
+            $analysis = $this->analysisService->analyzePlugin($fileContent, $filename);
+
+            // Add repository context to analysis
+            $analysis['repository_context'] = $repositoryContext;
+            $analysis['is_single_file'] = true;
+            $analysis['file_path'] = $options['file_path'] ?? $filename;
+
+            // Generate AI-powered tests with single-file context
+            $aiOptions = array_merge($options, [
+                'framework' => $framework,
+                'provider' => $provider,
+                'analysis' => $analysis,
+                'is_single_file' => true,
+                'file_context' => [
+                    'filename' => $filename,
+                    'file_path' => $options['file_path'] ?? $filename,
+                    'repository' => $repositoryContext,
+                ],
+            ]);
+
+            $aiResult = $this->aiService->generateWordPressTests($fileContent, $aiOptions);
+
+            // Post-process and enhance the generated tests for single file
+            $enhancedTests = $this->enhanceGeneratedTestsForSingleFile($aiResult['generated_tests'], $analysis, $framework);
+
+            // Generate test suite focused on the single file
+            $testSuite = $this->buildSingleFileTestSuite($enhancedTests, $analysis, $framework);
+
+            return [
+                'success' => true,
+                'framework' => $framework,
+                'provider' => $aiResult['provider'],
+                'model' => $aiResult['model'],
+                'analysis' => $analysis,
+                'tests' => $testSuite,
+                'main_test_file' => $enhancedTests,
+                'usage' => $aiResult['usage'] ?? null,
+                'file_context' => [
+                    'filename' => $filename,
+                    'file_path' => $options['file_path'] ?? $filename,
+                    'repository' => $repositoryContext,
+                ],
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Single-file test generation failed', [
+                'error' => $e->getMessage(),
+                'framework' => $framework,
+                'provider' => $provider,
+                'filename' => $filename,
+                'repository' => $repositoryContext['full_name'] ?? 'unknown',
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'framework' => $framework,
+                'provider' => $provider,
+                'filename' => $filename,
+            ];
+        }
+    }
+
+    /**
      * Generate comprehensive tests for WordPress plugin
      */
     public function generateTests(string $pluginCode, array $options = []): array
@@ -344,5 +427,232 @@ class TestGenerationService
         }
 
         return $errors;
+    }
+
+    /**
+     * Enhance AI-generated tests specifically for single file context
+     */
+    private function enhanceGeneratedTestsForSingleFile(string $generatedTests, array $analysis, string $framework): string
+    {
+        // Add proper file header with single-file context
+        $header = $this->generateSingleFileTestHeader($analysis, $framework);
+
+        // Clean up the generated tests
+        $cleanedTests = $this->cleanupGeneratedTests($generatedTests);
+
+        // Add setup and teardown methods if not present
+        $enhancedTests = $this->addSetupTeardownMethods($cleanedTests, $analysis, $framework);
+
+        // Add WordPress-specific test utilities
+        $finalTests = $this->addWordPressTestUtilities($enhancedTests, $analysis, $framework);
+
+        return $header."\n\n".$finalTests;
+    }
+
+    /**
+     * Generate test file header for single file with repository context
+     */
+    private function generateSingleFileTestHeader(array $analysis, string $framework): string
+    {
+        $filename = $analysis['filename'] ?? 'file.php';
+        $filePath = $analysis['file_path'] ?? $filename;
+        $repository = $analysis['repository_context']['full_name'] ?? 'unknown';
+        $date = date('Y-m-d H:i:s');
+
+        $header = "<?php\n";
+        $header .= "/**\n";
+        $header .= " * Generated Tests for Single File: {$filename}\n";
+        $header .= " * File Path: {$filePath}\n";
+        $header .= " * Repository: {$repository}\n";
+        $header .= " * Generated by ThinkTest AI on {$date}\n";
+        $header .= ' * Framework: '.ucfirst($framework)."\n";
+        $header .= " * \n";
+        $header .= " * This file contains focused tests for a specific file from the repository.\n";
+        $header .= " * Tests are tailored to the functions, classes, and patterns found in this file.\n";
+        $header .= " */\n";
+
+        if ($framework === 'phpunit') {
+            $header .= "\nuse PHPUnit\\Framework\\TestCase;";
+            $header .= "\nuse WP_UnitTestCase;";
+        } elseif ($framework === 'pest') {
+            $header .= "\nuses(WP_UnitTestCase::class);";
+        }
+
+        return $header;
+    }
+
+    /**
+     * Build test suite focused on a single file
+     */
+    private function buildSingleFileTestSuite(string $mainTests, array $analysis, string $framework): array
+    {
+        $testSuite = [
+            'main_test_file' => [
+                'filename' => $this->generateSingleFileTestFilename($analysis, $framework),
+                'content' => $mainTests,
+                'description' => 'Main test file for ' . ($analysis['filename'] ?? 'file'),
+            ],
+        ];
+
+        // Add specific test files based on what's found in the single file
+        if (!empty($analysis['functions'])) {
+            $testSuite['function_tests'] = [
+                'filename' => $this->generateFunctionTestFilename($analysis, $framework),
+                'content' => $this->generateFunctionSpecificTests($analysis['functions'], $framework),
+                'description' => 'Tests for functions found in the file',
+            ];
+        }
+
+        if (!empty($analysis['classes'])) {
+            $testSuite['class_tests'] = [
+                'filename' => $this->generateClassTestFilename($analysis, $framework),
+                'content' => $this->generateClassSpecificTests($analysis['classes'], $framework),
+                'description' => 'Tests for classes found in the file',
+            ];
+        }
+
+        if (!empty($analysis['hooks'])) {
+            $testSuite['hook_tests'] = [
+                'filename' => $this->generateHookTestFilename($analysis, $framework),
+                'content' => $this->generateHookSpecificTests($analysis['hooks'], $framework),
+                'description' => 'Tests for WordPress hooks found in the file',
+            ];
+        }
+
+        return $testSuite;
+    }
+
+    /**
+     * Generate filename for single file test
+     */
+    private function generateSingleFileTestFilename(array $analysis, string $framework): string
+    {
+        $filename = $analysis['filename'] ?? 'file.php';
+        $baseName = pathinfo($filename, PATHINFO_FILENAME);
+        $extension = $framework === 'pest' ? '.php' : 'Test.php';
+
+        return ucfirst($baseName) . $extension;
+    }
+
+    /**
+     * Generate filename for function tests
+     */
+    private function generateFunctionTestFilename(array $analysis, string $framework): string
+    {
+        $filename = $analysis['filename'] ?? 'file.php';
+        $baseName = pathinfo($filename, PATHINFO_FILENAME);
+        $extension = $framework === 'pest' ? '.php' : 'Test.php';
+
+        return ucfirst($baseName) . 'Functions' . $extension;
+    }
+
+    /**
+     * Generate filename for class tests
+     */
+    private function generateClassTestFilename(array $analysis, string $framework): string
+    {
+        $filename = $analysis['filename'] ?? 'file.php';
+        $baseName = pathinfo($filename, PATHINFO_FILENAME);
+        $extension = $framework === 'pest' ? '.php' : 'Test.php';
+
+        return ucfirst($baseName) . 'Classes' . $extension;
+    }
+
+    /**
+     * Generate filename for hook tests
+     */
+    private function generateHookTestFilename(array $analysis, string $framework): string
+    {
+        $filename = $analysis['filename'] ?? 'file.php';
+        $baseName = pathinfo($filename, PATHINFO_FILENAME);
+        $extension = $framework === 'pest' ? '.php' : 'Test.php';
+
+        return ucfirst($baseName) . 'Hooks' . $extension;
+    }
+
+    /**
+     * Generate function-specific tests
+     */
+    private function generateFunctionSpecificTests(array $functions, string $framework): string
+    {
+        $tests = $this->generateTestFileHeader(['filename' => 'Functions'], $framework);
+
+        foreach ($functions as $function) {
+            $functionName = $function['name'] ?? 'unknown_function';
+            $tests .= "\n\n    /**\n";
+            $tests .= "     * Test {$functionName} function\n";
+            $tests .= "     */\n";
+
+            if ($framework === 'pest') {
+                $tests .= "    test('{$functionName} works correctly', function () {\n";
+                $tests .= "        // Test implementation for {$functionName}\n";
+                $tests .= "        expect(function_exists('{$functionName}'))->toBeTrue();\n";
+                $tests .= "    });\n";
+            } else {
+                $tests .= "    public function test_{$functionName}()\n";
+                $tests .= "    {\n";
+                $tests .= "        // Test implementation for {$functionName}\n";
+                $tests .= "        \$this->assertTrue(function_exists('{$functionName}'));\n";
+                $tests .= "    }\n";
+            }
+        }
+
+        return $tests;
+    }
+
+    /**
+     * Generate class-specific tests
+     */
+    private function generateClassSpecificTests(array $classes, string $framework): string
+    {
+        $tests = $this->generateTestFileHeader(['filename' => 'Classes'], $framework);
+
+        foreach ($classes as $class) {
+            $className = $class['name'] ?? 'UnknownClass';
+            $tests .= "\n\n    /**\n";
+            $tests .= "     * Test {$className} class\n";
+            $tests .= "     */\n";
+
+            if ($framework === 'pest') {
+                $tests .= "    test('{$className} can be instantiated', function () {\n";
+                $tests .= "        expect(class_exists('{$className}'))->toBeTrue();\n";
+                $tests .= "    });\n";
+            } else {
+                $tests .= "    public function test_{$className}_instantiation()\n";
+                $tests .= "    {\n";
+                $tests .= "        \$this->assertTrue(class_exists('{$className}'));\n";
+                $tests .= "    }\n";
+            }
+        }
+
+        return $tests;
+    }
+
+    /**
+     * Generate hook-specific tests
+     */
+    private function generateHookSpecificTests(array $hooks, string $framework): string
+    {
+        $tests = $this->generateTestFileHeader(['filename' => 'Hooks'], $framework);
+
+        foreach ($hooks as $hook) {
+            $hookName = $hook['name'] ?? 'unknown_hook';
+            $tests .= "\n\n    /**\n";
+            $tests .= "     * Test {$hookName} hook\n";
+            $tests .= "     */\n";
+
+            if ($framework === 'pest') {
+                $tests .= "    test('{$hookName} hook is registered', function () {\n";
+                $tests .= "        expect(has_action('{$hookName}'))->toBeGreaterThan(0);\n";
+                $tests .= "    });\n";
+            } else {
+                $tests .= "    public function test_{$hookName}_hook()\n";
+                $tests .= "    {\n";
+                $tests .= "        \$this->assertGreaterThan(0, has_action('{$hookName}'));\n";
+                $tests .= "    }\n";
+            }
+        }
+
+        return $tests;
     }
 }

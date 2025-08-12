@@ -1,4 +1,6 @@
 import GitHubBranchSelector from '@/components/github/GitHubBranchSelector';
+import GitHubFileBrowser from '@/components/github/GitHubFileBrowser';
+import GitHubFileSelector from '@/components/github/GitHubFileSelector';
 import GitHubRepositoryInput from '@/components/github/GitHubRepositoryInput';
 import SourceToggle, { SourceType } from '@/components/github/SourceToggle';
 import TestSetupWizard from '@/components/TestSetupWizard';
@@ -45,6 +47,31 @@ interface Branch {
         url: string;
     };
 }
+
+interface FileItem {
+    name: string;
+    path: string;
+    type: 'file' | 'dir';
+    size: number;
+    sha: string;
+    url: string;
+    html_url: string;
+    download_url?: string;
+}
+
+interface FileContent {
+    name: string;
+    path: string;
+    content: string;
+    size: number;
+    sha: string;
+    encoding: string;
+    url: string;
+    html_url: string;
+    download_url: string;
+}
+
+type GitHubProcessingMode = 'repository' | 'single-file';
 
 interface TestInfrastructureDetection {
     has_phpunit_config: boolean;
@@ -253,6 +280,12 @@ export default function Index({ recentConversations, recentAnalyses }: ThinkTest
     const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
     const [isProcessingRepository, setIsProcessingRepository] = useState<boolean>(false);
     const [processingProgress, setProcessingProgress] = useState<string>('');
+
+    // File selection state
+    const [githubProcessingMode, setGithubProcessingMode] = useState<GitHubProcessingMode>('repository');
+    const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
+    const [fileContent, setFileContent] = useState<FileContent | null>(null);
+    const [isGeneratingSingleFile, setIsGeneratingSingleFile] = useState<boolean>(false);
 
     // Test setup wizard state
     const [showTestSetupWizard, setShowTestSetupWizard] = useState<boolean>(false);
@@ -539,10 +572,79 @@ export default function Index({ recentConversations, recentAnalyses }: ThinkTest
         setShowTestSetupWizard(false);
         setTestInfrastructureDetection(null);
         setTestSetupInstructions(null);
+        // Reset file selection state
+        setGithubProcessingMode('repository');
+        setSelectedFile(null);
+        setFileContent(null);
+        setIsGeneratingSingleFile(false);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
         setData('plugin_file', null);
+    };
+
+    const handleProcessingModeChange = (mode: GitHubProcessingMode) => {
+        setGithubProcessingMode(mode);
+        // Reset file selection when switching modes
+        setSelectedFile(null);
+        setFileContent(null);
+        setGeneratedTests(null);
+        setCurrentConversationId(null);
+    };
+
+    const handleFileSelected = (file: FileItem) => {
+        setSelectedFile(file);
+        setFileContent(null);
+    };
+
+    const handleFileContentLoaded = (content: FileContent) => {
+        setFileContent(content);
+    };
+
+    const handleGenerateTestsForSingleFile = async () => {
+        if (!validatedRepository || !selectedBranch || !selectedFile || !fileContent) {
+            alert('Please select a repository, branch, and file');
+            return;
+        }
+
+        setIsGeneratingSingleFile(true);
+        setGeneratedTests(null);
+
+        try {
+            const response = await fetch('/thinktest/generate-single-file', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken(),
+                },
+                body: JSON.stringify({
+                    owner: validatedRepository.owner,
+                    repo: validatedRepository.repo,
+                    file_path: selectedFile.path,
+                    branch: selectedBranch.name,
+                    provider: data.provider,
+                    framework: data.framework,
+                }),
+            });
+
+            const result = await handleApiResponse(response);
+            if (!result) return; // Handle redirect cases
+
+            if (result.success) {
+                setGeneratedTests({
+                    tests: result.tests,
+                    conversation_id: result.conversation_id,
+                });
+                setCurrentConversationId(result.conversation_id);
+            } else {
+                alert('Single-file test generation failed: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Single-file generation error:', error);
+            alert('Single-file test generation failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+        } finally {
+            setIsGeneratingSingleFile(false);
+        }
     };
 
     const handleDetectTestInfrastructure = async () => {
@@ -731,6 +833,61 @@ export default function Index({ recentConversations, recentAnalyses }: ThinkTest
                                     )}
 
                                     {validatedRepository && selectedBranch && (
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Processing Mode</label>
+                                                <div className="flex space-x-4">
+                                                    <label className="flex items-center">
+                                                        <input
+                                                            type="radio"
+                                                            value="repository"
+                                                            checked={githubProcessingMode === 'repository'}
+                                                            onChange={(e) => handleProcessingModeChange(e.target.value as GitHubProcessingMode)}
+                                                            disabled={isProcessingRepository || isGenerating || isGeneratingSingleFile}
+                                                            className="mr-2"
+                                                        />
+                                                        <span className="text-sm">Full Repository</span>
+                                                    </label>
+                                                    <label className="flex items-center">
+                                                        <input
+                                                            type="radio"
+                                                            value="single-file"
+                                                            checked={githubProcessingMode === 'single-file'}
+                                                            onChange={(e) => handleProcessingModeChange(e.target.value as GitHubProcessingMode)}
+                                                            disabled={isProcessingRepository || isGenerating || isGeneratingSingleFile}
+                                                            className="mr-2"
+                                                        />
+                                                        <span className="text-sm">Single File</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+
+                                            {githubProcessingMode === 'single-file' && (
+                                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                                    <GitHubFileBrowser
+                                                        repository={validatedRepository}
+                                                        branch={selectedBranch.name}
+                                                        onFileSelected={handleFileSelected}
+                                                        onError={handleError}
+                                                        disabled={isGeneratingSingleFile}
+                                                        selectedFilePath={selectedFile?.path}
+                                                    />
+                                                    <GitHubFileSelector
+                                                        repository={validatedRepository}
+                                                        branch={selectedBranch.name}
+                                                        selectedFile={selectedFile}
+                                                        onFileContentLoaded={handleFileContentLoaded}
+                                                        onError={handleError}
+                                                        onGenerateTests={handleGenerateTestsForSingleFile}
+                                                        disabled={isGeneratingSingleFile}
+                                                        isGenerating={isGeneratingSingleFile}
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {validatedRepository && selectedBranch && githubProcessingMode === 'repository' && (
                                         <div className="space-y-4">
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>

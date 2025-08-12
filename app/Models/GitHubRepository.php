@@ -186,4 +186,28 @@ class GitHubRepository extends Model
 
         return round($bytes, 2).' '.$units[$i];
     }
+
+    /**
+     * Get the file test generations for this repository
+     */
+    public function fileTestGenerations(): HasMany
+    {
+        return $this->hasMany(GitHubFileTestGeneration::class, 'github_repository_id');
+    }
+
+    /**
+     * Get successful file test generations
+     */
+    public function successfulFileTestGenerations(): HasMany
+    {
+        return $this->hasMany(GitHubFileTestGeneration::class, 'github_repository_id')->successful();
+    }
+
+    /**
+     * Get file test generations for a specific file
+     */
+    public function fileTestGenerationsForFile(string $filePath): HasMany
+    {
+        return $this->hasMany(GitHubFileTestGeneration::class, 'github_repository_id')->forFile($filePath);
+    }
 }
