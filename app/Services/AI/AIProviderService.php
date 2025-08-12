@@ -2,8 +2,11 @@
 
 namespace App\Services\AI;
 
+use App\Models\DemoCredit;
+use App\Models\UserApiToken;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class AIProviderService
@@ -27,6 +30,16 @@ class AIProviderService
     public function generateWordPressTests(string $pluginCode, array $options = []): array
     {
         $provider = $options['provider'] ?? $this->config['default_provider'];
+
+        // Check if user has API tokens or demo credits
+        if (!$this->userHasApiTokens() && !$this->userHasDemoCredits()) {
+            throw new \RuntimeException('No API tokens configured and no demo credits available. Please add your API tokens in settings or contact support.');
+        }
+
+        // Use demo credits if no API tokens are available
+        if (!$this->userHasApiTokens() && $this->userHasDemoCredits()) {
+            $this->useDemoCredit();
+        }
 
         // Use mock provider if explicitly requested or no API keys are configured
         if ($provider === 'mock' || $this->shouldUseMockProvider($provider)) {
@@ -106,7 +119,10 @@ class AIProviderService
     {
         $config = $this->config['providers']['openai-gpt5'] ?? $this->config['providers']['chatgpt-5'];
 
-        if (empty($config['api_key'])) {
+        // Get API key from user tokens first, then fallback to environment
+        $apiKey = $this->getApiKeyForProvider('openai') ?? $config['api_key'];
+
+        if (empty($apiKey)) {
             throw new \RuntimeException('OpenAI API key not configured');
         }
 
@@ -131,7 +147,7 @@ class AIProviderService
         try {
             $response = $this->httpClient->post('https://api.openai.com/v1/chat/completions', [
                 'headers' => [
-                    'Authorization' => 'Bearer '.$config['api_key'],
+                    'Authorization' => 'Bearer '.$apiKey,
                     'Content-Type' => 'application/json',
                 ],
                 'json' => $payload,
@@ -165,7 +181,10 @@ class AIProviderService
     {
         $config = $this->config['providers']['anthropic-claude'] ?? $this->config['providers']['anthropic'];
 
-        if (empty($config['api_key'])) {
+        // Get API key from user tokens first, then fallback to environment
+        $apiKey = $this->getApiKeyForProvider('anthropic') ?? $config['api_key'];
+
+        if (empty($apiKey)) {
             throw new \RuntimeException('Anthropic API key not configured');
         }
 
@@ -186,7 +205,7 @@ class AIProviderService
         try {
             $response = $this->httpClient->post('https://api.anthropic.com/v1/messages', [
                 'headers' => [
-                    'x-api-key' => $config['api_key'],
+                    'x-api-key' => $apiKey,
                     'Content-Type' => 'application/json',
                     'anthropic-version' => '2023-06-01',
                 ],
@@ -280,8 +299,108 @@ class AIProviderService
     private function shouldUseMockProvider(string $provider): bool
     {
         $config = $this->config['providers'][$provider] ?? null;
+        $userApiKey = $this->getApiKeyForProvider($this->mapProviderName($provider));
 
-        return ! $config || empty($config['api_key']);
+        return ! $config || (empty($config['api_key']) && empty($userApiKey));
+    }
+
+    /**
+     * Get API key for a provider from user's saved tokens
+     */
+    private function getApiKeyForProvider(string $provider): ?string
+    {
+        if (!Auth::check()) {
+            return null;
+        }
+
+        $userToken = UserApiToken::where('user_id', Auth::id())
+            ->where('provider', $provider)
+            ->where('is_active', true)
+            ->first();
+
+        if ($userToken) {
+            // Mark token as used
+            $userToken->markAsUsed();
+            return $userToken->decrypted_token;
+        }
+
+        return null;
+    }
+
+    /**
+     * Map provider names to user token provider names
+     */
+    private function mapProviderName(string $provider): string
+    {
+        return match ($provider) {
+            'openai-gpt5', 'chatgpt-5' => 'openai',
+            'anthropic-claude', 'anthropic' => 'anthropic',
+            default => $provider,
+        };
+    }
+
+    /**
+     * Check if user has any active API tokens
+     */
+    public function userHasApiTokens(): bool
+    {
+        if (!Auth::check()) {
+            return false;
+        }
+
+        return UserApiToken::where('user_id', Auth::id())
+            ->where('is_active', true)
+            ->exists();
+    }
+
+    /**
+     * Check if user has demo credits available
+     */
+    public function userHasDemoCredits(): bool
+    {
+        if (!Auth::check()) {
+            return false;
+        }
+
+        $demoCredit = DemoCredit::getOrCreateForUser(Auth::id());
+        return $demoCredit->hasCreditsRemaining();
+    }
+
+    /**
+     * Use a demo credit
+     */
+    public function useDemoCredit(): bool
+    {
+        if (!Auth::check()) {
+            return false;
+        }
+
+        $demoCredit = DemoCredit::getOrCreateForUser(Auth::id());
+        return $demoCredit->useCredit();
+    }
+
+    /**
+     * Get user's demo credit status
+     */
+    public function getDemoCreditStatus(): array
+    {
+        if (!Auth::check()) {
+            return [
+                'has_credits' => false,
+                'remaining' => 0,
+                'total' => 5,
+                'used' => 0,
+            ];
+        }
+
+        $demoCredit = DemoCredit::getOrCreateForUser(Auth::id());
+
+        return [
+            'has_credits' => $demoCredit->hasCreditsRemaining(),
+            'remaining' => $demoCredit->getRemainingCredits(),
+            'total' => $demoCredit->credits_limit,
+            'used' => $demoCredit->credits_used,
+        ];
     }
 
     /**
@@ -587,12 +706,24 @@ class AIProviderService
         $providers = [];
 
         foreach ($this->config['providers'] as $name => $config) {
+            // Check for user API tokens without calling getApiKeyForProvider to avoid side effects
+            $hasUserToken = false;
+            if (Auth::check()) {
+                $hasUserToken = UserApiToken::where('user_id', Auth::id())
+                    ->where('provider', $this->mapProviderName($name))
+                    ->where('is_active', true)
+                    ->exists();
+            }
+
+            $hasApiKey = !empty($config['api_key']) || $hasUserToken;
+
             $providers[$name] = [
                 'name' => $name,
                 'display_name' => $config['display_name'] ?? $name,
                 'provider_company' => $config['provider_company'] ?? 'Unknown',
-                'available' => ! empty($config['api_key']),
+                'available' => $hasApiKey,
                 'model' => $config['model'] ?? 'unknown',
+                'source' => $hasUserToken ? 'user_token' : (!empty($config['api_key']) ? 'environment' : 'none'),
             ];
         }
 

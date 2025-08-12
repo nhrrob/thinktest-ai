@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
@@ -199,5 +200,31 @@ class User extends Authenticatable
     public function apiTokens(): HasMany
     {
         return $this->hasMany(UserApiToken::class);
+    }
+
+    /**
+     * Get the demo credits for the user.
+     */
+    public function demoCredit(): HasOne
+    {
+        return $this->hasOne(DemoCredit::class);
+    }
+
+    /**
+     * Check if user has demo credits available.
+     */
+    public function hasDemoCredits(): bool
+    {
+        $demoCredit = $this->demoCredit;
+        return $demoCredit && $demoCredit->hasCreditsRemaining();
+    }
+
+    /**
+     * Get remaining demo credits count.
+     */
+    public function getRemainingDemoCredits(): int
+    {
+        $demoCredit = $this->demoCredit;
+        return $demoCredit ? $demoCredit->getRemainingCredits() : 5;
     }
 }

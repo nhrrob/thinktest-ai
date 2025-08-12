@@ -15,6 +15,13 @@ interface Conversation {
     updated_at: string;
 }
 
+interface DemoCreditStatus {
+    has_credits: boolean;
+    remaining: number;
+    total: number;
+    used: number;
+}
+
 interface Analysis {
     id: number;
     file_name: string;
@@ -130,6 +137,8 @@ interface ThinkTestProps {
     recentConversations: Conversation[];
     recentAnalyses: Analysis[];
     availableProviders: string[];
+    userHasApiTokens: boolean;
+    demoCreditStatus: DemoCreditStatus;
 }
 
 // Helper function to handle API responses with proper error checking
@@ -266,7 +275,7 @@ const validateAuthentication = async (): Promise<boolean> => {
     }
 };
 
-export default function Index({ recentConversations, recentAnalyses }: ThinkTestProps) {
+export default function Index({ recentConversations, recentAnalyses, availableProviders, userHasApiTokens, demoCreditStatus }: ThinkTestProps) {
     const [sourceType, setSourceType] = useState<SourceType>('github');
     const [isUploading, setIsUploading] = useState<boolean>(false);
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -758,6 +767,75 @@ export default function Index({ recentConversations, recentAnalyses }: ThinkTest
                                     disabled={isUploading || isProcessingRepository || isGenerating}
                                 />
                             </div>
+
+                            {/* Demo Credits Notice */}
+                            {!userHasApiTokens && (
+                                <div className="mb-8 rounded-lg border border-blue-200 bg-blue-50 p-6 dark:border-blue-800 dark:bg-blue-950">
+                                    <div className="flex items-start space-x-3">
+                                        <div className="flex-shrink-0">
+                                            <svg className="h-5 w-5 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                            </svg>
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                                                Demo Mode - {demoCreditStatus.remaining} free credits available
+                                            </h3>
+                                            <div className="mt-2 text-sm text-blue-700 dark:text-blue-300">
+                                                <p>
+                                                    You have <strong>{demoCreditStatus.remaining} out of {demoCreditStatus.total}</strong> free evaluation credits available during August 2025 only.
+                                                    After August, you must configure your own API tokens to continue using the service.
+                                                </p>
+                                                <div className="mt-3">
+                                                    <a
+                                                        href="/settings/api-tokens"
+                                                        className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-400"
+                                                    >
+                                                        Add Your API Tokens
+                                                        <svg className="ml-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                        </svg>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* No Credits Available Notice */}
+                            {!userHasApiTokens && !demoCreditStatus.has_credits && (
+                                <div className="mb-8 rounded-lg border border-red-200 bg-red-50 p-6 dark:border-red-800 dark:bg-red-950">
+                                    <div className="flex items-start space-x-3">
+                                        <div className="flex-shrink-0">
+                                            <svg className="h-5 w-5 text-red-600 dark:text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                            </svg>
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
+                                                No Credits Available
+                                            </h3>
+                                            <div className="mt-2 text-sm text-red-700 dark:text-red-300">
+                                                <p>
+                                                    You have used all {demoCreditStatus.total} free evaluation credits. To continue using ThinkTest AI, please add your own API tokens.
+                                                </p>
+                                                <div className="mt-3">
+                                                    <a
+                                                        href="/settings/api-tokens"
+                                                        className="inline-flex items-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 dark:bg-red-500 dark:hover:bg-red-400"
+                                                    >
+                                                        Configure API Tokens
+                                                        <svg className="ml-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                        </svg>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* File Upload Section */}
                             {sourceType === 'file' && (

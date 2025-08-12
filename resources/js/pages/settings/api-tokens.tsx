@@ -120,16 +120,16 @@ export default function ApiTokens({ tokens, availableProviders, instructions }: 
                             <h3 className="text-lg font-medium">Your API Tokens</h3>
                             <div className="grid gap-4">
                                 {tokens.map((token) => (
-                                    <Card key={token.id}>
+                                    <Card key={token.id} className="overflow-hidden">
                                         <CardHeader className="pb-3">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <CardTitle className="text-base">{token.display_name}</CardTitle>
-                                                    <Badge variant={token.is_active ? "default" : "secondary"}>
+                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                                    <CardTitle className="text-base truncate">{token.display_name}</CardTitle>
+                                                    <Badge variant={token.is_active ? "default" : "secondary"} className="flex-shrink-0">
                                                         {token.is_active ? 'Active' : 'Inactive'}
                                                     </Badge>
                                                 </div>
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-2 flex-shrink-0">
                                                     <Switch
                                                         checked={token.is_active}
                                                         onCheckedChange={() => toggleToken(token.id)}
@@ -144,14 +144,16 @@ export default function ApiTokens({ tokens, availableProviders, instructions }: 
                                                     </Button>
                                                 </div>
                                             </div>
-                                            <CardDescription>
+                                            <CardDescription className="text-xs sm:text-sm">
                                                 {token.provider_display_name} • Created {token.created_at}
                                                 {token.last_used_at && ` • Last used ${token.last_used_at}`}
                                             </CardDescription>
                                         </CardHeader>
                                         <CardContent>
-                                            <div className="font-mono text-sm bg-gray-50 dark:bg-gray-800 p-2 rounded">
-                                                {token.masked_token}
+                                            <div className="font-mono text-sm bg-gray-50 dark:bg-gray-800 p-3 rounded border overflow-hidden">
+                                                <div className="break-all text-xs leading-relaxed">
+                                                    {token.masked_token}
+                                                </div>
                                             </div>
                                         </CardContent>
                                     </Card>

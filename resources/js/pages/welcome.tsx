@@ -137,9 +137,6 @@ export default function Welcome() {
                                 <p className="text-muted-foreground mb-4">
                                     Join developers who are already using AI to create better, more comprehensive tests
                                 </p>
-                                <div className="text-sm text-muted-foreground">
-                                    <em>* Banner image/GIF demonstrating the workflow will be added here</em>
-                                </div>
                             </div>
                         </div>
                     </div>

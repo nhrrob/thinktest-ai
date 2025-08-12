@@ -98,6 +98,8 @@ class ThinkTestController extends Controller
             'recentConversations' => $recentConversations,
             'recentAnalyses' => $recentAnalyses,
             'availableProviders' => $this->aiService->getAvailableProviders(),
+            'userHasApiTokens' => $this->aiService->userHasApiTokens(),
+            'demoCreditStatus' => $this->aiService->getDemoCreditStatus(),
         ]);
     }
 

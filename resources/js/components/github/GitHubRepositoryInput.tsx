@@ -32,6 +32,9 @@ export default function GitHubRepositoryInput({ onRepositoryValidated, onError, 
     const [validatedRepository, setValidatedRepository] = useState<Repository | null>(null);
     const [error, setError] = useState<string | null>(null);
 
+    // Demo repository for evaluation purposes
+    const demoRepository = 'https://github.com/WordPress/hello-dolly';
+
     const handleValidateRepository = async () => {
         if (!repositoryUrl.trim()) {
             setError('Please enter a repository URL');
@@ -121,6 +124,12 @@ export default function GitHubRepositoryInput({ onRepositoryValidated, onError, 
         setValidatedRepository(null);
     };
 
+    const handleUseDemoRepository = () => {
+        setRepositoryUrl(demoRepository);
+        setError(null);
+        setValidatedRepository(null);
+    };
+
     const formatFileSize = (bytes: number): string => {
         const units = ['B', 'KB', 'MB', 'GB'];
         let size = bytes;
@@ -172,7 +181,35 @@ export default function GitHubRepositoryInput({ onRepositoryValidated, onError, 
                         )}
                     </Button>
                 </div>
-                <p className="text-xs text-gray-500">Enter a GitHub repository URL (e.g., https://github.com/owner/repo)</p>
+                <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground">Enter a GitHub repository URL (e.g., https://github.com/owner/repo)</p>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleUseDemoRepository}
+                        disabled={disabled || isValidating}
+                        className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                    >
+                        Use Demo Repository
+                    </Button>
+                </div>
+            </div>
+
+            {/* Demo Repository Notice */}
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950">
+                <div className="flex items-start space-x-2">
+                    <div className="flex-shrink-0">
+                        <svg className="h-4 w-4 text-amber-600 dark:text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        </svg>
+                    </div>
+                    <div className="flex-1">
+                        <p className="text-xs text-amber-800 dark:text-amber-200">
+                            <strong>For Evaluation:</strong> Click "Use Demo Repository" to quickly test with the WordPress Hello Dolly plugin repository during the August 2025 evaluation period.
+                        </p>
+                    </div>
+                </div>
             </div>
 
             {error && (
