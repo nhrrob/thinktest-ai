@@ -308,9 +308,6 @@ class ThinkTestController extends Controller
         try {
             $user = Auth::user();
 
-            // Rate limiting check
-            $this->githubValidationService->validateRateLimit($user->id);
-
             // Validate repository components
             $repoData = [
                 'owner' => $request->owner,
@@ -432,25 +429,36 @@ class ThinkTestController extends Controller
                 'model' => $testResult['model'],
             ]);
 
-            // Create file test generation record
-            $fileTestGeneration = GitHubFileTestGeneration::create([
-                'user_id' => $user->id,
-                'github_repository_id' => $githubRepo->id,
-                'ai_conversation_state_id' => $conversation->id,
-                'file_path' => $filePath,
-                'file_name' => $fileData['name'],
-                'file_sha' => $fileData['sha'],
-                'file_size' => $fileData['size'],
-                'branch' => $branch ?: $repositoryContext['branch'],
-                'provider' => $provider,
-                'framework' => $framework,
-                'generated_tests' => $testResult['main_test_file'],
-                'test_suite' => $testResult['tests'],
-                'analysis_data' => $testResult['analysis'],
-                'file_content_hash' => hash('sha256', $fileData['content']),
-                'generation_status' => 'completed',
-                'generated_at' => now(),
-            ]);
+            // Create or update file test generation record
+            // Use updateOrCreate to handle cases where the same file is regenerated
+            $fileContentHash = hash('sha256', $fileData['content']);
+            $branchName = $branch ?: $repositoryContext['branch'];
+
+            $fileTestGeneration = GitHubFileTestGeneration::updateOrCreate(
+                [
+                    // Unique constraint fields
+                    'github_repository_id' => $githubRepo->id,
+                    'file_path' => $filePath,
+                    'branch' => $branchName,
+                    'file_content_hash' => $fileContentHash,
+                ],
+                [
+                    // Fields to update/create
+                    'user_id' => $user->id,
+                    'ai_conversation_state_id' => $conversation->id,
+                    'file_name' => $fileData['name'],
+                    'file_sha' => $fileData['sha'],
+                    'file_size' => $fileData['size'],
+                    'provider' => $provider,
+                    'framework' => $framework,
+                    'generated_tests' => $testResult['main_test_file'],
+                    'test_suite' => $testResult['tests'],
+                    'analysis_data' => $testResult['analysis'],
+                    'generation_status' => 'completed',
+                    'generation_error' => null, // Clear any previous errors
+                    'generated_at' => now(),
+                ]
+            );
 
             Log::info('Single-file test generation completed', [
                 'user_id' => $user->id,
@@ -474,6 +482,36 @@ class ThinkTestController extends Controller
                 'analysis' => $testResult['analysis'],
             ]);
 
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Handle database constraint violations specifically
+            if (str_contains($e->getMessage(), 'gftg_unique_file')) {
+                Log::warning('Attempted duplicate file test generation', [
+                    'user_id' => Auth::id(),
+                    'owner' => $request->owner,
+                    'repo' => $request->repo,
+                    'file_path' => $request->input('file_path'),
+                    'error' => $e->getMessage(),
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tests for this file have already been generated. Please try regenerating or check existing results.',
+                ], 409);
+            }
+
+            // Handle other database errors
+            Log::error('Database error during single-file test generation', [
+                'user_id' => Auth::id(),
+                'owner' => $request->owner,
+                'repo' => $request->repo,
+                'file_path' => $request->input('file_path'),
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Database error occurred during test generation. Please try again.',
+            ], 500);
         } catch (\InvalidArgumentException $e) {
             $this->githubValidationService->logSecurityEvent('Invalid single-file test generation request', [
                 'user_id' => Auth::id(),
@@ -679,9 +717,6 @@ class ThinkTestController extends Controller
         try {
             $user = Auth::user();
 
-            // Rate limiting check
-            $this->githubValidationService->validateRateLimit($user->id);
-
             // Validate repository components
             $repoData = [
                 'owner' => $request->owner,
@@ -795,8 +830,6 @@ class ThinkTestController extends Controller
                 'repository' => "{$request->owner}/{$request->repo}",
                 'branch' => $request->branch,
             ]);
-
-            $this->githubValidationService->validateRateLimit($user->id);
 
             // Validate repository components
             $repoData = [
@@ -1251,9 +1284,6 @@ class ThinkTestController extends Controller
         try {
             $user = Auth::user();
 
-            // Rate limiting check
-            $this->githubValidationService->validateRateLimit($user->id);
-
             // Validate repository components
             $repoData = [
                 'owner' => $request->owner,
@@ -1342,9 +1372,6 @@ class ThinkTestController extends Controller
         try {
             $user = Auth::user();
 
-            // Rate limiting check
-            $this->githubValidationService->validateRateLimit($user->id);
-
             // Validate repository components
             $repoData = [
                 'owner' => $request->owner,
@@ -1430,9 +1457,6 @@ class ThinkTestController extends Controller
 
         try {
             $user = Auth::user();
-
-            // Rate limiting check
-            $this->githubValidationService->validateRateLimit($user->id);
 
             // Validate repository components
             $repoData = [

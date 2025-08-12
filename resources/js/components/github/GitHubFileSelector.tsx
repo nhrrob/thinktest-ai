@@ -68,6 +68,7 @@ export default function GitHubFileSelector({
     const [fileContent, setFileContent] = useState<FileContent | null>(null);
     const [isLoadingContent, setIsLoadingContent] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [lastRequestTime, setLastRequestTime] = useState<number>(0);
 
     const { error: showError, warning: showWarning, success: showSuccess } = useToast();
 
@@ -133,6 +134,23 @@ export default function GitHubFileSelector({
     };
 
     const fetchFileContent = async (file: FileItem) => {
+        // Debounce API calls to prevent rapid requests
+        const now = Date.now();
+        const timeSinceLastRequest = now - lastRequestTime;
+        const minInterval = 500; // 500ms minimum between requests
+
+        if (timeSinceLastRequest < minInterval) {
+            logDebug('File content request debounced', {
+                fileName: file.name,
+                timeSinceLastRequest,
+                minInterval,
+                willSkip: true
+            });
+            return;
+        }
+
+        setLastRequestTime(now);
+
         logDebug('Starting file content fetch', {
             fileName: file.name,
             filePath: file.path,
@@ -185,7 +203,8 @@ export default function GitHubFileSelector({
 
                 setError(errorMessage);
                 onError(errorMessage);
-                showWarning(errorMessage, { duration: retryAfterSeconds * 1000 });
+                // Use showError with retryAfter to trigger specialized rate limit handling
+                showError(errorMessage, { retryAfter: retryAfterSeconds });
                 return;
             }
 

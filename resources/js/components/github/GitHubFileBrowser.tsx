@@ -64,6 +64,7 @@ export default function GitHubFileBrowser({
     const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
     const [isRateLimited, setIsRateLimited] = useState(false);
     const [retryAfter, setRetryAfter] = useState<number | null>(null);
+    const [lastRequestTime, setLastRequestTime] = useState<number>(0);
 
     const { error: showError, warning: showWarning, info: showInfo } = useToast();
 
@@ -184,6 +185,22 @@ export default function GitHubFileBrowser({
             return;
         }
 
+        // Debounce API calls to prevent rapid requests
+        const now = Date.now();
+        const timeSinceLastRequest = now - lastRequestTime;
+        const minInterval = 1000; // 1 second minimum between requests
+
+        if (timeSinceLastRequest < minInterval) {
+            logDebug('Request debounced', {
+                timeSinceLastRequest,
+                minInterval,
+                willSkip: true
+            });
+            return;
+        }
+
+        setLastRequestTime(now);
+
         logDebug('Starting repository tree fetch', {
             owner: repository.owner,
             repo: repository.repo,
@@ -239,7 +256,8 @@ export default function GitHubFileBrowser({
 
                 setError(errorMessage);
                 onError(errorMessage);
-                showWarning(errorMessage, { duration: retryAfterSeconds * 1000 });
+                // Use showError with retryAfter to trigger specialized rate limit handling
+                showError(errorMessage, { retryAfter: retryAfterSeconds });
                 return;
             }
 

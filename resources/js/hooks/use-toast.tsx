@@ -1,7 +1,7 @@
 import { type SharedData } from '@/types';
 import { usePage } from '@inertiajs/react';
 import { AlertCircle, CheckCircle, Info, X, XCircle } from 'lucide-react';
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import toast from 'react-hot-toast';
 
 interface FlashMessages {
@@ -37,6 +37,60 @@ const CustomToast = ({ message, icon, onClose }: { message: string; icon: React.
 export function useToast() {
     const { props } = usePage<SharedData & FlashMessages>();
 
+    // Track active rate limit toasts to prevent duplicates
+    const activeRateLimitToasts = React.useRef<Set<string>>(new Set());
+
+    const showRateLimitError = (message: string, retryAfter?: number) => {
+        // Create a normalized key for rate limit messages
+        const rateLimitKey = 'rate-limit-error';
+
+        // If we already have an active rate limit toast, don't show another
+        if (activeRateLimitToasts.current.has(rateLimitKey)) {
+            return;
+        }
+
+        // Mark this rate limit toast as active
+        activeRateLimitToasts.current.add(rateLimitKey);
+
+        // Enhanced message with countdown if retry_after is provided
+        const enhancedMessage = retryAfter
+            ? `${message} Please wait ${retryAfter} seconds before trying again.`
+            : message;
+
+        return toast.custom(
+            (t) => (
+                <div
+                    className={`${
+                        t.visible ? 'animate-enter' : 'animate-leave'
+                    } ring-opacity-5 pointer-events-auto flex w-full max-w-md rounded-lg border border-border bg-background shadow-lg ring-1 ring-black`}
+                    style={{
+                        borderLeftColor: 'hsl(25 95% 53%)', // orange-600 for rate limit
+                        borderLeftWidth: '4px',
+                    }}
+                >
+                    <div className="w-0 flex-1 p-4">
+                        <CustomToast
+                            message={enhancedMessage}
+                            icon={<AlertCircle className="h-5 w-5 text-orange-600 dark:text-orange-400" />}
+                            onClose={() => {
+                                toast.dismiss(t.id);
+                                activeRateLimitToasts.current.delete(rateLimitKey);
+                            }}
+                        />
+                    </div>
+                </div>
+            ),
+            {
+                duration: retryAfter ? (retryAfter * 1000) : 8000, // Auto-dismiss after retry period or 8 seconds
+                position: 'top-center',
+                id: rateLimitKey, // Use consistent ID to prevent duplicates
+                onRemove: () => {
+                    activeRateLimitToasts.current.delete(rateLimitKey);
+                },
+            },
+        );
+    };
+
     const showSuccess = (message: string, options?: ToastOptions) => {
         return toast.custom(
             (t) => (
@@ -54,7 +108,6 @@ export function useToast() {
                             message={message}
                             icon={<CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />}
                             onClose={() => toast.dismiss(t.id)}
-                            borderColor="hsl(142 76% 36%)"
                         />
                     </div>
                 </div>
@@ -72,7 +125,12 @@ export function useToast() {
         );
     };
 
-    const showError = (message: string, options?: ToastOptions) => {
+    const showError = (message: string, options?: ToastOptions & { retryAfter?: number }) => {
+        // Check if this is a rate limit error
+        if (message.toLowerCase().includes('too many requests') || message.toLowerCase().includes('rate limit')) {
+            return showRateLimitError(message, options?.retryAfter);
+        }
+
         return toast.custom(
             (t) => (
                 <div
@@ -89,7 +147,6 @@ export function useToast() {
                             message={message}
                             icon={<XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />}
                             onClose={() => toast.dismiss(t.id)}
-                            borderColor="hsl(0 84% 60%)"
                         />
                     </div>
                 </div>
@@ -124,7 +181,6 @@ export function useToast() {
                             message={message}
                             icon={<AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />}
                             onClose={() => toast.dismiss(t.id)}
-                            borderColor="hsl(45 93% 47%)"
                         />
                     </div>
                 </div>
@@ -159,7 +215,6 @@ export function useToast() {
                             message={message}
                             icon={<Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />}
                             onClose={() => toast.dismiss(t.id)}
-                            borderColor="hsl(221 83% 53%)"
                         />
                     </div>
                 </div>

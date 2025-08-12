@@ -273,6 +273,327 @@ test('single file test generation endpoint works correctly', function () {
     ]);
 });
 
+test('github file test generation handles duplicate file regeneration correctly', function () {
+    // Mock GitHub service
+    $this->mock(GitHubService::class, function ($mock) {
+        $mock->shouldReceive('getFileContent')
+            ->with('owner', 'repo', 'index.php', null)
+            ->andReturn([
+                'name' => 'index.php',
+                'path' => 'index.php',
+                'content' => '<?php echo "Hello World"; ?>',
+                'size' => 29,
+                'sha' => 'abc123',
+                'encoding' => 'base64',
+                'url' => 'https://api.github.com/repos/owner/repo/contents/index.php',
+                'html_url' => 'https://github.com/owner/repo/blob/main/index.php',
+                'download_url' => 'https://raw.githubusercontent.com/owner/repo/main/index.php',
+            ]);
+
+        $mock->shouldReceive('getRepositoryInfo')
+            ->with('owner', 'repo')
+            ->andReturn([
+                'id' => 123,
+                'name' => 'repo',
+                'full_name' => 'owner/repo',
+                'description' => 'Test repository',
+                'private' => false,
+                'default_branch' => 'main',
+                'language' => 'PHP',
+                'html_url' => 'https://github.com/owner/repo',
+            ]);
+    });
+
+    // Mock test generation service
+    $this->mock(TestGenerationService::class, function ($mock) {
+        $mock->shouldReceive('generateTestsForSingleFile')
+            ->andReturn([
+                'success' => true,
+                'framework' => 'phpunit',
+                'provider' => 'openai-gpt5',
+                'model' => 'gpt-5',
+                'analysis' => ['functions' => [], 'classes' => []],
+                'tests' => ['main_test_file' => ['filename' => 'IndexTest.php', 'content' => 'updated test content']],
+                'main_test_file' => 'updated test content',
+                'file_context' => [
+                    'filename' => 'index.php',
+                    'file_path' => 'index.php',
+                    'repository' => ['full_name' => 'owner/repo'],
+                ],
+            ]);
+    });
+
+    // First generation
+    $response1 = $this->postJson('/thinktest/generate-single-file', [
+        'owner' => 'owner',
+        'repo' => 'repo',
+        'file_path' => 'index.php',
+        'provider' => 'openai-gpt5',
+        'framework' => 'phpunit',
+    ]);
+
+    $response1->assertStatus(200)
+        ->assertJson([
+            'success' => true,
+            'framework' => 'phpunit',
+        ]);
+
+    // Verify first record was created
+    $this->assertDatabaseHas('github_file_test_generations', [
+        'file_path' => 'index.php',
+        'file_name' => 'index.php',
+        'generation_status' => 'completed',
+    ]);
+
+    $initialCount = GitHubFileTestGeneration::count();
+
+    // Second generation (should update, not create new record)
+    $response2 = $this->postJson('/thinktest/generate-single-file', [
+        'owner' => 'owner',
+        'repo' => 'repo',
+        'file_path' => 'index.php',
+        'provider' => 'openai-gpt5',
+        'framework' => 'phpunit',
+    ]);
+
+    $response2->assertStatus(200)
+        ->assertJson([
+            'success' => true,
+            'framework' => 'phpunit',
+        ]);
+
+    // Verify no duplicate record was created
+    expect(GitHubFileTestGeneration::count())->toBe($initialCount);
+
+    // Verify the record was updated with new content
+    $this->assertDatabaseHas('github_file_test_generations', [
+        'file_path' => 'index.php',
+        'file_name' => 'index.php',
+        'generation_status' => 'completed',
+    ]);
+});
+
+test('github file test generation handles different providers and frameworks for same file', function () {
+    // Mock GitHub service
+    $this->mock(GitHubService::class, function ($mock) {
+        $mock->shouldReceive('getFileContent')
+            ->with('owner', 'repo', 'index.php', null)
+            ->andReturn([
+                'name' => 'index.php',
+                'path' => 'index.php',
+                'content' => '<?php echo "Hello World"; ?>',
+                'size' => 29,
+                'sha' => 'abc123',
+                'encoding' => 'base64',
+                'url' => 'https://api.github.com/repos/owner/repo/contents/index.php',
+                'html_url' => 'https://github.com/owner/repo/blob/main/index.php',
+                'download_url' => 'https://raw.githubusercontent.com/owner/repo/main/index.php',
+            ]);
+
+        $mock->shouldReceive('getRepositoryInfo')
+            ->with('owner', 'repo')
+            ->andReturn([
+                'id' => 123,
+                'name' => 'repo',
+                'full_name' => 'owner/repo',
+                'description' => 'Test repository',
+                'private' => false,
+                'default_branch' => 'main',
+                'language' => 'PHP',
+                'html_url' => 'https://github.com/owner/repo',
+            ]);
+    });
+
+    // Mock test generation service
+    $this->mock(TestGenerationService::class, function ($mock) {
+        $mock->shouldReceive('generateTestsForSingleFile')
+            ->andReturn([
+                'success' => true,
+                'framework' => 'phpunit',
+                'provider' => 'openai-gpt5',
+                'model' => 'gpt-5',
+                'analysis' => ['functions' => [], 'classes' => []],
+                'tests' => ['main_test_file' => ['filename' => 'IndexTest.php', 'content' => 'test content']],
+                'main_test_file' => 'test content',
+                'file_context' => [
+                    'filename' => 'index.php',
+                    'file_path' => 'index.php',
+                    'repository' => ['full_name' => 'owner/repo'],
+                ],
+            ]);
+    });
+
+    // First generation with OpenAI + PHPUnit
+    $response1 = $this->postJson('/thinktest/generate-single-file', [
+        'owner' => 'owner',
+        'repo' => 'repo',
+        'file_path' => 'index.php',
+        'provider' => 'openai-gpt5',
+        'framework' => 'phpunit',
+    ]);
+
+    $response1->assertStatus(200);
+
+    // Verify record was created
+    $this->assertDatabaseHas('github_file_test_generations', [
+        'file_path' => 'index.php',
+        'provider' => 'openai-gpt5',
+        'framework' => 'phpunit',
+    ]);
+
+    $initialCount = GitHubFileTestGeneration::count();
+
+    // Second generation with different provider but same framework (should update)
+    $response2 = $this->postJson('/thinktest/generate-single-file', [
+        'owner' => 'owner',
+        'repo' => 'repo',
+        'file_path' => 'index.php',
+        'provider' => 'anthropic-claude',
+        'framework' => 'phpunit',
+    ]);
+
+    $response2->assertStatus(200);
+
+    // Should still be same count (updated, not created new)
+    expect(GitHubFileTestGeneration::count())->toBe($initialCount);
+
+    // Verify the record was updated with new provider
+    $this->assertDatabaseHas('github_file_test_generations', [
+        'file_path' => 'index.php',
+        'provider' => 'anthropic-claude',
+        'framework' => 'phpunit',
+    ]);
+
+    // Third generation with different framework (should update)
+    $response3 = $this->postJson('/thinktest/generate-single-file', [
+        'owner' => 'owner',
+        'repo' => 'repo',
+        'file_path' => 'index.php',
+        'provider' => 'anthropic-claude',
+        'framework' => 'pest',
+    ]);
+
+    $response3->assertStatus(200);
+
+    // Should still be same count (updated, not created new)
+    expect(GitHubFileTestGeneration::count())->toBe($initialCount);
+
+    // Verify the record was updated with new framework
+    $this->assertDatabaseHas('github_file_test_generations', [
+        'file_path' => 'index.php',
+        'provider' => 'anthropic-claude',
+        'framework' => 'pest',
+    ]);
+});
+
+test('github file test generation creates new record when file content changes', function () {
+    // Mock GitHub service for first call
+    $this->mock(GitHubService::class, function ($mock) {
+        $mock->shouldReceive('getFileContent')
+            ->with('owner', 'repo', 'index.php', null)
+            ->andReturnUsing(function () {
+                static $callCount = 0;
+                $callCount++;
+
+                if ($callCount === 1) {
+                    return [
+                        'name' => 'index.php',
+                        'path' => 'index.php',
+                        'content' => '<?php echo "Hello World"; ?>',
+                        'size' => 29,
+                        'sha' => 'abc123',
+                        'encoding' => 'base64',
+                        'url' => 'https://api.github.com/repos/owner/repo/contents/index.php',
+                        'html_url' => 'https://github.com/owner/repo/blob/main/index.php',
+                        'download_url' => 'https://raw.githubusercontent.com/owner/repo/main/index.php',
+                    ];
+                } else {
+                    return [
+                        'name' => 'index.php',
+                        'path' => 'index.php',
+                        'content' => '<?php echo "Hello Updated World"; ?>',
+                        'size' => 37,
+                        'sha' => 'def456',
+                        'encoding' => 'base64',
+                        'url' => 'https://api.github.com/repos/owner/repo/contents/index.php',
+                        'html_url' => 'https://github.com/owner/repo/blob/main/index.php',
+                        'download_url' => 'https://raw.githubusercontent.com/owner/repo/main/index.php',
+                    ];
+                }
+            });
+
+        $mock->shouldReceive('getRepositoryInfo')
+            ->with('owner', 'repo')
+            ->andReturn([
+                'id' => 123,
+                'name' => 'repo',
+                'full_name' => 'owner/repo',
+                'description' => 'Test repository',
+                'private' => false,
+                'default_branch' => 'main',
+                'language' => 'PHP',
+                'html_url' => 'https://github.com/owner/repo',
+            ]);
+    });
+
+    // Mock test generation service
+    $this->mock(TestGenerationService::class, function ($mock) {
+        $mock->shouldReceive('generateTestsForSingleFile')
+            ->andReturn([
+                'success' => true,
+                'framework' => 'phpunit',
+                'provider' => 'openai-gpt5',
+                'model' => 'gpt-5',
+                'analysis' => ['functions' => [], 'classes' => []],
+                'tests' => ['main_test_file' => ['filename' => 'IndexTest.php', 'content' => 'test content']],
+                'main_test_file' => 'test content',
+                'file_context' => [
+                    'filename' => 'index.php',
+                    'file_path' => 'index.php',
+                    'repository' => ['full_name' => 'owner/repo'],
+                ],
+            ]);
+    });
+
+    // First generation with original content
+    $response1 = $this->postJson('/thinktest/generate-single-file', [
+        'owner' => 'owner',
+        'repo' => 'repo',
+        'file_path' => 'index.php',
+        'provider' => 'openai-gpt5',
+        'framework' => 'phpunit',
+    ]);
+
+    $response1->assertStatus(200);
+
+    $initialCount = GitHubFileTestGeneration::count();
+
+    // Second generation with updated content (different hash)
+    $response2 = $this->postJson('/thinktest/generate-single-file', [
+        'owner' => 'owner',
+        'repo' => 'repo',
+        'file_path' => 'index.php',
+        'provider' => 'openai-gpt5',
+        'framework' => 'phpunit',
+    ]);
+
+    $response2->assertStatus(200);
+
+    // Should create a new record since content hash is different
+    expect(GitHubFileTestGeneration::count())->toBe($initialCount + 1);
+
+    // Verify both records exist with different content hashes
+    $this->assertDatabaseHas('github_file_test_generations', [
+        'file_path' => 'index.php',
+        'file_content_hash' => hash('sha256', '<?php echo "Hello World"; ?>'),
+    ]);
+
+    $this->assertDatabaseHas('github_file_test_generations', [
+        'file_path' => 'index.php',
+        'file_content_hash' => hash('sha256', '<?php echo "Hello Updated World"; ?>'),
+    ]);
+});
+
 test('github file test generation model relationships work correctly', function () {
     $githubRepo = GitHubRepository::factory()->create([
         'owner' => 'owner',
