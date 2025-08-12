@@ -371,7 +371,11 @@ export default function Index({ recentConversations, recentAnalyses }: ThinkTest
             if (!result) return; // Handle redirect cases
 
             if (result.success) {
-                setGeneratedTests(result.tests);
+                setGeneratedTests({
+                    tests: result.tests,
+                    conversation_id: result.conversation_id,
+                });
+                setCurrentConversationId(result.conversation_id);
             } else {
                 alert('Test generation failed: ' + result.message);
             }
@@ -384,13 +388,13 @@ export default function Index({ recentConversations, recentAnalyses }: ThinkTest
     };
 
     const handleDownloadTests = async () => {
-        if (!currentConversationId) {
+        if (!generatedTests?.conversation_id) {
             alert('No tests available for download');
             return;
         }
 
         try {
-            const response = await fetch(`/thinktest/download?conversation_id=${currentConversationId}`, {
+            const response = await fetch(`/thinktest/download?conversation_id=${generatedTests.conversation_id}`, {
                 method: 'GET',
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
@@ -1038,7 +1042,7 @@ export default function Index({ recentConversations, recentAnalyses }: ThinkTest
 
                                     <details className="mt-4">
                                         <summary className="cursor-pointer font-medium text-blue-800">Preview Generated Tests</summary>
-                                        <pre className="mt-2 overflow-x-auto rounded bg-gray-100 p-4 text-sm">{generatedTests}</pre>
+                                        <pre className="mt-2 overflow-x-auto rounded bg-gray-100 p-4 text-sm">{generatedTests.tests}</pre>
                                     </details>
                                 </div>
                             )}
