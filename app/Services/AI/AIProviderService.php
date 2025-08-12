@@ -220,18 +220,58 @@ class AIProviderService
     private function buildWordPressTestPrompt(string $pluginCode, array $options): string
     {
         $framework = $options['framework'] ?? 'phpunit';
+        $isElementorWidget = $this->isElementorWidget($pluginCode);
 
-        return "Please analyze the following WordPress plugin code and generate comprehensive {$framework} tests.\n\n".
-               "Focus on:\n".
-               "- WordPress hooks and filters\n".
-               "- Plugin activation/deactivation\n".
-               "- WordPress-specific functions\n".
-               "- Security and sanitization\n".
-               "- Database operations\n".
-               "- AJAX handlers\n".
-               "- REST API endpoints\n\n".
-               "Plugin Code:\n```php\n{$pluginCode}\n```\n\n".
-               "Please provide complete, runnable {$framework} test files with proper setup and teardown methods.";
+        $prompt = "Please analyze the following WordPress plugin code and generate comprehensive {$framework} tests.\n\n";
+
+        $prompt .= "Focus on:\n";
+        $prompt .= "- WordPress hooks and filters\n";
+        $prompt .= "- Plugin activation/deactivation\n";
+        $prompt .= "- WordPress-specific functions\n";
+        $prompt .= "- Security and sanitization\n";
+        $prompt .= "- Database operations\n";
+        $prompt .= "- AJAX handlers\n";
+        $prompt .= "- REST API endpoints\n";
+
+        if ($isElementorWidget) {
+            $prompt .= "\nElementor Widget Specific Testing:\n";
+            $prompt .= "- Widget registration and basic properties (name, title, icon, categories)\n";
+            $prompt .= "- Control registration and default values\n";
+            $prompt .= "- Control validation and sanitization\n";
+            $prompt .= "- Frontend rendering with different control values\n";
+            $prompt .= "- Widget dependencies (styles and scripts)\n";
+            $prompt .= "- Control sections and tabs\n";
+            $prompt .= "- Conditional controls based on other control values\n";
+        }
+
+        $prompt .= "\n\nPlugin Code:\n```php\n{$pluginCode}\n```\n\n";
+        $prompt .= "Please provide complete, runnable {$framework} test files with proper setup and teardown methods.";
+
+        return $prompt;
+    }
+
+    /**
+     * Check if the code contains Elementor widget patterns.
+     */
+    private function isElementorWidget(string $code): bool
+    {
+        $elementorPatterns = [
+            'Widget_Base',
+            'Controls_Manager',
+            'Elementor\\Widget_Base',
+            'get_name()',
+            'get_title()',
+            'register_controls()',
+            'render()',
+        ];
+
+        foreach ($elementorPatterns as $pattern) {
+            if (strpos($code, $pattern) !== false) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

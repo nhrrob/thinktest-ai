@@ -19,7 +19,13 @@ Route::get('/favicon.ico', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
-        return Inertia::render('dashboard');
+        $user = Auth::user();
+        $statsService = new \App\Services\Dashboard\DashboardStatsService();
+        $stats = $statsService->getUserStats($user);
+
+        return Inertia::render('dashboard', [
+            'stats' => $stats,
+        ]);
     })->name('dashboard');
 
     // Test route for toast notifications

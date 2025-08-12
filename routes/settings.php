@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\ApiTokenController;
 use App\Http\Controllers\Settings\BrandingController;
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
@@ -23,4 +24,10 @@ Route::middleware('auth')->group(function () {
     Route::get('settings/branding', [BrandingController::class, 'edit'])->name('branding.edit');
     Route::post('settings/branding', [BrandingController::class, 'update'])->name('branding.update');
     Route::post('settings/branding/set-code-logo', [BrandingController::class, 'setCodeLogo'])->name('branding.set-code-logo');
+
+    Route::get('settings/api-tokens', [ApiTokenController::class, 'index'])->name('api-tokens.index');
+    Route::post('settings/api-tokens', [ApiTokenController::class, 'store'])->name('api-tokens.store');
+    Route::put('settings/api-tokens/{token}', [ApiTokenController::class, 'update'])->name('api-tokens.update');
+    Route::delete('settings/api-tokens/{token}', [ApiTokenController::class, 'destroy'])->name('api-tokens.destroy');
+    Route::patch('settings/api-tokens/{token}/toggle', [ApiTokenController::class, 'toggle'])->name('api-tokens.toggle');
 });

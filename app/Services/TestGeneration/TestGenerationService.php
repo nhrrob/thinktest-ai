@@ -12,14 +12,18 @@ class TestGenerationService
 
     private PluginAnalysisService $analysisService;
 
+    private ElementorTestGenerationService $elementorService;
+
     private array $config;
 
     public function __construct(
         AIProviderService $aiService,
-        PluginAnalysisService $analysisService
+        PluginAnalysisService $analysisService,
+        ElementorTestGenerationService $elementorService
     ) {
         $this->aiService = $aiService;
         $this->analysisService = $analysisService;
+        $this->elementorService = $elementorService;
         $this->config = config('thinktest_ai.test_generation');
     }
 
@@ -182,6 +186,9 @@ class TestGenerationService
 
         // Add WordPress-specific test utilities
         $finalTests = $this->addWordPressTestUtilities($enhancedTests, $analysis, $framework);
+
+        // Add Elementor-specific tests if Elementor patterns are detected
+        $finalTests = $this->addElementorSpecificTests($finalTests, $analysis, $framework);
 
         return $header."\n\n".$finalTests;
     }
@@ -893,6 +900,36 @@ class TestGenerationService
                 $tests .= "        \$this->assertTrue(true, '{$operationType} database operation should work correctly');\n";
                 $tests .= "    }\n";
             }
+        }
+
+        return $tests;
+    }
+
+    /**
+     * Add Elementor-specific tests if Elementor patterns are detected.
+     */
+    private function addElementorSpecificTests(string $tests, array $analysis, string $framework): string
+    {
+        // Check if this is an Elementor widget by looking for Elementor patterns
+        $pluginCode = $analysis['original_code'] ?? '';
+
+        if (!$this->elementorService->isElementorWidget($pluginCode)) {
+            return $tests;
+        }
+
+        Log::info('Detected Elementor widget, generating enhanced tests');
+
+        // Analyze the Elementor widget
+        $elementorAnalysis = $this->elementorService->analyzeElementorWidget($pluginCode);
+
+        // Generate Elementor-specific tests
+        $elementorTests = $this->elementorService->generateElementorWidgetTests($elementorAnalysis, $framework);
+
+        if (!empty($elementorTests)) {
+            $tests .= "\n\n    // ========================================\n";
+            $tests .= "    // Elementor Widget Specific Tests\n";
+            $tests .= "    // ========================================\n\n";
+            $tests .= $elementorTests;
         }
 
         return $tests;

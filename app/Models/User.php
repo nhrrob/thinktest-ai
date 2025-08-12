@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
@@ -190,5 +191,13 @@ class User extends Authenticatable
         }
 
         return $user;
+    }
+
+    /**
+     * Get the API tokens for the user.
+     */
+    public function apiTokens(): HasMany
+    {
+        return $this->hasMany(UserApiToken::class);
     }
 }

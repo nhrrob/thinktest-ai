@@ -40,6 +40,7 @@ class PluginAnalysisService
 
             $analysis = [
                 'filename' => $filename,
+                'original_code' => $pluginCode, // Store original code for Elementor analysis
                 'wordpress_patterns' => $this->detectWordPressPatterns($ast),
                 'functions' => $this->extractFunctions($ast),
                 'classes' => $this->extractClasses($ast),
