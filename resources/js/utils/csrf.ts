@@ -51,7 +51,7 @@ export const fetchWithCsrfRetry = async (
     options: RequestInit = {}
 ): Promise<Response> => {
     const currentToken = getCurrentCsrfToken();
-    
+
     // Prepare headers with CSRF token
     const headers = {
         'Content-Type': 'application/json',
@@ -74,10 +74,10 @@ export const fetchWithCsrfRetry = async (
     if (response.status === 419) {
         console.log('CSRF token mismatch, attempting to refresh token...');
         const freshToken = await getFreshCsrfToken();
-        
+
         if (freshToken) {
             console.log('Got fresh CSRF token, retrying request...');
-            
+
             // Update headers with fresh token
             const updatedHeaders = {
                 ...headers,

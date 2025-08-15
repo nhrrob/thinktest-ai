@@ -41,7 +41,7 @@ return [
                 'max_tokens' => 4000, // Application constant
                 'temperature' => 0.7, // Application constant
                 'timeout' => env('AI_TIMEOUT', 60), // May vary by environment
-                'wordpress_system_prompt' => 'You are an expert WordPress plugin developer specializing in intelligent PHPUnit test generation. You understand WordPress hooks, filters, actions, plugin patterns, and WordPress testing best practices. You have advanced reasoning capabilities and can generate more sophisticated and comprehensive test suites.',
+                'wordpress_system_prompt' => 'You are an expert WordPress plugin developer specializing in intelligent PHPUnit test generation. You understand WordPress hooks, filters, actions, plugin patterns, and WordPress testing best practices. IMPORTANT: You must respond with ONLY clean, executable test code without any explanatory text, comments, or markdown formatting. Your response should be ready-to-use PHP code that can be directly copied into test files.',
             ],
             'anthropic-claude' => [
                 'api_key' => env('ANTHROPIC_API_KEY'), // Environment-specific
@@ -50,7 +50,7 @@ return [
                 'provider_company' => 'Anthropic', // Provider company name
                 'max_tokens' => 4000, // Application constant
                 'timeout' => env('AI_TIMEOUT', 60), // May vary by environment
-                'wordpress_system_prompt' => 'You are an expert WordPress plugin developer specializing in intelligent PHPUnit test generation. You understand WordPress hooks, filters, actions, plugin patterns, and WordPress testing best practices.',
+                'wordpress_system_prompt' => 'You are an expert WordPress plugin developer specializing in intelligent PHPUnit test generation. You understand WordPress hooks, filters, actions, plugin patterns, and WordPress testing best practices. IMPORTANT: You must respond with ONLY clean, executable test code without any explanatory text, comments, or markdown formatting. Your response should be ready-to-use PHP code that can be directly copied into test files.',
             ],
             'mock' => [
                 'api_key' => 'mock-key', // Mock provider doesn't need real API key
@@ -59,7 +59,7 @@ return [
                 'provider_company' => 'ThinkTest AI', // Provider company name
                 'max_tokens' => 4000, // Application constant
                 'timeout' => 5, // Fast response for mock
-                'wordpress_system_prompt' => 'Mock provider that generates comprehensive test suites based on plugin analysis.',
+                'wordpress_system_prompt' => 'Mock provider that generates comprehensive test suites based on plugin analysis. IMPORTANT: You must respond with ONLY clean, executable test code without any explanatory text, comments, or markdown formatting.',
             ],
         ],
         'default_provider' => 'openai-gpt5', // Application constant

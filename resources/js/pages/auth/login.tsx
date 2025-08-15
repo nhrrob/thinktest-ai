@@ -37,6 +37,14 @@ export default function Login({ status, canResetPassword, socialLoginEnabled = t
         });
     };
 
+    const fillDemoCredentials = () => {
+        setData({
+            email: 'demo@example.com',
+            password: 'password',
+            remember: false,
+        });
+    };
+
     return (
         <AuthLayout title="Log in to your account" description="Enter your email and password below to log in">
             <Head title="Log in" />
@@ -158,13 +166,25 @@ export default function Login({ status, canResetPassword, socialLoginEnabled = t
                     <CardDescription className="text-xs text-blue-700">Use this test account to explore the application</CardDescription>
                 </CardHeader>
                 <CardContent className="text-xs">
-                    <div className="space-y-1 text-center">
-                        <p className="font-medium text-blue-900">
-                            Email: <span className="font-mono text-blue-700">demo@example.com</span>
-                        </p>
-                        <p className="font-medium text-blue-900">
-                            Password: <span className="font-mono text-blue-700">password</span>
-                        </p>
+                    <div className="space-y-3 text-center">
+                        <div className="space-y-1">
+                            <p className="font-medium text-blue-900">
+                                Email: <span className="font-mono text-blue-700">demo@example.com</span>
+                            </p>
+                            <p className="font-medium text-blue-900">
+                                Password: <span className="font-mono text-blue-700">password</span>
+                            </p>
+                        </div>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-full border-blue-300 bg-white text-blue-700 hover:bg-blue-50 hover:text-blue-800"
+                            onClick={fillDemoCredentials}
+                            tabIndex={9}
+                        >
+                            Auto-fill Demo Credentials
+                        </Button>
                     </div>
                 </CardContent>
             </Card>

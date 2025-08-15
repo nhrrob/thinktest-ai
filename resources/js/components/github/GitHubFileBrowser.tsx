@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useDebounce, useDebouncedValue } from '@/hooks/useDebounce';
-import { useGitHubState } from '@/hooks/useLocalStorage';
+import { useGitHubState, useTreeCache } from '@/hooks/useLocalStorage';
 
 interface Repository {
     owner: string;
@@ -63,6 +63,7 @@ export default function GitHubFileBrowser({
     selectedFilePath
 }: GitHubFileBrowserProps) {
     const githubState = useGitHubState();
+    const treeCache = useTreeCache();
     const [tree, setTree] = useState<TreeNode[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -71,6 +72,7 @@ export default function GitHubFileBrowser({
     const [retryAfter, setRetryAfter] = useState<number | null>(null);
     const [lastRequestTime, setLastRequestTime] = useState<number>(0);
     const [searchQuery, setSearchQuery] = useState<string>(githubState.state.searchQuery);
+    const [isUsingCache, setIsUsingCache] = useState(false);
     const [filteredTree, setFilteredTree] = useState<TreeNode[]>([]);
 
     const { error: showError, warning: showWarning, info: showInfo } = useToast();
@@ -210,9 +212,22 @@ export default function GitHubFileBrowser({
         return tree;
     }, [expandedPaths]);
 
-    const fetchRepositoryTree = useCallback(async () => {
+    const fetchRepositoryTree = useCallback(async (forceRefresh = false) => {
         if (!repository.owner || !repository.repo) {
             return;
+        }
+
+        // Check cache first unless forcing refresh
+        if (!forceRefresh) {
+            const cachedTree = treeCache.getCachedTree(repository.owner, repository.repo, branch);
+            if (cachedTree) {
+                console.log(`[GitHubFileBrowser] Using cached tree for ${repository.owner}/${repository.repo}@${branch}`);
+                const treeData = buildTreeFromFlat(cachedTree);
+                setTree(treeData);
+                setIsUsingCache(true);
+                setError(null);
+                return;
+            }
         }
 
         // Debounce API calls to prevent rapid requests
@@ -230,6 +245,7 @@ export default function GitHubFileBrowser({
         setError(null);
         setIsRateLimited(false);
         setRetryAfter(null);
+        setIsUsingCache(false);
 
         const requestPayload = {
             owner: repository.owner,
@@ -278,6 +294,10 @@ export default function GitHubFileBrowser({
                     return;
                 }
 
+                // Cache the successful result
+                treeCache.setCachedTree(repository.owner, repository.repo, branch, result.tree);
+                console.log(`[GitHubFileBrowser] Cached tree for ${repository.owner}/${repository.repo}@${branch}`);
+
                 const treeData = buildTreeFromFlat(result.tree);
 
                 setTree(treeData);
@@ -293,14 +313,28 @@ export default function GitHubFileBrowser({
                 showError(errorMessage);
             }
         } catch (err) {
-            const errorMessage = 'Network error occurred while fetching repository tree. Please check your internet connection and try again.';
-            setError(errorMessage);
-            onError(errorMessage);
-            showError(errorMessage);
+            console.error('[GitHubFileBrowser] Network error:', err);
+
+            // Try to fall back to cached data if available
+            const cachedTree = treeCache.getCachedTree(repository.owner, repository.repo, branch);
+            if (cachedTree) {
+                console.log(`[GitHubFileBrowser] Falling back to cached tree due to network error`);
+                const treeData = buildTreeFromFlat(cachedTree);
+                setTree(treeData);
+                setIsUsingCache(true);
+                setError('Network error occurred, showing cached data');
+                showWarning('Network error occurred, showing cached data');
+            } else {
+                // No cached data available, this is a real error
+                const errorMessage = 'Network error occurred while fetching repository tree. Please check your internet connection and try again.';
+                setError(errorMessage);
+                onError(errorMessage);
+                showError(errorMessage);
+            }
         } finally {
             setIsLoading(false);
         }
-    }, [repository.owner, repository.repo, branch, buildTreeFromFlat, onError, showError, showWarning, showInfo]);
+    }, [repository.owner, repository.repo, branch, buildTreeFromFlat, onError, showError, showWarning, showInfo, treeCache]);
 
     // Auto-retry after rate limit expires
     useEffect(() => {
@@ -441,7 +475,7 @@ export default function GitHubFileBrowser({
     };
 
     const handleRefresh = () => {
-        fetchRepositoryTree();
+        fetchRepositoryTree(true); // Force refresh
     };
 
     if (isLoading && tree.length === 0) {
@@ -463,13 +497,21 @@ export default function GitHubFileBrowser({
     return (
         <div className="space-y-3">
             <div className="flex items-center justify-between">
-                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Repository Files</h4>
+                <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Repository Files</h4>
+                    {isUsingCache && (
+                        <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                            Cached
+                        </span>
+                    )}
+                </div>
                 <Button
                     variant="outline"
                     size="sm"
                     onClick={handleRefresh}
                     disabled={disabled || isLoading}
                     className="h-8 w-8 p-0"
+                    title={isUsingCache ? "Refresh from GitHub" : "Refresh"}
                 >
                     {isLoading ? (
                         <Loader2 className="h-4 w-4 animate-spin" />

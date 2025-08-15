@@ -20,6 +20,7 @@ class AIConversationState extends Model
     protected $fillable = [
         'user_id',
         'conversation_id',
+        'title',
         'provider',
         'status',
         'context',
@@ -152,5 +153,46 @@ class AIConversationState extends Model
     public function markFailed(): void
     {
         $this->update(['status' => 'failed']);
+    }
+
+    /**
+     * Generate a meaningful title for the conversation based on context
+     */
+    public function generateTitle(): string
+    {
+        $context = $this->context ?? [];
+
+        // For GitHub repository analysis
+        if (isset($context['repository_info']['full_name'])) {
+            $repoName = $context['repository_info']['full_name'];
+            $framework = $context['framework'] ?? 'PHPUnit';
+
+            if ($this->source_type === 'github_file') {
+                $fileName = basename($context['filename'] ?? 'file');
+                return "Test {$fileName} ({$repoName}) - {$framework}";
+            } else {
+                return "Test {$repoName} - {$framework}";
+            }
+        }
+
+        // For uploaded file analysis
+        if (isset($context['filename'])) {
+            $fileName = $context['filename'];
+            $framework = $context['framework'] ?? 'PHPUnit';
+            return "Test {$fileName} - {$framework}";
+        }
+
+        // Fallback based on provider and timestamp
+        $provider = $this->provider ?? 'AI';
+        $date = $this->created_at ? $this->created_at->format('M j') : 'Unknown';
+        return "{$provider} Test Generation - {$date}";
+    }
+
+    /**
+     * Get or generate title for display
+     */
+    public function getDisplayTitle(): string
+    {
+        return $this->title ?? $this->generateTitle();
     }
 }

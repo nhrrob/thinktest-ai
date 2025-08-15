@@ -35,7 +35,7 @@ test('github oauth callback creates new user', function () {
 
     $response = $this->get(route('auth.github.callback'));
 
-    $response->assertRedirect('/dashboard');
+    $response->assertRedirect('/thinktest');
 
     // Check if user was created
     $user = User::where('email', 'john@example.com')->first();
@@ -71,7 +71,7 @@ test('github oauth callback updates existing user', function () {
 
     $response = $this->get(route('auth.github.callback'));
 
-    $response->assertRedirect('/dashboard');
+    $response->assertRedirect('/thinktest');
 
     // Check if user was updated
     $existingUser->refresh();

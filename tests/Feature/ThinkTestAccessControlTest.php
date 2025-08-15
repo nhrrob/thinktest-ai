@@ -81,7 +81,7 @@ test('newly registered user gets user role automatically', function () {
     
     $response = $this->post('/register', $userData);
     
-    $response->assertRedirect('/dashboard');
+    $response->assertRedirect('/thinktest');
     
     $user = User::where('email', 'test@example.com')->first();
     expect($user)->not->toBeNull();

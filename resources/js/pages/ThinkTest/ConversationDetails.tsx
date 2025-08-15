@@ -98,7 +98,7 @@ export default function ConversationDetails({ conversation }: ConversationDetail
                     <div className="flex items-start justify-between">
                         <div>
                             <h1 className="text-3xl font-bold text-foreground mb-2">
-                                Conversation Details
+                                {conversation.title || 'Conversation Details'}
                             </h1>
                             <p className="text-muted-foreground">
                                 {conversation.context?.filename || 'Unknown file'}

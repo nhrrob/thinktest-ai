@@ -226,19 +226,56 @@ class TestGenerationService
      */
     private function cleanupGeneratedTests(string $tests): string
     {
+        // Remove markdown code blocks
+        $tests = preg_replace('/```php\s*/', '', $tests);
+        $tests = preg_replace('/```\s*$/', '', $tests);
+        $tests = preg_replace('/```/', '', $tests);
+
+        // Remove explanatory text before PHP code
+        // Look for the first <?php tag and remove everything before it
+        if (preg_match('/<\?php/', $tests, $matches, PREG_OFFSET_CAPTURE)) {
+            $tests = substr($tests, $matches[0][1]);
+        }
+
+        // Remove explanatory text after PHP code
+        // Look for common ending patterns and remove text after them
+        $tests = preg_replace('/\?>\s*\n.*$/s', '?>', $tests);
+
         // Remove duplicate PHP opening tags
-        $tests = preg_replace('/^<\?php\s*/', '', $tests);
+        $tests = preg_replace('/(<\?php\s*)+/', '<?php' . "\n", $tests);
 
         // Remove multiple consecutive empty lines
         $tests = preg_replace('/\n\s*\n\s*\n/', "\n\n", $tests);
 
-        // Ensure proper indentation
+        // Remove lines that look like explanatory text (not PHP code)
         $lines = explode("\n", $tests);
         $cleanedLines = [];
+        $inPhpCode = false;
 
         foreach ($lines as $line) {
-            // Basic indentation cleanup
-            $cleanedLines[] = $line;
+            $trimmedLine = trim($line);
+
+            // Start of PHP code
+            if (strpos($trimmedLine, '<?php') === 0) {
+                $inPhpCode = true;
+                $cleanedLines[] = $line;
+                continue;
+            }
+
+            // Skip empty lines before PHP starts
+            if (!$inPhpCode && empty($trimmedLine)) {
+                continue;
+            }
+
+            // Skip explanatory text before PHP starts
+            if (!$inPhpCode && !preg_match('/^(class|function|use|namespace|\$|\/\*|\*|\/\/|public|private|protected)/', $trimmedLine)) {
+                continue;
+            }
+
+            // Once in PHP code, keep everything
+            if ($inPhpCode) {
+                $cleanedLines[] = $line;
+            }
         }
 
         return implode("\n", $cleanedLines);

@@ -114,6 +114,28 @@ export interface BranchCache {
 }
 
 /**
+ * Repository tree cache interface for storing tree data with expiration
+ */
+export interface TreeCacheEntry {
+    tree: Array<{
+        name: string;
+        path: string;
+        type: 'file' | 'dir';
+        size: number;
+        sha: string;
+        url: string;
+        html_url: string;
+        download_url?: string;
+    }>;
+    timestamp: number;
+    expiresAt: number;
+}
+
+export interface TreeCache {
+    [repositoryKey: string]: TreeCacheEntry;
+}
+
+/**
  * Hook for managing branch cache with localStorage persistence
  */
 export function useBranchCache() {
@@ -238,6 +260,111 @@ export function useBranchCache() {
         cleanExpiredEntries,
         getCacheInfo,
         getCacheStats
+    };
+}
+
+/**
+ * Hook for managing repository tree cache with localStorage persistence
+ */
+export function useTreeCache() {
+    const [cache, setCache] = useLocalStorage<TreeCache>('thinktest-tree-cache', {});
+
+    // Cache duration in milliseconds (10 minutes for tree data)
+    const CACHE_DURATION = 10 * 60 * 1000;
+
+    const generateCacheKey = (owner: string, repo: string, branch: string): string => {
+        return `${owner}/${repo}@${branch}`.toLowerCase();
+    };
+
+    const isExpired = (entry: TreeCacheEntry): boolean => {
+        return Date.now() > entry.expiresAt;
+    };
+
+    const getCachedTree = (owner: string, repo: string, branch: string) => {
+        const cacheKey = generateCacheKey(owner, repo, branch);
+        const entry = cache[cacheKey];
+
+        if (!entry || isExpired(entry)) {
+            return null;
+        }
+
+        return entry.tree;
+    };
+
+    const setCachedTree = (owner: string, repo: string, branch: string, tree: TreeCacheEntry['tree']) => {
+        const cacheKey = generateCacheKey(owner, repo, branch);
+        const now = Date.now();
+
+        const entry: TreeCacheEntry = {
+            tree,
+            timestamp: now,
+            expiresAt: now + CACHE_DURATION
+        };
+
+        setCache(prev => ({
+            ...prev,
+            [cacheKey]: entry
+        }));
+    };
+
+    const invalidateCache = (owner?: string, repo?: string, branch?: string) => {
+        if (owner && repo && branch) {
+            // Invalidate specific repository/branch cache
+            const cacheKey = generateCacheKey(owner, repo, branch);
+            setCache(prev => {
+                const newCache = { ...prev };
+                delete newCache[cacheKey];
+                return newCache;
+            });
+        } else {
+            // Clear all cache
+            setCache({});
+        }
+    };
+
+    const cleanExpiredEntries = () => {
+        const now = Date.now();
+        setCache(prev => {
+            const newCache = { ...prev };
+            let cleanedCount = 0;
+
+            Object.entries(newCache).forEach(([key, entry]) => {
+                if (isExpired(entry)) {
+                    delete newCache[key];
+                    cleanedCount++;
+                }
+            });
+
+            if (cleanedCount > 0) {
+                console.log(`[TreeCache] Cleaned ${cleanedCount} expired entries`);
+            }
+
+            return newCache;
+        });
+    };
+
+    const getCacheInfo = (owner: string, repo: string, branch: string) => {
+        const cacheKey = generateCacheKey(owner, repo, branch);
+        const entry = cache[cacheKey];
+
+        if (!entry) {
+            return { cached: false, age: null, expiresIn: null };
+        }
+
+        const now = Date.now();
+        return {
+            cached: !isExpired(entry),
+            age: entry.timestamp,
+            expiresIn: Math.max(0, entry.expiresAt - now)
+        };
+    };
+
+    return {
+        getCachedTree,
+        setCachedTree,
+        invalidateCache,
+        cleanExpiredEntries,
+        getCacheInfo
     };
 }
 

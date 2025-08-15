@@ -72,7 +72,7 @@ test('google oauth callback updates existing user', function () {
     expect($existingUser->avatar)->toBe('https://example.com/avatar.jpg');
 
     // Assert user is logged in and redirected
-    $response->assertRedirect(route('dashboard'));
+    $response->assertRedirect(route('thinktest.index'));
     $this->assertAuthenticatedAs($existingUser);
 });
 

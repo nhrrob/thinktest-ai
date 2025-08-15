@@ -31,7 +31,7 @@ export default function GitHubBranchSelector({ repository, onBranchSelected, onE
     const [branches, setBranches] = useState<Branch[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [currentBranch, setCurrentBranch] = useState<string>(selectedBranch || repository.default_branch);
+    const [currentBranch, setCurrentBranch] = useState<string>(selectedBranch || '');
     const [isUsingCache, setIsUsingCache] = useState(false);
     const [lastFetchTime, setLastFetchTime] = useState<number | null>(null);
 
@@ -57,8 +57,9 @@ export default function GitHubBranchSelector({ repository, onBranchSelected, onE
                 setIsUsingCache(true);
                 setError(null);
 
-                // Auto-select default branch if no branch is currently selected
-                if (!currentBranch && cachedBranches.length > 0) {
+                // Auto-select branch if no valid branch is currently selected
+                const needsSelection = !currentBranch || !cachedBranches.find(b => b.name === currentBranch);
+                if (needsSelection && cachedBranches.length > 0) {
                     const defaultBranch = cachedBranches.find((b: Branch) => b.name === repository.default_branch) || cachedBranches[0];
                     setCurrentBranch(defaultBranch.name);
                     onBranchSelected(defaultBranch);
@@ -95,8 +96,9 @@ export default function GitHubBranchSelector({ repository, onBranchSelected, onE
                 branchCache.setCachedBranches(repository.owner, repository.repo, result.branches);
                 console.log(`[GitHubBranchSelector] Cached branches for ${repository.owner}/${repository.repo}`);
 
-                // Auto-select default branch if no branch is currently selected
-                if (!currentBranch && result.branches.length > 0) {
+                // Auto-select branch if no valid branch is currently selected
+                const needsSelection = !currentBranch || !result.branches.find(b => b.name === currentBranch);
+                if (needsSelection && result.branches.length > 0) {
                     const defaultBranch = result.branches.find((b: Branch) => b.name === repository.default_branch) || result.branches[0];
                     setCurrentBranch(defaultBranch.name);
                     onBranchSelected(defaultBranch);
@@ -210,30 +212,50 @@ export default function GitHubBranchSelector({ repository, onBranchSelected, onE
                     </div>
                 </div>
 
-                <Select value={currentBranch} onValueChange={handleBranchChange} disabled={disabled || isLoading || branches.length === 0}>
-                    <SelectTrigger className="w-full">
-                        <SelectValue placeholder={isLoading ? 'Loading branches...' : 'Select a branch'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {branches.map((branch) => (
-                            <SelectItem key={branch.name} value={branch.name}>
-                                <div className="flex w-full items-center justify-between">
-                                    <div className="flex items-center space-x-2">
-                                        <GitBranch className="h-4 w-4 text-gray-500" />
-                                        <span className="font-medium">{branch.name}</span>
-                                        {branch.name === repository.default_branch && (
-                                            <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">
-                                                Default
-                                            </span>
-                                        )}
-                                        {branch.protected && <Shield className="h-3 w-3 text-yellow-500" title="Protected branch" />}
+                {branches.length === 1 ? (
+                    // Special case for single branch - show as read-only display
+                    <div className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                        <div className="flex w-full items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                                <GitBranch className="h-4 w-4 text-gray-500" />
+                                <span className="font-medium">{branches[0].name}</span>
+                                {branches[0].name === repository.default_branch && (
+                                    <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">
+                                        Default
+                                    </span>
+                                )}
+                                {branches[0].protected && <Shield className="h-3 w-3 text-yellow-500" title="Protected branch" />}
+                                <span className="text-xs text-muted-foreground">(only branch)</span>
+                            </div>
+                            <span className="ml-2 text-xs text-gray-500">{formatCommitSha(branches[0].commit_sha)}</span>
+                        </div>
+                    </div>
+                ) : (
+                    <Select value={currentBranch} onValueChange={handleBranchChange} disabled={disabled || isLoading || branches.length === 0}>
+                        <SelectTrigger className="w-full">
+                            <SelectValue placeholder={isLoading ? 'Loading branches...' : 'Select a branch'} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {branches.map((branch) => (
+                                <SelectItem key={branch.name} value={branch.name}>
+                                    <div className="flex w-full items-center justify-between">
+                                        <div className="flex items-center space-x-2">
+                                            <GitBranch className="h-4 w-4 text-gray-500" />
+                                            <span className="font-medium">{branch.name}</span>
+                                            {branch.name === repository.default_branch && (
+                                                <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">
+                                                    Default
+                                                </span>
+                                            )}
+                                            {branch.protected && <Shield className="h-3 w-3 text-yellow-500" title="Protected branch" />}
+                                        </div>
+                                        <span className="ml-2 text-xs text-gray-500">{formatCommitSha(branch.commit_sha)}</span>
                                     </div>
-                                    <span className="ml-2 text-xs text-gray-500">{formatCommitSha(branch.commit_sha)}</span>
-                                </div>
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                )}
 
                 {isLoading && (
                     <div className="flex items-center space-x-2 text-sm text-gray-500">
@@ -245,8 +267,11 @@ export default function GitHubBranchSelector({ repository, onBranchSelected, onE
                 {branches.length > 0 && !isLoading && (
                     <div className="flex items-center justify-between text-xs text-gray-500">
                         <span>
-                            Found {branches.length} branch{branches.length !== 1 ? 'es' : ''}
-                            {isUsingCache && ' (cached)'}
+                            {branches.length === 1 ? (
+                                <>Repository has only one branch{isUsingCache && ' (cached)'}</>
+                            ) : (
+                                <>Found {branches.length} branches{isUsingCache && ' (cached)'}</>
+                            )}
                         </span>
                         {lastFetchTime && !isUsingCache && (
                             <span>Updated {formatCacheAge(lastFetchTime)}</span>

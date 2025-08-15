@@ -196,6 +196,9 @@ class ThinkTestController extends Controller
                 'started_at' => now(),
             ]);
 
+            // Generate and set the title
+            $conversation->update(['title' => $conversation->generateTitle()]);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Plugin uploaded and analyzed successfully',
@@ -396,6 +399,7 @@ class ThinkTestController extends Controller
                     'file_path' => $filePath,
                     'repository_info' => $repositoryContext,
                     'is_single_file' => true,
+                    'framework' => $framework,
                 ],
                 'metadata' => [
                     'framework' => $framework,
@@ -407,12 +411,15 @@ class ThinkTestController extends Controller
                     'analysis' => $testResult['analysis'],
                 ],
                 'generated_tests' => $testResult['main_test_file'],
-                'source_type' => 'github_single_file',
+                'source_type' => 'github_file',
                 'step' => 2,
                 'total_steps' => 2,
                 'started_at' => now(),
                 'completed_at' => now(),
             ]);
+
+            // Generate and set the title
+            $conversation->update(['title' => $conversation->generateTitle()]);
 
             $conversation->addMessage([
                 'role' => 'user',
@@ -1014,6 +1021,9 @@ class ThinkTestController extends Controller
                 'total_steps' => 3,
                 'started_at' => now(),
             ]);
+
+            // Generate and set the title
+            $conversation->update(['title' => $conversation->generateTitle()]);
 
             $endTime = microtime(true);
             $processingTime = round(($endTime - $startTime) * 1000, 2); // Convert to milliseconds

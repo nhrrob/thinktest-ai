@@ -241,9 +241,14 @@ class AIProviderService
         $framework = $options['framework'] ?? 'phpunit';
         $isElementorWidget = $this->isElementorWidget($pluginCode);
 
-        $prompt = "Please analyze the following WordPress plugin code and generate comprehensive {$framework} tests.\n\n";
+        $prompt = "Generate comprehensive {$framework} tests for the following WordPress plugin code.\n\n";
+        $prompt .= "CRITICAL REQUIREMENTS:\n";
+        $prompt .= "- Respond with ONLY executable PHP test code\n";
+        $prompt .= "- NO explanatory text, comments, or markdown formatting\n";
+        $prompt .= "- Start directly with <?php tag\n";
+        $prompt .= "- Code must be ready to copy-paste into test files\n\n";
 
-        $prompt .= "Focus on:\n";
+        $prompt .= "Focus on testing:\n";
         $prompt .= "- WordPress hooks and filters\n";
         $prompt .= "- Plugin activation/deactivation\n";
         $prompt .= "- WordPress-specific functions\n";
@@ -264,7 +269,7 @@ class AIProviderService
         }
 
         $prompt .= "\n\nPlugin Code:\n```php\n{$pluginCode}\n```\n\n";
-        $prompt .= "Please provide complete, runnable {$framework} test files with proper setup and teardown methods.";
+        $prompt .= "Generate complete, runnable {$framework} test code with proper setup and teardown methods. Remember: ONLY PHP CODE, no explanations.";
 
         return $prompt;
     }
