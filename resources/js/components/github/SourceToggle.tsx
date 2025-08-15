@@ -1,4 +1,4 @@
-import { Github, Upload } from 'lucide-react';
+import { GitBranch, Upload } from 'lucide-react';
 
 export type SourceType = 'file' | 'github';
 
@@ -15,7 +15,7 @@ export default function SourceToggle({ selectedSource, onSourceChange, disabled 
             <p className="text-sm text-muted-foreground">Select how you want to provide your WordPress plugin code for analysis.</p>
 
             {/* Compact tab-style design */}
-            <div className="inline-flex rounded-lg border border-input bg-background p-1">
+            <div className="inline-flex rounded-lg border border-input bg-background p-1 gap-2">
                 <button
                     onClick={() => onSourceChange('file')}
                     disabled={disabled}
@@ -44,7 +44,7 @@ export default function SourceToggle({ selectedSource, onSourceChange, disabled 
                         ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                     `}
                 >
-                    <Github className="h-4 w-4" />
+                    <GitBranch className="h-4 w-4" />
                     GitHub Repository
                 </button>
             </div>

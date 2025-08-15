@@ -2,7 +2,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Github, Loader2 } from 'lucide-react';
+import { GitBranch, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 
 interface Repository {
@@ -116,6 +116,7 @@ export default function GitHubRepositoryInput({ onRepositoryValidated, onError, 
     };
 
     const handleUseDemoRepository = () => {
+        // Using a popular WordPress plugin repository for better testing
         const demoUrl = 'https://github.com/nhrrob/nhrrob-core-contributions';
         setRepositoryUrl(demoUrl);
         setError(null);
@@ -129,7 +130,7 @@ export default function GitHubRepositoryInput({ onRepositoryValidated, onError, 
                 </Label>
                 <div className="flex space-x-2">
                     <div className="relative flex-1">
-                        <Github className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
+                        <GitBranch className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
                         <Input
                             id="repository-url"
                             type="text"

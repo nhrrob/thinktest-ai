@@ -1727,4 +1727,38 @@ class ThinkTestController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Show individual conversation details
+     */
+    public function showConversation($id)
+    {
+        $user = Auth::user();
+
+        $conversation = AIConversationState::where('id', $id)
+            ->where('user_id', $user->id)
+            ->with(['user', 'githubRepository'])
+            ->firstOrFail();
+
+        return Inertia::render('ThinkTest/ConversationDetails', [
+            'conversation' => $conversation,
+        ]);
+    }
+
+    /**
+     * Show individual analysis details
+     */
+    public function showAnalysis($id)
+    {
+        $user = Auth::user();
+
+        $analysis = PluginAnalysisResult::where('id', $id)
+            ->where('user_id', $user->id)
+            ->with(['user'])
+            ->firstOrFail();
+
+        return Inertia::render('ThinkTest/AnalysisDetails', [
+            'analysis' => $analysis,
+        ]);
+    }
 }

@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Clock, FileText, MessageSquare, X } from 'lucide-react';
 import { useState } from 'react';
+import { router } from '@inertiajs/react';
 
 interface Conversation {
     id: number;
@@ -107,7 +108,7 @@ export default function RecentItemsSidebar({
                                                     className="h-auto p-1 opacity-0 group-hover:opacity-100"
                                                     onClick={() => {
                                                         // Navigate to conversation
-                                                        window.location.href = `/thinktest/conversation/${conversation.id}`;
+                                                        router.visit(`/thinktest/conversation/${conversation.id}`);
                                                     }}
                                                 >
                                                     <span className="sr-only">View conversation</span>
@@ -148,7 +149,7 @@ export default function RecentItemsSidebar({
                                                     className="h-auto p-1 opacity-0 group-hover:opacity-100"
                                                     onClick={() => {
                                                         // Navigate to analysis
-                                                        window.location.href = `/thinktest/analysis/${analysis.id}`;
+                                                        router.visit(`/thinktest/analysis/${analysis.id}`);
                                                     }}
                                                 >
                                                     <span className="sr-only">View analysis</span>

@@ -84,6 +84,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('thinktest/generate', [ThinkTestController::class, 'generateTests'])->name('thinktest.generate');
     Route::get('thinktest/download', [ThinkTestController::class, 'downloadTests'])->name('thinktest.download');
 
+    // History routes for viewing individual conversations and analysis results
+    Route::get('thinktest/conversation/{id}', [ThinkTestController::class, 'showConversation'])->name('thinktest.conversation.show');
+    Route::get('thinktest/analysis/{id}', [ThinkTestController::class, 'showAnalysis'])->name('thinktest.analysis.show');
+
     // Test infrastructure setup routes
     Route::post('thinktest/detect-infrastructure', [ThinkTestController::class, 'detectTestInfrastructure'])->name('thinktest.detect_infrastructure');
     Route::post('thinktest/download-template', [ThinkTestController::class, 'downloadTemplate'])->name('thinktest.download_template');

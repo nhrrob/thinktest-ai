@@ -1113,42 +1113,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                                 </div>
                             )}
 
-                            {/* Recent Activity */}
-                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                                <div>
-                                    <h4 className="mb-4 text-lg font-medium text-foreground">Recent Conversations</h4>
-                                    {recentConversations?.length > 0 ? (
-                                        <div className="space-y-2">
-                                            {recentConversations.map((conversation) => (
-                                                <div key={conversation.id} className="rounded bg-muted p-3">
-                                                    <div className="text-sm font-medium">{conversation.context?.filename || 'Unknown file'}</div>
-                                                    <div className="text-xs text-muted-foreground">
-                                                        {conversation.status} • {conversation.provider}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <p className="text-muted-foreground">No recent conversations</p>
-                                    )}
-                                </div>
 
-                                <div>
-                                    <h4 className="mb-4 text-lg font-medium text-foreground">Recent Analyses</h4>
-                                    {recentAnalyses?.length > 0 ? (
-                                        <div className="space-y-2">
-                                            {recentAnalyses.map((analysis) => (
-                                                <div key={analysis.id} className="rounded bg-muted p-3">
-                                                    <div className="text-sm font-medium">{analysis.filename}</div>
-                                                    <div className="text-xs text-muted-foreground">Complexity: {analysis.complexity_score || 'N/A'}</div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <p className="text-muted-foreground">No recent analyses</p>
-                                    )}
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
