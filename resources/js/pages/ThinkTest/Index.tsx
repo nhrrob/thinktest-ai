@@ -5,7 +5,7 @@ import GitHubRepositoryInput from '@/components/github/GitHubRepositoryInput';
 import SourceToggle, { SourceType } from '@/components/github/SourceToggle';
 import RecentItemsSidebar from '@/components/recent-items-sidebar';
 import TestSetupWizard from '@/components/TestSetupWizard';
-import { useGitHubState } from '@/hooks/useLocalStorage';
+import { useGitHubState, useBranchCache } from '@/hooks/useLocalStorage';
 import AppLayout from '@/layouts/app-layout';
 import { Head, useForm } from '@inertiajs/react';
 import { useRef, useState, useEffect } from 'react';
@@ -248,6 +248,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
 
     // GitHub persistent state
     const githubState = useGitHubState();
+    const branchCache = useBranchCache();
 
     // GitHub-related state (now using persistent state)
     const [validatedRepository, setValidatedRepository] = useState<Repository | null>(githubState.state.selectedRepository);
@@ -423,6 +424,19 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
     };
 
     const handleRepositoryValidated = (repository: Repository) => {
+        // Check if this is a different repository
+        const isDifferentRepo = !validatedRepository ||
+            validatedRepository.owner !== repository.owner ||
+            validatedRepository.repo !== repository.repo;
+
+        if (isDifferentRepo) {
+            console.log(`[ThinkTest] Repository changed to ${repository.owner}/${repository.repo}, invalidating branch cache`);
+            // Invalidate branch cache for the previous repository if it exists
+            if (validatedRepository) {
+                branchCache.invalidateCache(validatedRepository.owner, validatedRepository.repo);
+            }
+        }
+
         setValidatedRepository(repository);
         githubState.updateRepository(repository);
         setSelectedBranch(null);
@@ -562,6 +576,9 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
         // Clear persistent state when switching away from GitHub
         if (source !== 'github') {
             githubState.clearState();
+            // Also clear branch cache when switching away from GitHub
+            console.log('[ThinkTest] Switching away from GitHub, clearing branch cache');
+            branchCache.invalidateCache();
         }
         if (fileInputRef.current) {
             fileInputRef.current.value = '';

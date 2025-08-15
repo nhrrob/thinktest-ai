@@ -95,6 +95,152 @@ export interface GitHubPersistedState {
     searchQuery: string;
 }
 
+/**
+ * Branch cache interface for storing branch data with expiration
+ */
+export interface BranchCacheEntry {
+    branches: Array<{
+        name: string;
+        commit_sha: string;
+        commit_url: string;
+        protected: boolean;
+    }>;
+    timestamp: number;
+    expiresAt: number;
+}
+
+export interface BranchCache {
+    [repositoryKey: string]: BranchCacheEntry;
+}
+
+/**
+ * Hook for managing branch cache with localStorage persistence
+ */
+export function useBranchCache() {
+    const [cache, setCache] = useLocalStorage<BranchCache>('thinktest-branch-cache', {});
+
+    // Cache duration in milliseconds (5 minutes)
+    const CACHE_DURATION = 5 * 60 * 1000;
+
+    const generateCacheKey = (owner: string, repo: string): string => {
+        return `${owner}/${repo}`.toLowerCase();
+    };
+
+    const isExpired = (entry: BranchCacheEntry): boolean => {
+        return Date.now() > entry.expiresAt;
+    };
+
+    const getCachedBranches = (owner: string, repo: string) => {
+        const cacheKey = generateCacheKey(owner, repo);
+        const entry = cache[cacheKey];
+
+        if (!entry || isExpired(entry)) {
+            return null;
+        }
+
+        return entry.branches;
+    };
+
+    const setCachedBranches = (owner: string, repo: string, branches: BranchCacheEntry['branches']) => {
+        const cacheKey = generateCacheKey(owner, repo);
+        const now = Date.now();
+
+        const entry: BranchCacheEntry = {
+            branches,
+            timestamp: now,
+            expiresAt: now + CACHE_DURATION
+        };
+
+        setCache(prev => ({
+            ...prev,
+            [cacheKey]: entry
+        }));
+    };
+
+    const invalidateCache = (owner?: string, repo?: string) => {
+        if (owner && repo) {
+            // Invalidate specific repository cache
+            const cacheKey = generateCacheKey(owner, repo);
+            setCache(prev => {
+                const newCache = { ...prev };
+                delete newCache[cacheKey];
+                return newCache;
+            });
+        } else {
+            // Clear all cache
+            setCache({});
+        }
+    };
+
+    const cleanExpiredEntries = () => {
+        const now = Date.now();
+        setCache(prev => {
+            const newCache: BranchCache = {};
+            let cleanedCount = 0;
+            Object.entries(prev).forEach(([key, entry]) => {
+                if (entry.expiresAt > now) {
+                    newCache[key] = entry;
+                } else {
+                    cleanedCount++;
+                }
+            });
+            if (cleanedCount > 0) {
+                console.log(`[BranchCache] Cleaned ${cleanedCount} expired cache entries`);
+            }
+            return newCache;
+        });
+    };
+
+    const getCacheInfo = (owner: string, repo: string) => {
+        const cacheKey = generateCacheKey(owner, repo);
+        const entry = cache[cacheKey];
+
+        if (!entry) {
+            return { cached: false, expired: false, age: 0 };
+        }
+
+        const age = Date.now() - entry.timestamp;
+        const expired = isExpired(entry);
+
+        return {
+            cached: true,
+            expired,
+            age,
+            expiresIn: Math.max(0, entry.expiresAt - Date.now())
+        };
+    };
+
+    const getCacheStats = () => {
+        const now = Date.now();
+        const entries = Object.entries(cache);
+        const total = entries.length;
+        const expired = entries.filter(([, entry]) => isExpired(entry)).length;
+        const active = total - expired;
+
+        return {
+            total,
+            active,
+            expired,
+            repositories: entries.map(([key, entry]) => ({
+                repository: key,
+                cached: !isExpired(entry),
+                age: now - entry.timestamp,
+                expiresIn: Math.max(0, entry.expiresAt - now),
+                branchCount: entry.branches.length
+            }))
+        };
+    };
+
+    return {
+        getCachedBranches,
+        setCachedBranches,
+        invalidateCache,
+        cleanExpiredEntries,
+        getCacheInfo,
+        getCacheStats
+    };
+}
+
 export function useGitHubState() {
     const [persistedState, setPersistedState] = useLocalStorage<GitHubPersistedState>('thinktest-github-state', {
         selectedRepository: null,
