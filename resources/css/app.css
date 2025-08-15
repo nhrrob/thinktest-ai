@@ -290,3 +290,61 @@
         background-color: rgba(0, 0, 0, 0.9) !important;
     }
 }
+
+/* Code Preview Enhancements */
+.code-preview-container {
+    scroll-behavior: smooth;
+}
+
+.code-preview-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.code-preview-container::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+.code-preview-container::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.code-preview-container::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+.dark .code-preview-container::-webkit-scrollbar-track {
+    background: #1e293b;
+}
+
+.dark .code-preview-container::-webkit-scrollbar-thumb {
+    background: #475569;
+}
+
+.dark .code-preview-container::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+
+/* Line numbers styling */
+.line-numbers {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* Code content styling */
+.code-content {
+    tab-size: 4;
+    -moz-tab-size: 4;
+    -o-tab-size: 4;
+}
+
+/* Ensure proper text wrapping in code blocks */
+.code-content pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}

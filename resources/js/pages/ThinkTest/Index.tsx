@@ -4,9 +4,10 @@ import GitHubFileSelector from '@/components/github/GitHubFileSelector';
 import GitHubRepositoryInput from '@/components/github/GitHubRepositoryInput';
 import SourceToggle, { SourceType } from '@/components/github/SourceToggle';
 import TestSetupWizard from '@/components/TestSetupWizard';
+import { useGitHubState } from '@/hooks/useLocalStorage';
 import AppLayout from '@/layouts/app-layout';
 import { Head, useForm } from '@inertiajs/react';
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 
 interface Conversation {
     id: number;
@@ -143,21 +144,9 @@ interface ThinkTestProps {
 
 // Helper function to handle API responses with proper error checking
 const handleApiResponse = async (response: Response): Promise<unknown> => {
-    console.log('API Response received:', {
-        status: response.status,
-        statusText: response.statusText,
-        redirected: response.redirected,
-        url: response.url,
-        headers: Object.fromEntries(response.headers.entries()),
-    });
 
     // Check if response is redirected (authentication issue)
     if (response.redirected || response.status === 302) {
-        console.error('Authentication redirect detected:', {
-            status: response.status,
-            redirected: response.redirected,
-            url: response.url,
-        });
         alert('Authentication required. Please refresh the page and log in again.');
         window.location.reload();
         return;
@@ -166,19 +155,16 @@ const handleApiResponse = async (response: Response): Promise<unknown> => {
     // Check if response is not ok
     if (!response.ok) {
         if (response.status === 419) {
-            console.error('CSRF token mismatch detected');
             alert('Session expired. Please refresh the page and try again.');
             window.location.reload();
             return;
         }
         if (response.status === 401) {
-            console.error('Unauthorized access detected');
             alert('Authentication required. Please refresh the page and log in again.');
             window.location.reload();
             return;
         }
         if (response.status === 403) {
-            console.error('Forbidden access detected');
             alert('You do not have permission to perform this action. Please contact an administrator.');
             return;
         }
@@ -200,8 +186,6 @@ const handleApiResponse = async (response: Response): Promise<unknown> => {
     // Check if response is JSON
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
-        const text = await response.text();
-        console.error('Non-JSON response received:', text);
         throw new Error('Server returned an invalid response. Please try again.');
     }
 
@@ -212,7 +196,6 @@ const handleApiResponse = async (response: Response): Promise<unknown> => {
 const getCsrfToken = (): string => {
     const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     if (!token) {
-        console.error('CSRF token not found in meta tag');
         throw new Error('CSRF token not available. Please refresh the page.');
     }
     return token;
@@ -221,7 +204,6 @@ const getCsrfToken = (): string => {
 // Helper function to validate authentication status
 const validateAuthentication = async (): Promise<boolean> => {
     try {
-        console.log('Validating authentication status...');
         const response = await fetch('/auth/check', {
             method: 'GET',
             headers: {
@@ -231,20 +213,8 @@ const validateAuthentication = async (): Promise<boolean> => {
             credentials: 'same-origin', // Ensure cookies are sent
         });
 
-        console.log('Authentication check response:', {
-            status: response.status,
-            statusText: response.statusText,
-            redirected: response.redirected,
-            url: response.url,
-        });
-
         if (response.ok) {
             const data = await response.json();
-            console.log('Authentication data received:', {
-                authenticated: data.authenticated,
-                user: data.user ? { id: data.user.id, name: data.user.name } : null,
-                csrf_token_present: !!data.csrf_token,
-            });
 
             if (data.authenticated) {
                 // Update CSRF token if provided
@@ -252,25 +222,16 @@ const validateAuthentication = async (): Promise<boolean> => {
                     const metaTag = document.querySelector('meta[name="csrf-token"]');
                     if (metaTag) {
                         metaTag.setAttribute('content', data.csrf_token);
-                        console.log('CSRF token updated successfully');
-                    } else {
-                        console.warn('CSRF meta tag not found, cannot update token');
                     }
                 }
                 return true;
             } else {
-                console.error('User is not authenticated according to server response');
                 return false;
             }
         }
 
-        console.error('Authentication validation failed:', {
-            status: response.status,
-            statusText: response.statusText,
-        });
         return false;
     } catch (error) {
-        console.error('Authentication check error:', error);
         return false;
     }
 };
@@ -284,15 +245,18 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
     const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // GitHub-related state
-    const [validatedRepository, setValidatedRepository] = useState<Repository | null>(null);
-    const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
+    // GitHub persistent state
+    const githubState = useGitHubState();
+
+    // GitHub-related state (now using persistent state)
+    const [validatedRepository, setValidatedRepository] = useState<Repository | null>(githubState.state.selectedRepository);
+    const [selectedBranch, setSelectedBranch] = useState<Branch | null>(githubState.state.selectedBranch);
     const [isProcessingRepository, setIsProcessingRepository] = useState<boolean>(false);
     const [processingProgress, setProcessingProgress] = useState<string>('');
 
-    // File selection state
+    // File selection state (now using persistent state)
     const [githubProcessingMode, setGithubProcessingMode] = useState<GitHubProcessingMode>('repository');
-    const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
+    const [selectedFile, setSelectedFile] = useState<FileItem | null>(githubState.state.selectedFile);
     const [fileContent, setFileContent] = useState<FileContent | null>(null);
     const [isGeneratingSingleFile, setIsGeneratingSingleFile] = useState<boolean>(false);
 
@@ -310,6 +274,19 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
         provider: 'openai-gpt5',
         framework: 'phpunit',
     });
+
+    // Restore state on component mount
+    useEffect(() => {
+        if (githubState.state.selectedRepository) {
+            setValidatedRepository(githubState.state.selectedRepository);
+        }
+        if (githubState.state.selectedBranch) {
+            setSelectedBranch(githubState.state.selectedBranch);
+        }
+        if (githubState.state.selectedFile) {
+            setSelectedFile(githubState.state.selectedFile);
+        }
+    }, []);
 
     const handleFileUpload = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -446,6 +423,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
 
     const handleRepositoryValidated = (repository: Repository) => {
         setValidatedRepository(repository);
+        githubState.updateRepository(repository);
         setSelectedBranch(null);
         setUploadResult(null);
         setGeneratedTests(null);
@@ -454,6 +432,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
 
     const handleBranchSelected = (branch: Branch) => {
         setSelectedBranch(branch);
+        githubState.updateBranch(branch);
     };
 
     const handleProcessRepository = async () => {
@@ -479,7 +458,6 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
             // Step 2: Prepare request
             setProcessingProgress('Preparing repository processing request...');
             const csrfToken = getCsrfToken();
-            console.log('Making GitHub repository process request with CSRF token:', csrfToken.substring(0, 10) + '...');
 
             const requestData = {
                 owner: validatedRepository.owner,
@@ -488,8 +466,6 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                 provider: data.provider,
                 framework: data.framework,
             };
-
-            console.log('Repository processing request data:', requestData);
 
             // Step 3: Make the request
             setProcessingProgress('Connecting to GitHub API...');
@@ -513,14 +489,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                 setProcessingProgress('Analysis complete!');
                 setUploadResult(result);
                 setCurrentConversationId(result.conversation_id);
-                console.log('Repository processing successful:', {
-                    conversation_id: result.conversation_id,
-                    analysis_id: result.analysis_id,
-                    file_count: result.repository?.file_count,
-                    processing_time_ms: result.processing_time_ms,
-                });
             } else {
-                console.error('Repository processing failed:', result);
 
                 // Provide more specific error messages based on error code
                 let errorMessage = result.message || 'Repository processing failed';
@@ -546,7 +515,6 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                 alert(errorMessage);
             }
         } catch (error) {
-            console.error('Repository processing error:', error);
             setProcessingProgress('Error occurred during processing');
 
             // Provide more specific error messages
@@ -590,6 +558,10 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
         setSelectedFile(null);
         setFileContent(null);
         setIsGeneratingSingleFile(false);
+        // Clear persistent state when switching away from GitHub
+        if (source !== 'github') {
+            githubState.clearState();
+        }
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -607,6 +579,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
 
     const handleFileSelected = (file: FileItem) => {
         setSelectedFile(file);
+        githubState.updateSelectedFile(file);
         setFileContent(null);
     };
 
@@ -745,7 +718,6 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
     };
 
     const handleError = (error: string) => {
-        console.error('Error:', error);
         // You could also show a toast notification here
     };
 

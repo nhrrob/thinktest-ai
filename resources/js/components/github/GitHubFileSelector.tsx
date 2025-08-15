@@ -2,15 +2,18 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { 
-    File, 
-    Code, 
-    FileText, 
-    ExternalLink, 
+import {
+    File,
+    Code,
+    FileText,
+    ExternalLink,
     Download,
     Loader2,
-    CheckCircle
+    CheckCircle,
+    Eye,
+    Copy
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -72,18 +75,64 @@ export default function GitHubFileSelector({
 
     const { error: showError, warning: showWarning, success: showSuccess } = useToast();
 
-    // Enhanced logging function with timestamps and context
-    const logDebug = (message: string, data?: any) => {
-        const timestamp = new Date().toISOString();
-        const context = {
-            timestamp,
-            component: 'GitHubFileSelector',
-            repository: `${repository.owner}/${repository.repo}`,
-            branch,
-            selectedFile: selectedFile?.path,
-            ...data
+    // Get file language for syntax highlighting
+    const getFileLanguage = (filename: string): string => {
+        const extension = filename.split('.').pop()?.toLowerCase();
+        const languageMap: { [key: string]: string } = {
+            'js': 'javascript',
+            'jsx': 'javascript',
+            'ts': 'typescript',
+            'tsx': 'typescript',
+            'py': 'python',
+            'php': 'php',
+            'java': 'java',
+            'cpp': 'cpp',
+            'c': 'c',
+            'cs': 'csharp',
+            'rb': 'ruby',
+            'go': 'go',
+            'rs': 'rust',
+            'swift': 'swift',
+            'kt': 'kotlin',
+            'scala': 'scala',
+            'html': 'html',
+            'css': 'css',
+            'scss': 'scss',
+            'sass': 'sass',
+            'less': 'less',
+            'json': 'json',
+            'xml': 'xml',
+            'yaml': 'yaml',
+            'yml': 'yaml',
+            'md': 'markdown',
+            'sql': 'sql',
+            'sh': 'bash',
+            'bash': 'bash',
+            'zsh': 'bash',
+            'fish': 'bash',
+            'ps1': 'powershell',
+            'dockerfile': 'dockerfile',
+            'makefile': 'makefile',
+            'r': 'r',
+            'matlab': 'matlab',
+            'm': 'matlab'
         };
-        console.log(`[${timestamp}] GitHubFileSelector: ${message}`, context);
+        return languageMap[extension || ''] || 'text';
+    };
+
+    // Copy content to clipboard
+    const copyToClipboard = async (content: string) => {
+        try {
+            await navigator.clipboard.writeText(content);
+            showSuccess('File content copied to clipboard');
+        } catch (err) {
+            showError('Failed to copy content to clipboard');
+        }
+    };
+
+    // Generate line numbers
+    const generateLineNumbers = (content: string): string[] => {
+        return content.split('\n').map((_, index) => (index + 1).toString());
     };
 
     const getCsrfToken = () => {
@@ -140,23 +189,10 @@ export default function GitHubFileSelector({
         const minInterval = 500; // 500ms minimum between requests
 
         if (timeSinceLastRequest < minInterval) {
-            logDebug('File content request debounced', {
-                fileName: file.name,
-                timeSinceLastRequest,
-                minInterval,
-                willSkip: true
-            });
             return;
         }
 
         setLastRequestTime(now);
-
-        logDebug('Starting file content fetch', {
-            fileName: file.name,
-            filePath: file.path,
-            fileSize: file.size,
-            fileType: file.type
-        });
 
         setIsLoadingContent(true);
         setError(null);
@@ -170,8 +206,6 @@ export default function GitHubFileSelector({
         };
 
         try {
-            logDebug('Making API request to /thinktest/github/file', { payload: requestPayload });
-
             const response = await fetch('/thinktest/github/file', {
                 method: 'POST',
                 headers: {
@@ -181,25 +215,14 @@ export default function GitHubFileSelector({
                 body: JSON.stringify(requestPayload),
             });
 
-            logDebug('API response received', {
-                status: response.status,
-                statusText: response.statusText,
-                headers: Object.fromEntries(response.headers.entries())
-            });
-
             const result = await response.json();
-            logDebug('API response parsed', { result });
 
             if (response.status === 429) {
                 // Handle rate limiting
                 const retryAfterSeconds = result.retry_after || 60;
                 const errorMessage = result.message || `Rate limit exceeded. Please wait ${retryAfterSeconds} seconds before trying again.`;
 
-                logDebug('Rate limit exceeded', {
-                    retryAfterSeconds,
-                    message: result.message,
-                    rateLimitInfo: result
-                });
+
 
                 setError(errorMessage);
                 onError(errorMessage);
@@ -209,56 +232,29 @@ export default function GitHubFileSelector({
             }
 
             if (result.success) {
-                logDebug('File content loaded successfully', {
-                    fileName: result.file.name,
-                    filePath: result.file.path,
-                    contentLength: result.file.content?.length || 0,
-                    encoding: result.file.encoding
-                });
-
                 setFileContent(result.file);
                 onFileContentLoaded(result.file);
                 showSuccess(`File "${file.name}" loaded successfully`);
             } else {
                 const errorMessage = result.message || 'Failed to fetch file content. Please check the file path and try again.';
-                logDebug('API request failed', {
-                    success: result.success,
-                    message: result.message,
-                    fullResult: result
-                });
                 setError(errorMessage);
                 onError(errorMessage);
                 showError(errorMessage);
             }
         } catch (err) {
             const errorMessage = 'Network error occurred while fetching file content. Please check your internet connection and try again.';
-            logDebug('Network error during API request', {
-                error: err instanceof Error ? err.message : String(err),
-                stack: err instanceof Error ? err.stack : undefined,
-                requestPayload
-            });
             setError(errorMessage);
             onError(errorMessage);
             showError(errorMessage);
         } finally {
             setIsLoadingContent(false);
-            logDebug('File content fetch completed', { isLoading: false });
         }
     };
 
     useEffect(() => {
         if (selectedFile && selectedFile.type === 'file') {
-            logDebug('Selected file changed, fetching content', {
-                fileName: selectedFile.name,
-                filePath: selectedFile.path,
-                fileType: selectedFile.type
-            });
             fetchFileContent(selectedFile);
         } else {
-            logDebug('Selected file cleared or is directory', {
-                selectedFile: selectedFile?.path || 'none',
-                fileType: selectedFile?.type || 'none'
-            });
             setFileContent(null);
             setError(null);
         }
@@ -367,21 +363,98 @@ export default function GitHubFileSelector({
                 )}
 
                 {fileContent && !isLoadingContent && (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                         <div className="flex items-center gap-2 text-sm text-green-600">
                             <CheckCircle className="h-4 w-4" />
                             <span>File content loaded successfully</span>
                         </div>
-                        
-                        <div className="bg-gray-50 rounded-md p-3">
-                            <div className="text-xs text-gray-500 mb-2">Preview (first 200 characters):</div>
-                            <code className="text-xs text-gray-700 block whitespace-pre-wrap">
-                                {fileContent.content.substring(0, 200)}
-                                {fileContent.content.length > 200 && '...'}
-                            </code>
-                        </div>
 
-                        <Button 
+                        <Tabs defaultValue="preview" className="w-full">
+                            <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="preview" className="flex items-center gap-2">
+                                    <Eye className="h-4 w-4" />
+                                    Preview
+                                </TabsTrigger>
+                                <TabsTrigger value="raw" className="flex items-center gap-2">
+                                    <Code className="h-4 w-4" />
+                                    Raw
+                                </TabsTrigger>
+                            </TabsList>
+
+                            <TabsContent value="preview" className="mt-4">
+                                <div className="border rounded-lg overflow-hidden bg-white">
+                                    <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-medium text-gray-600">
+                                                {fileContent.name} ({getFileLanguage(fileContent.name)})
+                                            </span>
+                                            <Badge variant="outline" className="text-xs">
+                                                {fileContent.content.split('\n').length} lines
+                                            </Badge>
+                                        </div>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => copyToClipboard(fileContent.content)}
+                                            className="h-6 px-2"
+                                        >
+                                            <Copy className="h-3 w-3" />
+                                        </Button>
+                                    </div>
+
+                                    <div className="relative">
+                                        <div className="flex max-h-96 overflow-hidden">
+                                            {/* Line numbers */}
+                                            <div className="bg-gray-50 dark:bg-gray-800 px-3 py-3 text-xs text-gray-500 dark:text-gray-400 font-mono line-numbers border-r border-gray-200 dark:border-gray-700 overflow-y-auto code-preview-container">
+                                                {generateLineNumbers(fileContent.content).map((lineNum, index) => (
+                                                    <div key={index} className="leading-5 text-right min-w-[2rem]">
+                                                        {lineNum}
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            {/* Code content */}
+                                            <div className="flex-1 overflow-auto code-preview-container">
+                                                <pre className="p-3 text-xs font-mono leading-5 code-content bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+                                                    <code className={`language-${getFileLanguage(fileContent.name)}`}>
+                                                        {fileContent.content}
+                                                    </code>
+                                                </pre>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </TabsContent>
+
+                            <TabsContent value="raw" className="mt-4">
+                                <div className="border rounded-lg overflow-hidden bg-white">
+                                    <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b">
+                                        <span className="text-xs font-medium text-gray-600">
+                                            Raw Content ({(new Blob([fileContent.content]).size / 1024).toFixed(1)} KB)
+                                        </span>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => copyToClipboard(fileContent.content)}
+                                            className="h-6 px-2"
+                                        >
+                                            <Copy className="h-3 w-3" />
+                                        </Button>
+                                    </div>
+
+                                    <div className="max-h-96 overflow-auto p-3 code-preview-container bg-white dark:bg-gray-900">
+                                        <textarea
+                                            value={fileContent.content}
+                                            readOnly
+                                            className="w-full h-full min-h-[300px] text-xs font-mono bg-transparent border-none outline-none resize-none text-gray-900 dark:text-gray-100"
+                                            style={{ scrollbarWidth: 'thin' }}
+                                        />
+                                    </div>
+                                </div>
+                            </TabsContent>
+                        </Tabs>
+
+                        <Button
                             onClick={onGenerateTests}
                             disabled={disabled || isGenerating}
                             className="w-full"

@@ -1,21 +1,25 @@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { 
-    ChevronDown, 
-    ChevronRight, 
-    File, 
-    Folder, 
-    FolderOpen, 
-    Loader2, 
+import {
+    ChevronDown,
+    ChevronRight,
+    File,
+    Folder,
+    FolderOpen,
+    Loader2,
     RefreshCw,
     FileText,
-    Code
+    Code,
+    Search,
+    X
 } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
-import { useDebounce } from '@/hooks/useDebounce';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useDebounce, useDebouncedValue } from '@/hooks/useDebounce';
+import { useGitHubState } from '@/hooks/useLocalStorage';
 
 interface Repository {
     owner: string;
@@ -58,38 +62,90 @@ export default function GitHubFileBrowser({
     disabled = false,
     selectedFilePath
 }: GitHubFileBrowserProps) {
+    const githubState = useGitHubState();
     const [tree, setTree] = useState<TreeNode[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
+    const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set(githubState.state.expandedPaths));
     const [isRateLimited, setIsRateLimited] = useState(false);
     const [retryAfter, setRetryAfter] = useState<number | null>(null);
     const [lastRequestTime, setLastRequestTime] = useState<number>(0);
+    const [searchQuery, setSearchQuery] = useState<string>(githubState.state.searchQuery);
+    const [filteredTree, setFilteredTree] = useState<TreeNode[]>([]);
 
     const { error: showError, warning: showWarning, info: showInfo } = useToast();
 
-    // Enhanced logging function with timestamps and context
-    const logDebug = useCallback((message: string, data?: any) => {
-        const timestamp = new Date().toISOString();
-        const context = {
-            timestamp,
-            component: 'GitHubFileBrowser',
-            repository: `${repository.owner}/${repository.repo}`,
-            branch,
-            ...data
+    // Debounced search query
+    const debouncedSearchQuery = useDebouncedValue(searchQuery, 300);
+
+    // Filter tree based on search query
+    const filterTree = useCallback((nodes: TreeNode[], query: string): TreeNode[] => {
+        if (!query.trim()) {
+            return nodes;
+        }
+
+        const lowercaseQuery = query.toLowerCase();
+
+        const filterNode = (node: TreeNode): TreeNode | null => {
+            const nameMatches = node.name.toLowerCase().includes(lowercaseQuery);
+            const pathMatches = node.path.toLowerCase().includes(lowercaseQuery);
+
+            let filteredChildren: TreeNode[] = [];
+            if (node.children) {
+                filteredChildren = node.children
+                    .map(child => filterNode(child))
+                    .filter((child): child is TreeNode => child !== null);
+            }
+
+            // Include node if it matches or has matching children
+            if (nameMatches || pathMatches || filteredChildren.length > 0) {
+                return {
+                    ...node,
+                    children: filteredChildren.length > 0 ? filteredChildren : node.children,
+                    isExpanded: filteredChildren.length > 0 ? true : node.isExpanded
+                };
+            }
+
+            return null;
         };
-        console.log(`[${timestamp}] GitHubFileBrowser: ${message}`, context);
-    }, [repository.owner, repository.repo, branch]);
+
+        return nodes
+            .map(node => filterNode(node))
+            .filter((node): node is TreeNode => node !== null);
+    }, []);
+
+    // Update filtered tree when search query or tree changes
+    useEffect(() => {
+        const filtered = filterTree(tree, debouncedSearchQuery);
+        setFilteredTree(filtered);
+
+        // Auto-expand paths when searching
+        if (debouncedSearchQuery.trim()) {
+            const expandPaths = (nodes: TreeNode[], paths: Set<string> = new Set()) => {
+                nodes.forEach(node => {
+                    if (node.type === 'dir' && node.children && node.children.length > 0) {
+                        paths.add(node.path);
+                        expandPaths(node.children, paths);
+                    }
+                });
+                return paths;
+            };
+
+            const pathsToExpand = expandPaths(filtered);
+            setExpandedPaths(prev => {
+                const newSet = new Set([...prev, ...pathsToExpand]);
+                githubState.updateExpandedPaths(Array.from(newSet));
+                return newSet;
+            });
+        }
+    }, [tree, debouncedSearchQuery, filterTree]);
 
     const getCsrfToken = () => {
         return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
     };
 
     const buildTreeFromFlat = useCallback((items: FileItem[]): TreeNode[] => {
-        logDebug('Building tree from flat items', {
-            totalItems: items.length,
-            sampleItems: items.slice(0, 3)
-        });
+
 
         const tree: TreeNode[] = [];
         const pathMap = new Map<string, TreeNode>();
@@ -102,18 +158,12 @@ export default function GitHubFileBrowser({
                 item.type &&
                 (item.type === 'file' || item.type === 'dir');
 
-            if (!isValid) {
-                logDebug('Filtering out invalid item', { item });
-            }
+
 
             return isValid;
         });
 
-        logDebug('Filtered valid items', {
-            originalCount: items.length,
-            validCount: validItems.length,
-            filteredOut: items.length - validItems.length
-        });
+
 
         // Sort items to ensure directories come before their contents
         const sortedItems = [...validItems].sort((a, b) => {
@@ -136,32 +186,17 @@ export default function GitHubFileBrowser({
 
             if (pathParts.length === 1) {
                 // Root level item
-                logDebug('Adding root level item', {
-                    path: item.path,
-                    type: item.type,
-                    name: item.name
-                });
+
                 tree.push(node);
             } else {
                 // Find parent directory
                 const parentPath = pathParts.slice(0, -1).join('/');
                 const parent = pathMap.get(parentPath);
                 if (parent && parent.children) {
-                    logDebug('Adding child item to parent', {
-                        childPath: item.path,
-                        parentPath,
-                        childType: item.type,
-                        parentType: parent.type
-                    });
+
                     parent.children.push(node);
                 } else {
-                    logDebug('Parent not found for item', {
-                        childPath: item.path,
-                        parentPath,
-                        parentExists: !!parent,
-                        parentHasChildren: parent?.children !== undefined,
-                        availableParents: Array.from(pathMap.keys())
-                    });
+
 
                     // If parent doesn't exist, add as root level item
                     // This handles cases where the API doesn't return all directory entries
@@ -170,18 +205,13 @@ export default function GitHubFileBrowser({
             }
         }
 
-        logDebug('Tree building completed', {
-            finalTreeLength: tree.length,
-            totalNodesCreated: pathMap.size,
-            rootLevelItems: tree.map(node => ({ path: node.path, type: node.type }))
-        });
+
 
         return tree;
     }, [expandedPaths]);
 
     const fetchRepositoryTree = useCallback(async () => {
         if (!repository.owner || !repository.repo) {
-            logDebug('Missing repository owner or repo', { owner: repository.owner, repo: repository.repo });
             return;
         }
 
@@ -191,22 +221,10 @@ export default function GitHubFileBrowser({
         const minInterval = 1000; // 1 second minimum between requests
 
         if (timeSinceLastRequest < minInterval) {
-            logDebug('Request debounced', {
-                timeSinceLastRequest,
-                minInterval,
-                willSkip: true
-            });
             return;
         }
 
         setLastRequestTime(now);
-
-        logDebug('Starting repository tree fetch', {
-            owner: repository.owner,
-            repo: repository.repo,
-            branch,
-            recursive: true
-        });
 
         setIsLoading(true);
         setError(null);
@@ -221,7 +239,6 @@ export default function GitHubFileBrowser({
         };
 
         try {
-            logDebug('Making API request to /thinktest/github/tree', { payload: requestPayload });
 
             const response = await fetch('/thinktest/github/tree', {
                 method: 'POST',
@@ -232,14 +249,7 @@ export default function GitHubFileBrowser({
                 body: JSON.stringify(requestPayload),
             });
 
-            logDebug('API response received', {
-                status: response.status,
-                statusText: response.statusText,
-                headers: Object.fromEntries(response.headers.entries())
-            });
-
             const result = await response.json();
-            logDebug('API response parsed', { result });
 
             if (response.status === 429) {
                 // Handle rate limiting
@@ -248,11 +258,7 @@ export default function GitHubFileBrowser({
                 setRetryAfter(retryAfterSeconds);
                 const errorMessage = result.message || `Rate limit exceeded. Retrying automatically in ${retryAfterSeconds} seconds.`;
 
-                logDebug('Rate limit exceeded', {
-                    retryAfterSeconds,
-                    message: result.message,
-                    rateLimitInfo: result
-                });
+
 
                 setError(errorMessage);
                 onError(errorMessage);
@@ -265,62 +271,36 @@ export default function GitHubFileBrowser({
                 // Validate that result.tree is an array
                 if (!Array.isArray(result.tree)) {
                     const errorMessage = 'Invalid repository tree data received. Expected an array but got: ' + typeof result.tree;
-                    logDebug('Invalid tree data structure', {
-                        expectedType: 'array',
-                        actualType: typeof result.tree,
-                        treeData: result.tree
-                    });
+
                     setError(errorMessage);
                     onError(errorMessage);
                     showError(errorMessage);
                     return;
                 }
 
-                logDebug('Repository tree data received', {
-                    treeLength: result.tree.length,
-                    sampleItems: result.tree.slice(0, 3)
-                });
-
                 const treeData = buildTreeFromFlat(result.tree);
-                logDebug('Tree built from flat data', {
-                    originalLength: result.tree.length,
-                    treeLength: treeData.length,
-                    treeStructure: treeData.map(node => ({ path: node.path, type: node.type, childrenCount: node.children?.length || 0 }))
-                });
 
                 setTree(treeData);
 
                 if (treeData.length === 0) {
                     const message = 'Repository appears to be empty or contains no supported file types.';
-                    logDebug('Empty tree after building', { originalTree: result.tree });
                     showInfo(message);
                 }
             } else {
                 const errorMessage = result.message || 'Failed to fetch repository tree. Please check the repository URL and try again.';
-                logDebug('API request failed', {
-                    success: result.success,
-                    message: result.message,
-                    fullResult: result
-                });
                 setError(errorMessage);
                 onError(errorMessage);
                 showError(errorMessage);
             }
         } catch (err) {
             const errorMessage = 'Network error occurred while fetching repository tree. Please check your internet connection and try again.';
-            logDebug('Network error during API request', {
-                error: err instanceof Error ? err.message : String(err),
-                stack: err instanceof Error ? err.stack : undefined,
-                requestPayload
-            });
             setError(errorMessage);
             onError(errorMessage);
             showError(errorMessage);
         } finally {
             setIsLoading(false);
-            logDebug('Repository tree fetch completed', { isLoading: false });
         }
-    }, [repository.owner, repository.repo, branch, buildTreeFromFlat, onError, logDebug, showError, showWarning, showInfo]);
+    }, [repository.owner, repository.repo, branch, buildTreeFromFlat, onError, showError, showWarning, showInfo]);
 
     // Auto-retry after rate limit expires
     useEffect(() => {
@@ -347,35 +327,24 @@ export default function GitHubFileBrowser({
             } else {
                 newSet.add(path);
             }
+            // Persist expanded paths
+            githubState.updateExpandedPaths(Array.from(newSet));
             return newSet;
         });
-    }, []);
+    }, [githubState]);
 
     // Debounced file selection to prevent rapid API calls
     const debouncedFileSelection = useDebounce((file: FileItem) => {
-        logDebug('File selected (debounced)', {
-            fileName: file.name,
-            filePath: file.path,
-            fileType: file.type,
-            fileSize: file.size
-        });
         onFileSelected(file);
     }, 300); // 300ms debounce
 
     const handleFileClick = useCallback((file: FileItem) => {
-        logDebug('File clicked', {
-            fileName: file.name,
-            filePath: file.path,
-            fileType: file.type,
-            action: file.type === 'file' ? 'select' : 'toggle_directory'
-        });
-
         if (file.type === 'file') {
             debouncedFileSelection(file);
         } else {
             toggleDirectory(file.path);
         }
-    }, [debouncedFileSelection, toggleDirectory, logDebug]);
+    }, [debouncedFileSelection, toggleDirectory]);
 
     const getFileIcon = (file: FileItem) => {
         if (file.type === 'dir') {
@@ -403,7 +372,25 @@ export default function GitHubFileBrowser({
         }
     };
 
-    const renderTreeNode = (node: TreeNode, depth: number = 0): JSX.Element => {
+    // Highlight matching text in search results
+    const highlightText = (text: string, query: string) => {
+        if (!query.trim()) {
+            return text;
+        }
+
+        const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        const parts = text.split(regex);
+
+        return parts.map((part, index) =>
+            regex.test(part) ? (
+                <span key={index} className="bg-yellow-200 text-yellow-900 px-0.5 rounded">
+                    {part}
+                </span>
+            ) : part
+        );
+    };
+
+    const renderTreeNode = (node: TreeNode, depth: number = 0): React.ReactElement => {
         // Skip rendering if node is invalid
         if (!node || !node.path || !node.name) {
             return <div key={`invalid-${depth}-${Math.random()}`}></div>;
@@ -416,14 +403,14 @@ export default function GitHubFileBrowser({
         return (
             <div key={node.path} className="select-none">
                 <div
-                    className={`flex items-center py-1 px-2 hover:bg-gray-100 cursor-pointer rounded ${
-                        isSelected ? 'bg-blue-100 text-blue-800' : ''
+                    className={`flex items-center py-1 px-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer rounded ${
+                        isSelected ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200' : 'text-gray-900 dark:text-gray-100'
                     }`}
                     style={{ paddingLeft: `${depth * 16 + 8}px` }}
                     onClick={() => handleFileClick(node)}
                 >
                     {node.type === 'dir' && (
-                        <span className="mr-1">
+                        <span className="mr-1 text-gray-600 dark:text-gray-400">
                             {expandedPaths.has(node.path) ? (
                                 <ChevronDown className="h-4 w-4" />
                             ) : (
@@ -432,11 +419,13 @@ export default function GitHubFileBrowser({
                         </span>
                     )}
                     <Icon className={`h-4 w-4 mr-2 ${
-                        node.type === 'dir' ? 'text-blue-600' : 'text-gray-600'
+                        node.type === 'dir' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'
                     }`} />
-                    <span className="text-sm truncate">{node.name}</span>
+                    <span className="text-sm truncate text-gray-900 dark:text-gray-100">
+                        {highlightText(node.name, debouncedSearchQuery)}
+                    </span>
                     {node.type === 'file' && node.size && (
-                        <span className="ml-auto text-xs text-gray-500">
+                        <span className="ml-auto text-xs text-gray-500 dark:text-gray-400">
                             {(node.size / 1024).toFixed(1)}KB
                         </span>
                     )}
@@ -472,9 +461,9 @@ export default function GitHubFileBrowser({
     }
 
     return (
-        <div className="space-y-2">
+        <div className="space-y-3">
             <div className="flex items-center justify-between">
-                <h4 className="text-sm font-medium text-gray-700">Repository Files</h4>
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Repository Files</h4>
                 <Button
                     variant="outline"
                     size="sm"
@@ -488,6 +477,36 @@ export default function GitHubFileBrowser({
                         <RefreshCw className="h-4 w-4" />
                     )}
                 </Button>
+            </div>
+
+            {/* Search Input */}
+            <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                <Input
+                    type="text"
+                    placeholder="Search files and folders..."
+                    value={searchQuery}
+                    onChange={(e) => {
+                        const newQuery = e.target.value;
+                        setSearchQuery(newQuery);
+                        githubState.updateSearchQuery(newQuery);
+                    }}
+                    className="pl-10 pr-10 text-sm"
+                    disabled={disabled}
+                />
+                {searchQuery && (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                            setSearchQuery('');
+                            githubState.updateSearchQuery('');
+                        }}
+                        className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0 hover:bg-gray-100"
+                    >
+                        <X className="h-3 w-3" />
+                    </Button>
+                )}
             </div>
 
             {error && (
@@ -515,16 +534,20 @@ export default function GitHubFileBrowser({
             )}
 
             <div className="border rounded-md bg-white max-h-96 overflow-y-auto">
-                {tree.length > 0 ? (
+                {(debouncedSearchQuery ? filteredTree : tree).length > 0 ? (
                     <div className="p-2">
-                        {tree.map(node => renderTreeNode(node))}
+                        {(debouncedSearchQuery ? filteredTree : tree).map(node => renderTreeNode(node))}
                     </div>
                 ) : (
                     <div className="p-4 text-center text-gray-500">
                         <File className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                        <p className="text-sm font-medium mb-1">No files found</p>
+                        <p className="text-sm font-medium mb-1">
+                            {debouncedSearchQuery ? 'No matching files found' : 'No files found'}
+                        </p>
                         <p className="text-xs text-gray-400">
-                            {!error ? (
+                            {debouncedSearchQuery ? (
+                                'Try adjusting your search query or clear the search to see all files.'
+                            ) : !error ? (
                                 <>
                                     Repository may be empty or contain only unsupported file types.<br />
                                     Try refreshing or check the repository URL and branch.

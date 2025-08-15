@@ -61,7 +61,6 @@ export default function GitHubRepositoryInput({ onRepositoryValidated, onError, 
 
             // Handle CSRF token mismatch (419) by reloading the page
             if (response.status === 419) {
-                console.error('CSRF token mismatch detected');
                 alert('Session expired. Please refresh the page and try again.');
                 window.location.reload();
                 return;
@@ -69,7 +68,6 @@ export default function GitHubRepositoryInput({ onRepositoryValidated, onError, 
 
             // Handle authentication errors (401) by reloading the page
             if (response.status === 401) {
-                console.error('Unauthorized access detected');
                 alert('Authentication required. Please refresh the page and log in again.');
                 window.location.reload();
                 return;
