@@ -3,6 +3,7 @@ import GitHubFileBrowser from '@/components/github/GitHubFileBrowser';
 import GitHubFileSelector from '@/components/github/GitHubFileSelector';
 import GitHubRepositoryInput from '@/components/github/GitHubRepositoryInput';
 import SourceToggle, { SourceType } from '@/components/github/SourceToggle';
+import RecentItemsSidebar from '@/components/recent-items-sidebar';
 import TestSetupWizard from '@/components/TestSetupWizard';
 import { useGitHubState } from '@/hooks/useLocalStorage';
 import AppLayout from '@/layouts/app-layout';
@@ -731,6 +732,21 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                     <div className="overflow-hidden bg-background shadow-lg sm:rounded-lg border">
                         <div className="p-6 text-foreground">
+                            {/* Page Header with Recent Items */}
+                            <div className="mb-8 flex items-center justify-between">
+                                <div className="flex-1">
+                                    <h1 className="text-2xl font-bold text-foreground">ThinkTest AI</h1>
+                                    <p className="mt-1 text-sm text-muted-foreground">
+                                        Generate comprehensive tests for your WordPress plugins using AI
+                                    </p>
+                                </div>
+                                <RecentItemsSidebar
+                                    recentConversations={recentConversations}
+                                    recentAnalyses={recentAnalyses}
+                                    className="ml-4"
+                                />
+                            </div>
+
                             {/* Source Selection */}
                             <div className="mb-8">
                                 <SourceToggle

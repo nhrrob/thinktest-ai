@@ -115,7 +115,11 @@ export default function GitHubRepositoryInput({ onRepositoryValidated, onError, 
         setError(null);
     };
 
-
+    const handleUseDemoRepository = () => {
+        const demoUrl = 'https://github.com/nhrrob/nhrrob-core-contributions';
+        setRepositoryUrl(demoUrl);
+        setError(null);
+    };
 
     return (
         <div className="space-y-4">
@@ -147,7 +151,18 @@ export default function GitHubRepositoryInput({ onRepositoryValidated, onError, 
                         )}
                     </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">Enter a GitHub repository URL (e.g., https://github.com/owner/repo)</p>
+                <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground">Enter a GitHub repository URL (e.g., https://github.com/owner/repo)</p>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleUseDemoRepository}
+                        disabled={disabled || isValidating}
+                        className="text-xs h-auto py-1 px-2 text-muted-foreground hover:text-foreground"
+                    >
+                        Use Demo Repository
+                    </Button>
+                </div>
             </div>
 
 

@@ -7,7 +7,6 @@ import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
 import { BookOpen, Code, Folder, Home, Key, LayoutGrid, Shield, Users } from 'lucide-react';
 import AppLogo from './app-logo';
-import AppearanceToggleDropdown from './appearance-dropdown';
 
 const mainNavItems: NavItem[] = [
     {
@@ -80,9 +79,6 @@ export function AppSidebar() {
 
             <SidebarFooter>
                 <NavFooter items={footerNavItems} className="mt-auto" />
-                <div className="flex items-center justify-between px-2 py-1">
-                    <AppearanceToggleDropdown />
-                </div>
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

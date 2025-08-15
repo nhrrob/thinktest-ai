@@ -1,4 +1,3 @@
-import { Button } from '@/components/ui/button';
 import { Github, Upload } from 'lucide-react';
 
 export type SourceType = 'file' | 'github';
@@ -15,32 +14,39 @@ export default function SourceToggle({ selectedSource, onSourceChange, disabled 
             <h3 className="text-lg font-medium text-foreground">Choose Source</h3>
             <p className="text-sm text-muted-foreground">Select how you want to provide your WordPress plugin code for analysis.</p>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <Button
-                    variant={selectedSource === 'file' ? 'default' : 'outline'}
+            {/* Compact tab-style design */}
+            <div className="inline-flex rounded-lg border border-input bg-background p-1">
+                <button
                     onClick={() => onSourceChange('file')}
                     disabled={disabled}
-                    className="flex h-auto flex-col items-center space-y-2 p-4 text-left"
+                    className={`
+                        inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all
+                        ${selectedSource === 'file'
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                        }
+                        ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                    `}
                 >
-                    <Upload className="h-8 w-8" />
-                    <div>
-                        <div className="font-medium">Upload File</div>
-                        <div className="text-xs opacity-75">Upload a .php file or .zip archive</div>
-                    </div>
-                </Button>
+                    <Upload className="h-4 w-4" />
+                    Upload File
+                </button>
 
-                <Button
-                    variant={selectedSource === 'github' ? 'default' : 'outline'}
+                <button
                     onClick={() => onSourceChange('github')}
                     disabled={disabled}
-                    className="flex h-auto flex-col items-center space-y-2 p-4 text-left"
+                    className={`
+                        inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all
+                        ${selectedSource === 'github'
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                        }
+                        ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                    `}
                 >
-                    <Github className="h-8 w-8" />
-                    <div>
-                        <div className="font-medium">GitHub Repository</div>
-                        <div className="text-xs opacity-75">Connect a GitHub repository</div>
-                    </div>
-                </Button>
+                    <Github className="h-4 w-4" />
+                    GitHub Repository
+                </button>
             </div>
 
             <div className="space-y-1 text-xs text-muted-foreground">
