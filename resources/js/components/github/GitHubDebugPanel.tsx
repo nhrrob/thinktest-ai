@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown, ChevronRight, Bug, RefreshCw } from 'lucide-react';
+import { fetchWithCsrfRetry, handleApiResponse } from '@/utils/csrf';
 
 interface Repository {
     owner: string;
@@ -35,9 +36,7 @@ export default function GitHubDebugPanel({
     const [isDebugging, setIsDebugging] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
 
-    const getCsrfToken = () => {
-        return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-    };
+
 
     const runDebugTest = async () => {
         setIsDebugging(true);
@@ -56,13 +55,9 @@ export default function GitHubDebugPanel({
         try {
             // Test repository tree API
             console.log(`[${timestamp}] GitHubDebugPanel: Testing /thinktest/github/tree API`);
-            
-            const response = await fetch('/thinktest/github/tree', {
+
+            const response = await fetchWithCsrfRetry('/thinktest/github/tree', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': getCsrfToken(),
-                },
                 body: JSON.stringify({
                     owner: repository.owner,
                     repo: repository.repo,
@@ -74,7 +69,12 @@ export default function GitHubDebugPanel({
             console.log(`[${timestamp}] GitHubDebugPanel: API response status:`, response.status);
             console.log(`[${timestamp}] GitHubDebugPanel: API response headers:`, Object.fromEntries(response.headers.entries()));
 
-            const result = await response.json();
+            const result = await handleApiResponse(response);
+
+            // If handleApiResponse returned undefined, it means there was an error that caused a page reload
+            if (result === undefined) {
+                return;
+            }
             debugData.apiResponse = result;
 
             console.log(`[${timestamp}] GitHubDebugPanel: API response body:`, result);

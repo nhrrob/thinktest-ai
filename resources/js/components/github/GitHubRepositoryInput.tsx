@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { GitBranch, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { fetchWithCsrfRetry, handleApiResponse } from '@/utils/csrf';
 
 interface Repository {
     id: number;
@@ -41,34 +42,19 @@ export default function GitHubRepositoryInput({ onRepositoryValidated, onError, 
         setError(null);
 
         try {
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-
-            const response = await fetch('/thinktest/github/validate', {
+            const response = await fetchWithCsrfRetry('/thinktest/github/validate', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken || '',
-                },
                 body: JSON.stringify({
                     repository_url: repositoryUrl,
                 }),
             });
 
-            // Handle CSRF token mismatch (419) by reloading the page
-            if (response.status === 419) {
-                alert('Session expired. Please refresh the page and try again.');
-                window.location.reload();
+            const result = await handleApiResponse(response);
+
+            // If handleApiResponse returned undefined, it means there was an error that caused a page reload
+            if (result === undefined) {
                 return;
             }
-
-            // Handle authentication errors (401) by reloading the page
-            if (response.status === 401) {
-                alert('Authentication required. Please refresh the page and log in again.');
-                window.location.reload();
-                return;
-            }
-
-            const result = await response.json();
 
             if (result.success) {
                 onRepositoryValidated(result.repository);
@@ -153,7 +139,7 @@ export default function GitHubRepositoryInput({ onRepositoryValidated, onError, 
                     </Button>
                 </div>
                 <div className="flex items-center justify-between">
-                    <p className="text-xs text-muted-foreground">Enter a GitHub repository URL (e.g., https://github.com/owner/repo)</p>
+                    <p className="text-xs text-muted-foreground hidden">Enter a GitHub repository URL (e.g., https://github.com/owner/repo)</p>
                     <Button
                         variant="ghost"
                         size="sm"
