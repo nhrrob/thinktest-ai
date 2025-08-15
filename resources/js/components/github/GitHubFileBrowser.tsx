@@ -383,7 +383,7 @@ export default function GitHubFileBrowser({
 
         return parts.map((part, index) =>
             regex.test(part) ? (
-                <span key={index} className="bg-yellow-200 text-yellow-900 px-0.5 rounded">
+                <span key={index} className="bg-yellow-200 dark:bg-yellow-800 text-yellow-900 dark:text-yellow-100 px-0.5 rounded">
                     {part}
                 </span>
             ) : part
@@ -533,18 +533,18 @@ export default function GitHubFileBrowser({
                 </Alert>
             )}
 
-            <div className="border rounded-md bg-white max-h-96 overflow-y-auto">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900 max-h-96 overflow-y-auto">
                 {(debouncedSearchQuery ? filteredTree : tree).length > 0 ? (
                     <div className="p-2">
                         {(debouncedSearchQuery ? filteredTree : tree).map(node => renderTreeNode(node))}
                     </div>
                 ) : (
-                    <div className="p-4 text-center text-gray-500">
-                        <File className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                        <p className="text-sm font-medium mb-1">
+                    <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                        <File className="h-8 w-8 mx-auto mb-2 text-gray-400 dark:text-gray-500" />
+                        <p className="text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
                             {debouncedSearchQuery ? 'No matching files found' : 'No files found'}
                         </p>
-                        <p className="text-xs text-gray-400">
+                        <p className="text-xs text-gray-400 dark:text-gray-500">
                             {debouncedSearchQuery ? (
                                 'Try adjusting your search query or clear the search to see all files.'
                             ) : !error ? (

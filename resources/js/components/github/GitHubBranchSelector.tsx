@@ -153,37 +153,7 @@ export default function GitHubBranchSelector({ repository, onBranchSelected, onE
                 </Alert>
             )}
 
-            {currentBranch && branches.length > 0 && (
-                <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
-                    <div className="flex items-center space-x-2">
-                        <GitBranch className="h-4 w-4 text-blue-600" />
-                        <span className="text-sm font-medium text-blue-800">Selected: {currentBranch}</span>
-                        {currentBranch === repository.default_branch && (
-                            <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">
-                                Default
-                            </span>
-                        )}
-                    </div>
-                    {(() => {
-                        const selectedBranchData = branches.find((b) => b.name === currentBranch);
-                        return (
-                            selectedBranchData && (
-                                <div className="mt-2 text-xs text-blue-700">
-                                    <div className="flex items-center space-x-4">
-                                        <span>Commit: {formatCommitSha(selectedBranchData.commit_sha)}</span>
-                                        {selectedBranchData.protected && (
-                                            <div className="flex items-center space-x-1">
-                                                <Shield className="h-3 w-3 text-yellow-500" />
-                                                <span>Protected</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )
-                        );
-                    })()}
-                </div>
-            )}
+
         </div>
     );
 }

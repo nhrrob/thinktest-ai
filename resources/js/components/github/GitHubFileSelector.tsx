@@ -271,9 +271,9 @@ export default function GitHubFileSelector({
                 </CardHeader>
                 <CardContent>
                     <div className="text-center py-8">
-                        <File className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                        <p className="text-gray-500">No file selected</p>
-                        <p className="text-sm text-gray-400 mt-1">
+                        <File className="h-12 w-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
+                        <p className="text-gray-500 dark:text-gray-400">No file selected</p>
+                        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
                             Browse the repository files and click on a file to select it
                         </p>
                     </div>
@@ -293,9 +293,9 @@ export default function GitHubFileSelector({
                 </CardHeader>
                 <CardContent>
                     <div className="text-center py-8">
-                        <File className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                        <p className="text-gray-500">Directory cannot be processed</p>
-                        <p className="text-sm text-gray-400 mt-1">
+                        <File className="h-12 w-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
+                        <p className="text-gray-500 dark:text-gray-400">Directory cannot be processed</p>
+                        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
                             Select an individual file to generate tests for
                         </p>
                     </div>
@@ -320,8 +320,8 @@ export default function GitHubFileSelector({
             <CardContent className="space-y-4">
                 <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-gray-900 truncate">{selectedFile.name}</h3>
-                        <p className="text-sm text-gray-500 truncate">{selectedFile.path}</p>
+                        <h3 className="font-medium text-gray-900 dark:text-gray-100 truncate">{selectedFile.name}</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{selectedFile.path}</p>
                     </div>
                     <div className="flex items-center gap-2 ml-4">
                         <Badge className={getFileTypeColor(selectedFile.name)}>
@@ -331,7 +331,7 @@ export default function GitHubFileSelector({
                             href={selectedFile.html_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-gray-400 hover:text-gray-600"
+                            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
                         >
                             <ExternalLink className="h-4 w-4" />
                         </a>
@@ -340,19 +340,19 @@ export default function GitHubFileSelector({
 
                 <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                        <span className="text-gray-500">Size:</span>
-                        <span className="ml-2 font-medium">{formatFileSize(selectedFile.size)}</span>
+                        <span className="text-gray-500 dark:text-gray-400">Size:</span>
+                        <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{formatFileSize(selectedFile.size)}</span>
                     </div>
                     <div>
-                        <span className="text-gray-500">Repository:</span>
-                        <span className="ml-2 font-medium">{repository.full_name}</span>
+                        <span className="text-gray-500 dark:text-gray-400">Repository:</span>
+                        <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{repository.full_name}</span>
                     </div>
                 </div>
 
                 {isLoadingContent && (
                     <div className="flex items-center justify-center py-4">
                         <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                        <span className="text-sm text-gray-600">Loading file content...</span>
+                        <span className="text-sm text-gray-600 dark:text-gray-300">Loading file content...</span>
                     </div>
                 )}
 
@@ -364,7 +364,7 @@ export default function GitHubFileSelector({
 
                 {fileContent && !isLoadingContent && (
                     <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-sm text-green-600">
+                        <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
                             <CheckCircle className="h-4 w-4" />
                             <span>File content loaded successfully</span>
                         </div>
@@ -382,10 +382,10 @@ export default function GitHubFileSelector({
                             </TabsList>
 
                             <TabsContent value="preview" className="mt-4">
-                                <div className="border rounded-lg overflow-hidden bg-white">
-                                    <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b">
+                                <div className="border rounded-lg overflow-hidden bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+                                    <div className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                                         <div className="flex items-center gap-2">
-                                            <span className="text-xs font-medium text-gray-600">
+                                            <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
                                                 {fileContent.name} ({getFileLanguage(fileContent.name)})
                                             </span>
                                             <Badge variant="outline" className="text-xs">
@@ -427,9 +427,9 @@ export default function GitHubFileSelector({
                             </TabsContent>
 
                             <TabsContent value="raw" className="mt-4">
-                                <div className="border rounded-lg overflow-hidden bg-white">
-                                    <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b">
-                                        <span className="text-xs font-medium text-gray-600">
+                                <div className="border rounded-lg overflow-hidden bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+                                    <div className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                                        <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
                                             Raw Content ({(new Blob([fileContent.content]).size / 1024).toFixed(1)} KB)
                                         </span>
                                         <Button
