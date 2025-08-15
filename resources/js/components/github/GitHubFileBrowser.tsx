@@ -4,6 +4,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { fetchWithCsrfRetry, handleApiResponse } from '@/utils/csrf';
 import {
     ChevronDown,
     ChevronRight,
@@ -142,9 +143,7 @@ export default function GitHubFileBrowser({
         }
     }, [tree, debouncedSearchQuery, filterTree]);
 
-    const getCsrfToken = () => {
-        return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-    };
+
 
     const buildTreeFromFlat = useCallback((items: FileItem[]): TreeNode[] => {
 
@@ -255,17 +254,13 @@ export default function GitHubFileBrowser({
         };
 
         try {
-
-            const response = await fetch('/thinktest/github/tree', {
+            const response = await fetchWithCsrfRetry('/thinktest/github/tree', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': getCsrfToken(),
-                },
                 body: JSON.stringify(requestPayload),
             });
 
-            const result = await response.json();
+            const result = await handleApiResponse(response);
+            if (!result) return; // Handle redirect cases
 
             if (response.status === 429) {
                 // Handle rate limiting

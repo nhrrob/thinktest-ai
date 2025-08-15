@@ -91,7 +91,12 @@ export default function RecentItemsSidebar({
                                     {recentConversations.slice(0, 5).map((conversation) => (
                                         <div
                                             key={conversation.id}
-                                            className="group rounded-lg border border-border bg-card p-3 transition-colors hover:bg-muted/50"
+                                            className="group rounded-lg border border-border bg-card p-3 transition-colors hover:bg-muted/50 cursor-pointer"
+                                            onClick={() => {
+                                                // Navigate to conversation
+                                                router.visit(`/thinktest/conversation/${conversation.id}`);
+                                                setIsOpen(false); // Close sidebar after navigation
+                                            }}
                                         >
                                             <div className="flex items-start justify-between">
                                                 <div className="min-w-0 flex-1">
@@ -106,9 +111,10 @@ export default function RecentItemsSidebar({
                                                     variant="ghost"
                                                     size="sm"
                                                     className="h-auto p-1 opacity-0 group-hover:opacity-100"
-                                                    onClick={() => {
-                                                        // Navigate to conversation
+                                                    onClick={(e) => {
+                                                        e.stopPropagation(); // Prevent parent click
                                                         router.visit(`/thinktest/conversation/${conversation.id}`);
+                                                        setIsOpen(false);
                                                     }}
                                                 >
                                                     <span className="sr-only">View conversation</span>
@@ -132,7 +138,12 @@ export default function RecentItemsSidebar({
                                     {recentAnalyses.slice(0, 5).map((analysis) => (
                                         <div
                                             key={analysis.id}
-                                            className="group rounded-lg border border-border bg-card p-3 transition-colors hover:bg-muted/50"
+                                            className="group rounded-lg border border-border bg-card p-3 transition-colors hover:bg-muted/50 cursor-pointer"
+                                            onClick={() => {
+                                                // Navigate to analysis
+                                                router.visit(`/thinktest/analysis/${analysis.id}`);
+                                                setIsOpen(false); // Close sidebar after navigation
+                                            }}
                                         >
                                             <div className="flex items-start justify-between">
                                                 <div className="min-w-0 flex-1">
@@ -147,9 +158,10 @@ export default function RecentItemsSidebar({
                                                     variant="ghost"
                                                     size="sm"
                                                     className="h-auto p-1 opacity-0 group-hover:opacity-100"
-                                                    onClick={() => {
-                                                        // Navigate to analysis
+                                                    onClick={(e) => {
+                                                        e.stopPropagation(); // Prevent parent click
                                                         router.visit(`/thinktest/analysis/${analysis.id}`);
+                                                        setIsOpen(false);
                                                     }}
                                                 >
                                                     <span className="sr-only">View analysis</span>

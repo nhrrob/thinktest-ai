@@ -90,8 +90,14 @@ class AIProviderService
         switch ($provider) {
             case 'openai-gpt5':
                 return $this->callOpenAIGPT5($pluginCode, $options);
+            case 'openai-gpt5-mini':
+                return $this->callOpenAIGPT5Mini($pluginCode, $options);
             case 'anthropic-claude':
                 return $this->callAnthropicClaude($pluginCode, $options);
+            case 'anthropic-claude4-opus':
+                return $this->callAnthropicClaude4Opus($pluginCode, $options);
+            case 'anthropic-claude4-sonnet':
+                return $this->callAnthropicClaude4Sonnet($pluginCode, $options);
                 // Legacy support - will be removed in future version
             case 'chatgpt-5':
                 return $this->callOpenAIGPT5($pluginCode, $options);
@@ -175,6 +181,68 @@ class AIProviderService
     }
 
     /**
+     * Call OpenAI GPT-5 Mini API
+     */
+    private function callOpenAIGPT5Mini(string $pluginCode, array $options): array
+    {
+        $config = $this->config['providers']['openai-gpt5-mini'];
+
+        // Get API key from user tokens first, then fallback to environment
+        $apiKey = $this->getApiKeyForProvider('openai') ?? $config['api_key'];
+
+        if (empty($apiKey)) {
+            throw new \RuntimeException('OpenAI API key not configured');
+        }
+
+        $prompt = $this->buildWordPressTestPrompt($pluginCode, $options);
+
+        $payload = [
+            'model' => $config['model'],
+            'messages' => [
+                [
+                    'role' => 'system',
+                    'content' => $config['wordpress_system_prompt'],
+                ],
+                [
+                    'role' => 'user',
+                    'content' => $prompt,
+                ],
+            ],
+            'max_tokens' => $config['max_tokens'],
+            'temperature' => $config['temperature'],
+        ];
+
+        try {
+            $response = $this->httpClient->post('https://api.openai.com/v1/chat/completions', [
+                'headers' => [
+                    'Authorization' => 'Bearer '.$apiKey,
+                    'Content-Type' => 'application/json',
+                ],
+                'json' => $payload,
+                'timeout' => $config['timeout'],
+            ]);
+
+            $data = json_decode($response->getBody()->getContents(), true);
+
+            if (! isset($data['choices'][0]['message']['content'])) {
+                throw new \RuntimeException('Invalid GPT-5 Mini response format');
+            }
+
+            return [
+                'provider' => 'openai-gpt5-mini',
+                'provider_display_name' => $config['display_name'] ?? 'OpenAI GPT-5 Mini',
+                'generated_tests' => $data['choices'][0]['message']['content'],
+                'usage' => $data['usage'] ?? null,
+                'model' => $config['model'],
+                'success' => true,
+            ];
+
+        } catch (RequestException $e) {
+            throw new \RuntimeException('OpenAI GPT-5 Mini API request failed: '.$e->getMessage());
+        }
+    }
+
+    /**
      * Call Anthropic Claude API
      */
     private function callAnthropicClaude(string $pluginCode, array $options): array
@@ -230,6 +298,124 @@ class AIProviderService
 
         } catch (RequestException $e) {
             throw new \RuntimeException('Anthropic API request failed: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Call Anthropic Claude 4 Opus API
+     */
+    private function callAnthropicClaude4Opus(string $pluginCode, array $options): array
+    {
+        $config = $this->config['providers']['anthropic-claude4-opus'];
+
+        // Get API key from user tokens first, then fallback to environment
+        $apiKey = $this->getApiKeyForProvider('anthropic') ?? $config['api_key'];
+
+        if (empty($apiKey)) {
+            throw new \RuntimeException('Anthropic API key not configured');
+        }
+
+        $prompt = $this->buildWordPressTestPrompt($pluginCode, $options);
+
+        $payload = [
+            'model' => $config['model'],
+            'max_tokens' => $config['max_tokens'],
+            'system' => $config['wordpress_system_prompt'],
+            'messages' => [
+                [
+                    'role' => 'user',
+                    'content' => $prompt,
+                ],
+            ],
+        ];
+
+        try {
+            $response = $this->httpClient->post('https://api.anthropic.com/v1/messages', [
+                'headers' => [
+                    'x-api-key' => $apiKey,
+                    'Content-Type' => 'application/json',
+                    'anthropic-version' => '2023-06-01',
+                ],
+                'json' => $payload,
+                'timeout' => $config['timeout'],
+            ]);
+
+            $data = json_decode($response->getBody()->getContents(), true);
+
+            if (! isset($data['content'][0]['text'])) {
+                throw new \RuntimeException('Invalid Claude 4 Opus response format');
+            }
+
+            return [
+                'provider' => 'anthropic-claude4-opus',
+                'provider_display_name' => $config['display_name'] ?? 'Anthropic Claude 4 Opus',
+                'generated_tests' => $data['content'][0]['text'],
+                'usage' => $data['usage'] ?? null,
+                'model' => $config['model'],
+                'success' => true,
+            ];
+
+        } catch (RequestException $e) {
+            throw new \RuntimeException('Anthropic Claude 4 Opus API request failed: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Call Anthropic Claude 4 Sonnet API
+     */
+    private function callAnthropicClaude4Sonnet(string $pluginCode, array $options): array
+    {
+        $config = $this->config['providers']['anthropic-claude4-sonnet'];
+
+        // Get API key from user tokens first, then fallback to environment
+        $apiKey = $this->getApiKeyForProvider('anthropic') ?? $config['api_key'];
+
+        if (empty($apiKey)) {
+            throw new \RuntimeException('Anthropic API key not configured');
+        }
+
+        $prompt = $this->buildWordPressTestPrompt($pluginCode, $options);
+
+        $payload = [
+            'model' => $config['model'],
+            'max_tokens' => $config['max_tokens'],
+            'system' => $config['wordpress_system_prompt'],
+            'messages' => [
+                [
+                    'role' => 'user',
+                    'content' => $prompt,
+                ],
+            ],
+        ];
+
+        try {
+            $response = $this->httpClient->post('https://api.anthropic.com/v1/messages', [
+                'headers' => [
+                    'x-api-key' => $apiKey,
+                    'Content-Type' => 'application/json',
+                    'anthropic-version' => '2023-06-01',
+                ],
+                'json' => $payload,
+                'timeout' => $config['timeout'],
+            ]);
+
+            $data = json_decode($response->getBody()->getContents(), true);
+
+            if (! isset($data['content'][0]['text'])) {
+                throw new \RuntimeException('Invalid Claude 4 Sonnet response format');
+            }
+
+            return [
+                'provider' => 'anthropic-claude4-sonnet',
+                'provider_display_name' => $config['display_name'] ?? 'Anthropic Claude 4 Sonnet',
+                'generated_tests' => $data['content'][0]['text'],
+                'usage' => $data['usage'] ?? null,
+                'model' => $config['model'],
+                'success' => true,
+            ];
+
+        } catch (RequestException $e) {
+            throw new \RuntimeException('Anthropic Claude 4 Sonnet API request failed: '.$e->getMessage());
         }
     }
 
@@ -338,8 +524,8 @@ class AIProviderService
     private function mapProviderName(string $provider): string
     {
         return match ($provider) {
-            'openai-gpt5', 'chatgpt-5' => 'openai',
-            'anthropic-claude', 'anthropic' => 'anthropic',
+            'openai-gpt5', 'openai-gpt5-mini', 'chatgpt-5' => 'openai',
+            'anthropic-claude', 'anthropic-claude4-opus', 'anthropic-claude4-sonnet', 'anthropic' => 'anthropic',
             default => $provider,
         };
     }

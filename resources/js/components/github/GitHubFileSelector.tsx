@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { fetchWithCsrfRetry, handleApiResponse } from '@/utils/csrf';
 import {
     File,
     Code,
@@ -135,9 +136,7 @@ export default function GitHubFileSelector({
         return content.split('\n').map((_, index) => (index + 1).toString());
     };
 
-    const getCsrfToken = () => {
-        return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-    };
+
 
     const getFileIcon = (fileName: string) => {
         const extension = fileName.split('.').pop()?.toLowerCase();
@@ -206,16 +205,13 @@ export default function GitHubFileSelector({
         };
 
         try {
-            const response = await fetch('/thinktest/github/file', {
+            const response = await fetchWithCsrfRetry('/thinktest/github/file', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': getCsrfToken(),
-                },
                 body: JSON.stringify(requestPayload),
             });
 
-            const result = await response.json();
+            const result = await handleApiResponse(response);
+            if (!result) return; // Handle redirect cases
 
             if (response.status === 429) {
                 // Handle rate limiting

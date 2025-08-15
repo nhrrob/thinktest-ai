@@ -35,8 +35,19 @@ return [
             'openai-gpt5' => [
                 'api_key' => env('OPENAI_API_KEY'), // Environment-specific - Uses OpenAI API key
                 'organization' => env('OPENAI_ORGANIZATION'), // Environment-specific
-                'model' => 'gpt-4-turbo', // Application constant - Using GPT-4 Turbo until GPT-5 is available
+                'model' => env('OPENAI_GPT5_MODEL', 'gpt-5'), // Application constant - GPT-5 is now available
                 'display_name' => 'OpenAI GPT-5', // User-facing display name
+                'provider_company' => 'OpenAI', // Provider company name
+                'max_tokens' => 4000, // Application constant
+                'temperature' => 0.7, // Application constant
+                'timeout' => env('AI_TIMEOUT', 60), // May vary by environment
+                'wordpress_system_prompt' => 'You are an expert WordPress plugin developer specializing in intelligent PHPUnit test generation. You understand WordPress hooks, filters, actions, plugin patterns, and WordPress testing best practices. IMPORTANT: You must respond with ONLY clean, executable test code without any explanatory text, comments, or markdown formatting. Your response should be ready-to-use PHP code that can be directly copied into test files.',
+            ],
+            'openai-gpt5-mini' => [
+                'api_key' => env('OPENAI_API_KEY'), // Environment-specific - Uses OpenAI API key
+                'organization' => env('OPENAI_ORGANIZATION'), // Environment-specific
+                'model' => 'gpt-5-mini', // Application constant - GPT-5 Mini for faster, cost-effective responses
+                'display_name' => 'OpenAI GPT-5 Mini', // User-facing display name
                 'provider_company' => 'OpenAI', // Provider company name
                 'max_tokens' => 4000, // Application constant
                 'temperature' => 0.7, // Application constant
@@ -45,8 +56,26 @@ return [
             ],
             'anthropic-claude' => [
                 'api_key' => env('ANTHROPIC_API_KEY'), // Environment-specific
-                'model' => 'claude-3-5-sonnet-20241022', // Application constant - Latest Claude 3.5 Sonnet
+                'model' => env('ANTHROPIC_CLAUDE_MODEL', 'claude-3-5-sonnet-20241022'), // Application constant - Latest Claude 3.5 Sonnet (fallback)
                 'display_name' => 'Anthropic Claude 3.5 Sonnet', // User-facing display name
+                'provider_company' => 'Anthropic', // Provider company name
+                'max_tokens' => 4000, // Application constant
+                'timeout' => env('AI_TIMEOUT', 60), // May vary by environment
+                'wordpress_system_prompt' => 'You are an expert WordPress plugin developer specializing in intelligent PHPUnit test generation. You understand WordPress hooks, filters, actions, plugin patterns, and WordPress testing best practices. IMPORTANT: You must respond with ONLY clean, executable test code without any explanatory text, comments, or markdown formatting. Your response should be ready-to-use PHP code that can be directly copied into test files.',
+            ],
+            'anthropic-claude4-opus' => [
+                'api_key' => env('ANTHROPIC_API_KEY'), // Environment-specific
+                'model' => 'claude-opus-4', // Application constant - Claude 4 Opus
+                'display_name' => 'Anthropic Claude 4 Opus', // User-facing display name
+                'provider_company' => 'Anthropic', // Provider company name
+                'max_tokens' => 4000, // Application constant
+                'timeout' => env('AI_TIMEOUT', 60), // May vary by environment
+                'wordpress_system_prompt' => 'You are an expert WordPress plugin developer specializing in intelligent PHPUnit test generation. You understand WordPress hooks, filters, actions, plugin patterns, and WordPress testing best practices. IMPORTANT: You must respond with ONLY clean, executable test code without any explanatory text, comments, or markdown formatting. Your response should be ready-to-use PHP code that can be directly copied into test files.',
+            ],
+            'anthropic-claude4-sonnet' => [
+                'api_key' => env('ANTHROPIC_API_KEY'), // Environment-specific
+                'model' => 'claude-sonnet-4', // Application constant - Claude 4 Sonnet
+                'display_name' => 'Anthropic Claude 4 Sonnet', // User-facing display name
                 'provider_company' => 'Anthropic', // Provider company name
                 'max_tokens' => 4000, // Application constant
                 'timeout' => env('AI_TIMEOUT', 60), // May vary by environment
@@ -68,7 +97,11 @@ return [
         // Backward compatibility mapping for existing code
         'legacy_provider_mapping' => [
             'chatgpt-5' => 'openai-gpt5',
+            'gpt-5-mini' => 'openai-gpt5-mini',
             'anthropic' => 'anthropic-claude',
+            'claude-4' => 'anthropic-claude4-opus',
+            'claude-opus-4' => 'anthropic-claude4-opus',
+            'claude-sonnet-4' => 'anthropic-claude4-sonnet',
             'openai' => 'openai-gpt5', // For database migration compatibility
         ],
         'rate_limits' => [
