@@ -112,6 +112,7 @@ class ThinkTestController extends Controller
             'plugin_file' => 'required|file|max:10240', // 10MB max
             'provider' => 'sometimes|string|in:openai-gpt5,anthropic-claude,chatgpt-5,anthropic,mock',
             'framework' => 'sometimes|string|in:phpunit,pest',
+            'custom_prompt' => 'sometimes|string|max:2000',
         ]);
 
         try {
@@ -188,6 +189,7 @@ class ThinkTestController extends Controller
                     'filename' => $fileData['filename'],
                     'framework' => $request->input('framework', 'phpunit'),
                     'analysis_id' => $analysisResult->id,
+                    'custom_prompt' => $request->input('custom_prompt'),
                 ],
                 'plugin_file_path' => $fileData['stored_path'],
                 'plugin_file_hash' => $fileData['file_hash'],
@@ -230,6 +232,7 @@ class ThinkTestController extends Controller
             'conversation_id' => 'required|string',
             'provider' => 'sometimes|string|in:openai-gpt5,anthropic-claude,chatgpt-5,anthropic,mock',
             'framework' => 'sometimes|string|in:phpunit,pest',
+            'custom_prompt' => 'sometimes|string|max:2000',
         ]);
 
         try {
@@ -255,6 +258,7 @@ class ThinkTestController extends Controller
                 'provider' => $request->input('provider', $conversation->provider),
                 'framework' => $request->input('framework', $conversation->context['framework'] ?? 'phpunit'),
                 'test_type' => 'unit',
+                'custom_prompt' => $request->input('custom_prompt'),
             ];
 
             $aiResult = $this->aiService->generateWordPressTests($pluginContent, $aiOptions);
@@ -308,6 +312,7 @@ class ThinkTestController extends Controller
             'branch' => 'sometimes|string|max:100|regex:/^[a-zA-Z0-9\-_\.\/]+$/',
             'provider' => 'sometimes|string|in:openai-gpt5,anthropic-claude,chatgpt-5,anthropic,mock',
             'framework' => 'sometimes|string|in:phpunit,pest',
+            'custom_prompt' => 'sometimes|string|max:2000',
         ]);
 
         try {
@@ -363,6 +368,7 @@ class ThinkTestController extends Controller
                     'provider' => $provider,
                     'framework' => $framework,
                     'repository_context' => $repositoryContext,
+                    'custom_prompt' => $request->input('custom_prompt'),
                 ]
             );
 
@@ -400,6 +406,7 @@ class ThinkTestController extends Controller
                     'repository_info' => $repositoryContext,
                     'is_single_file' => true,
                     'framework' => $framework,
+                    'custom_prompt' => $request->input('custom_prompt'),
                 ],
                 'metadata' => [
                     'framework' => $framework,

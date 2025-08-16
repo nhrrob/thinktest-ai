@@ -61,8 +61,16 @@ export default function GitHubBranchSelector({ repository, onBranchSelected, onE
                 const needsSelection = !currentBranch || !cachedBranches.find(b => b.name === currentBranch);
                 if (needsSelection && cachedBranches.length > 0) {
                     const defaultBranch = cachedBranches.find((b: Branch) => b.name === repository.default_branch) || cachedBranches[0];
+                    console.log(`[GitHubBranchSelector] Auto-selecting branch from cache: ${defaultBranch.name} (${cachedBranches.length} branches available)`);
                     setCurrentBranch(defaultBranch.name);
                     onBranchSelected(defaultBranch);
+                } else if (currentBranch && cachedBranches.find(b => b.name === currentBranch)) {
+                    // Ensure the callback is called even if branch is already selected
+                    const existingBranch = cachedBranches.find(b => b.name === currentBranch);
+                    if (existingBranch) {
+                        console.log(`[GitHubBranchSelector] Re-confirming existing branch selection: ${currentBranch}`);
+                        onBranchSelected(existingBranch);
+                    }
                 }
                 return;
             }
@@ -98,10 +106,20 @@ export default function GitHubBranchSelector({ repository, onBranchSelected, onE
 
                 // Auto-select branch if no valid branch is currently selected
                 const needsSelection = !currentBranch || !result.branches.find(b => b.name === currentBranch);
+                console.log(`[GitHubBranchSelector] Branch selection check - Current: ${currentBranch}, Needs selection: ${needsSelection}, Available branches: ${result.branches.length}`);
+
                 if (needsSelection && result.branches.length > 0) {
                     const defaultBranch = result.branches.find((b: Branch) => b.name === repository.default_branch) || result.branches[0];
+                    console.log(`[GitHubBranchSelector] Auto-selecting branch: ${defaultBranch.name} (default: ${repository.default_branch})`);
                     setCurrentBranch(defaultBranch.name);
                     onBranchSelected(defaultBranch);
+                } else if (currentBranch && result.branches.find(b => b.name === currentBranch)) {
+                    // Re-confirm existing selection to ensure parent component is updated
+                    const existingBranch = result.branches.find(b => b.name === currentBranch);
+                    if (existingBranch) {
+                        console.log(`[GitHubBranchSelector] Re-confirming existing branch: ${currentBranch}`);
+                        onBranchSelected(existingBranch);
+                    }
                 }
             } else {
                 const errorMessage = result.message || 'Failed to fetch branches';
@@ -115,6 +133,15 @@ export default function GitHubBranchSelector({ repository, onBranchSelected, onE
                     setBranches(cachedBranches);
                     setIsUsingCache(true);
                     setError(`${errorMessage} (showing cached data)`);
+
+                    // Auto-select branch from cached data
+                    const needsSelection = !currentBranch || !cachedBranches.find(b => b.name === currentBranch);
+                    if (needsSelection && cachedBranches.length > 0) {
+                        const defaultBranch = cachedBranches.find((b: Branch) => b.name === repository.default_branch) || cachedBranches[0];
+                        console.log(`[GitHubBranchSelector] Auto-selecting branch from fallback cache: ${defaultBranch.name}`);
+                        setCurrentBranch(defaultBranch.name);
+                        onBranchSelected(defaultBranch);
+                    }
                 }
             }
         } catch (fetchError) {

@@ -6,10 +6,17 @@ use App\Services\AI\AIProviderService;
 use App\Services\TestGeneration\TestGenerationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Tests\Support\MocksExternalApis;
 
 class ChatGPT5IntegrationTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, MocksExternalApis;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->setUpApiMocks();
+    }
 
     public function test_openai_gpt5_config_exists(): void
     {
@@ -48,7 +55,8 @@ class ChatGPT5IntegrationTest extends TestCase
     {
         $service = new TestGenerationService(
             app(\App\Services\AI\AIProviderService::class),
-            app(\App\Services\WordPress\PluginAnalysisService::class)
+            app(\App\Services\WordPress\PluginAnalysisService::class),
+            app(\App\Services\TestGeneration\ElementorTestGenerationService::class)
         );
 
         // Test valid provider
@@ -106,10 +114,14 @@ class ChatGPT5IntegrationTest extends TestCase
         // Verify legacy openai provider is no longer available
         $this->assertArrayNotHasKey('openai', $providers);
 
-        // Verify current providers are available
-        $this->assertCount(2, $providers);
+        // Verify current providers are available (we now have 6 providers including mock)
+        $this->assertCount(6, $providers);
         $this->assertArrayHasKey('openai-gpt5', $providers);
+        $this->assertArrayHasKey('openai-gpt5-mini', $providers);
         $this->assertArrayHasKey('anthropic-claude', $providers);
+        $this->assertArrayHasKey('anthropic-claude4-opus', $providers);
+        $this->assertArrayHasKey('anthropic-claude4-sonnet', $providers);
+        $this->assertArrayHasKey('mock', $providers);
 
         // Verify provider details
         $this->assertEquals('OpenAI GPT-5', $providers['openai-gpt5']['display_name']);
@@ -120,6 +132,10 @@ class ChatGPT5IntegrationTest extends TestCase
 
     public function test_chatgpt5_provider_validation_in_switch_statement(): void
     {
+        // Clear any environment API keys for this test
+        config(['thinktest_ai.ai.providers.openai-gpt5.api_key' => null]);
+        config(['thinktest_ai.ai.providers.chatgpt-5.api_key' => null]);
+
         $service = new AIProviderService;
 
         // Use reflection to test the private callProvider method
@@ -139,7 +155,7 @@ class ChatGPT5IntegrationTest extends TestCase
             $this->fail('ChatGPT-5 provider should be supported in callProvider method');
         } catch (\RuntimeException $e) {
             // RuntimeException is expected when no API key is configured
-            $this->assertStringContainsString('ChatGPT-5 API key not configured', $e->getMessage());
+            $this->assertStringContainsString('OpenAI API key not configured', $e->getMessage());
         }
     }
 }

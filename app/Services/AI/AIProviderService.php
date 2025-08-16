@@ -4,6 +4,7 @@ namespace App\Services\AI;
 
 use App\Models\DemoCredit;
 use App\Models\UserApiToken;
+use App\Services\CreditService;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use Illuminate\Support\Facades\Auth;
@@ -14,14 +15,16 @@ class AIProviderService
     private Client $httpClient;
 
     private array $config;
+    private CreditService $creditService;
 
-    public function __construct()
+    public function __construct(CreditService $creditService = null)
     {
         $this->httpClient = new Client([
             'timeout' => 60,
             'connect_timeout' => 10,
         ]);
         $this->config = config('thinktest_ai.ai');
+        $this->creditService = $creditService ?? new CreditService();
     }
 
     /**
@@ -31,15 +34,8 @@ class AIProviderService
     {
         $provider = $options['provider'] ?? $this->config['default_provider'];
 
-        // Check if user has API tokens or demo credits
-        if (!$this->userHasApiTokens() && !$this->userHasDemoCredits()) {
-            throw new \RuntimeException('No API tokens configured and no demo credits available. Please add your API tokens in settings or contact support.');
-        }
-
-        // Use demo credits if no API tokens are available
-        if (!$this->userHasApiTokens() && $this->userHasDemoCredits()) {
-            $this->useDemoCredit();
-        }
+        $user = Auth::user();
+        $userId = $user?->id;
 
         // Use mock provider if explicitly requested or no API keys are configured
         if ($provider === 'mock' || $this->shouldUseMockProvider($provider)) {
@@ -51,8 +47,35 @@ class AIProviderService
             return $this->callMockProvider($pluginCode, $options);
         }
 
+        // Check if user has API tokens, purchased credits, or demo credits
+        $hasApiTokens = $this->userHasApiTokens();
+        $hasPurchasedCredits = $userId && $this->creditService->hasCreditsForProvider($userId, $provider);
+        $hasDemoCredits = $this->userHasDemoCredits();
+
+        if (!$hasApiTokens && !$hasPurchasedCredits && !$hasDemoCredits) {
+            throw new \RuntimeException('No API tokens configured and no credits available. Please add your API tokens in settings or purchase credits.');
+        }
+
         try {
-            return $this->callProvider($provider, $pluginCode, $options);
+            $result = $this->callProvider($provider, $pluginCode, $options);
+
+            // Deduct credits after successful API call
+            if (!$hasApiTokens && $userId) {
+                if ($hasPurchasedCredits) {
+                    // Deduct purchased credits
+                    $this->creditService->deductCreditsForUsage(
+                        $userId,
+                        $provider,
+                        $this->config['providers'][$provider]['model'] ?? null,
+                        $result['usage']['total_tokens'] ?? null
+                    );
+                } elseif ($hasDemoCredits) {
+                    // Deduct demo credits
+                    $this->useDemoCredit();
+                }
+            }
+
+            return $result;
         } catch (\Exception $e) {
             Log::error("AI provider {$provider} failed", [
                 'error' => $e->getMessage(),
@@ -72,9 +95,13 @@ class AIProviderService
                 }
             }
 
-            // If all providers fail, use mock provider
-            Log::warning('All AI providers failed, using mock provider');
+            // If all providers fail, only use mock provider for demo credits
+            if ($hasApiTokens || $hasPurchasedCredits) {
+                // Don't fallback to mock if user has API keys or paid credits
+                throw $e;
+            }
 
+            Log::warning('All AI providers failed, using mock provider for demo credits');
             return $this->callMockProvider($pluginCode, $options);
         }
     }
@@ -452,6 +479,12 @@ class AIProviderService
             $prompt .= "- Widget dependencies (styles and scripts)\n";
             $prompt .= "- Control sections and tabs\n";
             $prompt .= "- Conditional controls based on other control values\n";
+        }
+
+        // Add custom prompt if provided
+        if (!empty($options['custom_prompt'])) {
+            $prompt .= "\n\nADDITIONAL INSTRUCTIONS:\n";
+            $prompt .= $options['custom_prompt'] . "\n";
         }
 
         $prompt .= "\n\nPlugin Code:\n```php\n{$pluginCode}\n```\n\n";

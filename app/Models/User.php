@@ -211,6 +211,30 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the credits for the user.
+     */
+    public function credit(): HasOne
+    {
+        return $this->hasOne(Credit::class);
+    }
+
+    /**
+     * Get all credit transactions for the user.
+     */
+    public function creditTransactions(): HasMany
+    {
+        return $this->hasMany(CreditTransaction::class);
+    }
+
+    /**
+     * Get all payment intents for the user.
+     */
+    public function paymentIntents(): HasMany
+    {
+        return $this->hasMany(PaymentIntent::class);
+    }
+
+    /**
      * Check if user has demo credits available.
      */
     public function hasDemoCredits(): bool
@@ -226,5 +250,32 @@ class User extends Authenticatable
     {
         $demoCredit = $this->demoCredit;
         return $demoCredit ? $demoCredit->getRemainingCredits() : 5;
+    }
+
+    /**
+     * Check if user has purchased credits available.
+     */
+    public function hasPurchasedCredits(): bool
+    {
+        $credit = $this->credit;
+        return $credit && $credit->balance > 0;
+    }
+
+    /**
+     * Get purchased credits balance.
+     */
+    public function getCreditBalance(): float
+    {
+        $credit = $this->credit;
+        return $credit ? $credit->balance : 0.00;
+    }
+
+    /**
+     * Check if user has sufficient credits for AI provider.
+     */
+    public function hasCreditsForProvider(string $provider): bool
+    {
+        $creditService = app(\App\Services\CreditService::class);
+        return $creditService->hasCreditsForProvider($this->id, $provider);
     }
 }

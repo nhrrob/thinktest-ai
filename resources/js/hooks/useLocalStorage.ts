@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 /**
  * Custom hook for managing localStorage state with TypeScript support
@@ -152,7 +152,7 @@ export function useBranchCache() {
         return Date.now() > entry.expiresAt;
     };
 
-    const getCachedBranches = (owner: string, repo: string) => {
+    const getCachedBranches = useCallback((owner: string, repo: string) => {
         const cacheKey = generateCacheKey(owner, repo);
         const entry = cache[cacheKey];
 
@@ -161,9 +161,9 @@ export function useBranchCache() {
         }
 
         return entry.branches;
-    };
+    }, [cache]);
 
-    const setCachedBranches = (owner: string, repo: string, branches: BranchCacheEntry['branches']) => {
+    const setCachedBranches = useCallback((owner: string, repo: string, branches: BranchCacheEntry['branches']) => {
         const cacheKey = generateCacheKey(owner, repo);
         const now = Date.now();
 
@@ -177,9 +177,9 @@ export function useBranchCache() {
             ...prev,
             [cacheKey]: entry
         }));
-    };
+    }, [setCache, CACHE_DURATION]);
 
-    const invalidateCache = (owner?: string, repo?: string) => {
+    const invalidateCache = useCallback((owner?: string, repo?: string) => {
         if (owner && repo) {
             // Invalidate specific repository cache
             const cacheKey = generateCacheKey(owner, repo);
@@ -192,9 +192,9 @@ export function useBranchCache() {
             // Clear all cache
             setCache({});
         }
-    };
+    }, [setCache]);
 
-    const cleanExpiredEntries = () => {
+    const cleanExpiredEntries = useCallback(() => {
         const now = Date.now();
         setCache(prev => {
             const newCache: BranchCache = {};
@@ -211,9 +211,9 @@ export function useBranchCache() {
             }
             return newCache;
         });
-    };
+    }, [setCache]);
 
-    const getCacheInfo = (owner: string, repo: string) => {
+    const getCacheInfo = useCallback((owner: string, repo: string) => {
         const cacheKey = generateCacheKey(owner, repo);
         const entry = cache[cacheKey];
 
@@ -230,9 +230,9 @@ export function useBranchCache() {
             age,
             expiresIn: Math.max(0, entry.expiresAt - Date.now())
         };
-    };
+    }, [cache]);
 
-    const getCacheStats = () => {
+    const getCacheStats = useCallback(() => {
         const now = Date.now();
         const entries = Object.entries(cache);
         const total = entries.length;
@@ -251,7 +251,7 @@ export function useBranchCache() {
                 branchCount: entry.branches.length
             }))
         };
-    };
+    }, [cache]);
 
     return {
         getCachedBranches,
@@ -377,7 +377,7 @@ export function useGitHubState() {
         searchQuery: ''
     });
 
-    const updateRepository = (repository: GitHubPersistedState['selectedRepository']) => {
+    const updateRepository = useCallback((repository: GitHubPersistedState['selectedRepository']) => {
         setPersistedState(prev => ({
             ...prev,
             selectedRepository: repository,
@@ -387,9 +387,9 @@ export function useGitHubState() {
             expandedPaths: [],
             searchQuery: ''
         }));
-    };
+    }, [setPersistedState]);
 
-    const updateBranch = (branch: GitHubPersistedState['selectedBranch']) => {
+    const updateBranch = useCallback((branch: GitHubPersistedState['selectedBranch']) => {
         setPersistedState(prev => ({
             ...prev,
             selectedBranch: branch,
@@ -398,30 +398,30 @@ export function useGitHubState() {
             expandedPaths: [],
             searchQuery: ''
         }));
-    };
+    }, [setPersistedState]);
 
-    const updateSelectedFile = (file: GitHubPersistedState['selectedFile']) => {
+    const updateSelectedFile = useCallback((file: GitHubPersistedState['selectedFile']) => {
         setPersistedState(prev => ({
             ...prev,
             selectedFile: file
         }));
-    };
+    }, [setPersistedState]);
 
-    const updateExpandedPaths = (paths: string[]) => {
+    const updateExpandedPaths = useCallback((paths: string[]) => {
         setPersistedState(prev => ({
             ...prev,
             expandedPaths: paths
         }));
-    };
+    }, [setPersistedState]);
 
-    const updateSearchQuery = (query: string) => {
+    const updateSearchQuery = useCallback((query: string) => {
         setPersistedState(prev => ({
             ...prev,
             searchQuery: query
         }));
-    };
+    }, [setPersistedState]);
 
-    const clearState = () => {
+    const clearState = useCallback(() => {
         setPersistedState({
             selectedRepository: null,
             selectedBranch: null,
@@ -429,7 +429,7 @@ export function useGitHubState() {
             expandedPaths: [],
             searchQuery: ''
         });
-    };
+    }, [setPersistedState]);
 
     return {
         state: persistedState,

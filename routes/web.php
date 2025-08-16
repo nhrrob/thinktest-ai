@@ -19,12 +19,18 @@ Route::get('/favicon.ico', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
         $statsService = new \App\Services\Dashboard\DashboardStatsService();
+        $creditService = new \App\Services\CreditService();
+
         $stats = $statsService->getUserStats($user);
+        $creditStatus = $creditService->getUserCreditStatus($user->id);
+        $creditStatus['demo_credits_remaining'] = $user->getRemainingDemoCredits();
 
         return Inertia::render('dashboard', [
             'stats' => $stats,
+            'creditStatus' => $creditStatus,
         ]);
     })->name('dashboard');
 
@@ -92,8 +98,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('thinktest/detect-infrastructure', [ThinkTestController::class, 'detectTestInfrastructure'])->name('thinktest.detect_infrastructure');
     Route::post('thinktest/download-template', [ThinkTestController::class, 'downloadTemplate'])->name('thinktest.download_template');
 
-    // GitHub repository routes with rate limiting
-    Route::middleware(['github.rate_limit'])->group(function () {
+    // GitHub repository routes with authentication and rate limiting
+    Route::middleware(['auth', 'github.rate_limit'])->group(function () {
         Route::post('thinktest/github/validate', [ThinkTestController::class, 'validateRepository'])->name('thinktest.github.validate');
         Route::post('thinktest/github/branches', [ThinkTestController::class, 'getRepositoryBranches'])->name('thinktest.github.branches');
         Route::post('thinktest/github/process', [ThinkTestController::class, 'processRepository'])->name('thinktest.github.process');
@@ -112,6 +118,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('thinktest.github.debug')
         ->middleware('can:access dashboard');
 
+    // Credit and Payment routes
+    Route::prefix('credits')->name('credits.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\PaymentController::class, 'index'])->name('index');
+        Route::post('/payment-intent', [\App\Http\Controllers\PaymentController::class, 'createPaymentIntent'])->name('payment-intent');
+        Route::get('/payment-status', [\App\Http\Controllers\PaymentController::class, 'paymentStatus'])->name('payment-status');
+        Route::get('/success', [\App\Http\Controllers\PaymentController::class, 'success'])->name('success');
+        Route::get('/canceled', [\App\Http\Controllers\PaymentController::class, 'canceled'])->name('canceled');
+        Route::get('/transactions', [\App\Http\Controllers\PaymentController::class, 'transactions'])->name('transactions');
+        Route::get('/receipt', [\App\Http\Controllers\PaymentController::class, 'receipt'])->name('receipt');
+    });
+
     // Admin routes - Organized under admin prefix with proper namespace
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::middleware(['permission:view roles|create roles|edit roles|delete roles'])->group(function () {
@@ -125,8 +142,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::middleware(['permission:view users|create users|edit users|delete users'])->group(function () {
             Route::resource('users', UserController::class);
         });
+
+        // Admin payment management routes
+        Route::middleware(['permission:manage-payments'])->group(function () {
+            Route::post('/payments/refund', [\App\Http\Controllers\PaymentController::class, 'refund'])->name('payments.refund');
+        });
     });
 });
+
+// Stripe webhook route (outside auth middleware)
+Route::post('/stripe/webhook', [\App\Http\Controllers\PaymentController::class, 'webhook'])->name('stripe.webhook');
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';

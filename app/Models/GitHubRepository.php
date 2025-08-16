@@ -90,6 +90,14 @@ class GitHubRepository extends Model
     }
 
     /**
+     * Check if repository is pending processing
+     */
+    public function isPending(): bool
+    {
+        return $this->processing_status === 'pending';
+    }
+
+    /**
      * Check if repository processing is completed
      */
     public function isProcessed(): bool

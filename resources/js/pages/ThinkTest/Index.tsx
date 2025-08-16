@@ -8,7 +8,7 @@ import TestSetupWizard from '@/components/TestSetupWizard';
 import { useGitHubState, useBranchCache } from '@/hooks/useLocalStorage';
 import AppLayout from '@/layouts/app-layout';
 import { Head, useForm } from '@inertiajs/react';
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 
 interface Conversation {
     id: number;
@@ -250,15 +250,15 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
     const githubState = useGitHubState();
     const branchCache = useBranchCache();
 
-    // GitHub-related state (now using persistent state)
-    const [validatedRepository, setValidatedRepository] = useState<Repository | null>(githubState.state.selectedRepository);
-    const [selectedBranch, setSelectedBranch] = useState<Branch | null>(githubState.state.selectedBranch);
+    // GitHub-related state (initialize with null to avoid circular dependencies)
+    const [validatedRepository, setValidatedRepository] = useState<Repository | null>(null);
+    const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
     const [isProcessingRepository, setIsProcessingRepository] = useState<boolean>(false);
     const [processingProgress, setProcessingProgress] = useState<string>('');
 
-    // File selection state (now using persistent state)
+    // File selection state (initialize with null to avoid circular dependencies)
     const [githubProcessingMode, setGithubProcessingMode] = useState<GitHubProcessingMode>('repository');
-    const [selectedFile, setSelectedFile] = useState<FileItem | null>(githubState.state.selectedFile);
+    const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
     const [fileContent, setFileContent] = useState<FileContent | null>(null);
     const [isGeneratingSingleFile, setIsGeneratingSingleFile] = useState<boolean>(false);
 
@@ -271,13 +271,15 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
         plugin_file: File | null;
         provider: string;
         framework: string;
+        custom_prompt: string;
     }>({
         plugin_file: null,
         provider: 'openai-gpt5',
         framework: 'phpunit',
+        custom_prompt: '',
     });
 
-    // Restore state on component mount
+    // Restore state on component mount (only once)
     useEffect(() => {
         if (githubState.state.selectedRepository) {
             setValidatedRepository(githubState.state.selectedRepository);
@@ -288,7 +290,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
         if (githubState.state.selectedFile) {
             setSelectedFile(githubState.state.selectedFile);
         }
-    }, []);
+    }, []); // Empty dependency array is correct here - we only want this to run once on mount
 
     const handleFileUpload = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -306,6 +308,9 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
             formData.append('plugin_file', data.plugin_file);
             formData.append('provider', data.provider);
             formData.append('framework', data.framework);
+            if (data.custom_prompt.trim()) {
+                formData.append('custom_prompt', data.custom_prompt);
+            }
 
             const response = await fetch('/thinktest/upload', {
                 method: 'POST',
@@ -352,6 +357,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                     conversation_id: currentConversationId,
                     provider: data.provider,
                     framework: data.framework,
+                    custom_prompt: data.custom_prompt.trim() || null,
                 }),
             });
 
@@ -423,7 +429,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
         }
     };
 
-    const handleRepositoryValidated = (repository: Repository) => {
+    const handleRepositoryValidated = useCallback((repository: Repository) => {
         // Check if this is a different repository
         const isDifferentRepo = !validatedRepository ||
             validatedRepository.owner !== repository.owner ||
@@ -443,12 +449,13 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
         setUploadResult(null);
         setGeneratedTests(null);
         setCurrentConversationId(null);
-    };
+    }, [validatedRepository, branchCache, githubState]);
 
-    const handleBranchSelected = (branch: Branch) => {
+    const handleBranchSelected = useCallback((branch: Branch) => {
+        console.log(`[ThinkTest] Branch selected: ${branch.name} for repository: ${validatedRepository?.full_name}`);
         setSelectedBranch(branch);
         githubState.updateBranch(branch);
-    };
+    }, [validatedRepository?.full_name, githubState]);
 
     const handleProcessRepository = async () => {
         if (!validatedRepository || !selectedBranch) {
@@ -595,17 +602,17 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
         setCurrentConversationId(null);
     };
 
-    const handleFileSelected = (file: FileItem) => {
+    const handleFileSelected = useCallback((file: FileItem) => {
         setSelectedFile(file);
         githubState.updateSelectedFile(file);
         setFileContent(null);
-    };
+    }, [githubState]);
 
-    const handleFileContentLoaded = (content: FileContent) => {
+    const handleFileContentLoaded = useCallback((content: FileContent) => {
         setFileContent(content);
-    };
+    }, []);
 
-    const handleGenerateTestsForSingleFile = async () => {
+    const handleGenerateTestsForSingleFile = useCallback(async () => {
         if (!validatedRepository || !selectedBranch || !selectedFile || !fileContent) {
             alert('Please select a repository, branch, and file');
             return;
@@ -628,6 +635,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                     branch: selectedBranch.name,
                     provider: data.provider,
                     framework: data.framework,
+                    custom_prompt: data.custom_prompt.trim() || null,
                 }),
             });
 
@@ -649,7 +657,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
         } finally {
             setIsGeneratingSingleFile(false);
         }
-    };
+    }, [validatedRepository, selectedBranch, selectedFile, fileContent, data.provider, data.framework]);
 
     const handleDetectTestInfrastructure = async () => {
         if (!currentConversationId) {
@@ -735,9 +743,9 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
         }
     };
 
-    const handleError = (error: string) => {
+    const handleError = useCallback((error: string) => {
         // You could also show a toast notification here
-    };
+    }, []);
 
     const breadcrumbs = [{ title: 'ThinkTest AI', href: '/thinktest' }];
 
@@ -888,6 +896,21 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                                             </div>
                                         </div>
 
+                                        <div>
+                                            <label className="block text-sm font-medium text-muted-foreground">Custom Instructions (Optional)</label>
+                                            <textarea
+                                                value={data.custom_prompt}
+                                                onChange={(e) => setData('custom_prompt', e.target.value)}
+                                                disabled={isUploading}
+                                                placeholder="Add any specific instructions or context for test generation..."
+                                                rows={3}
+                                                className="mt-1 block w-full rounded-md border border-input bg-background p-2 shadow-sm focus:border-ring focus:ring-ring disabled:opacity-50 resize-none"
+                                            />
+                                            <p className="mt-1 text-xs text-muted-foreground">
+                                                Provide additional context, specific testing requirements, or custom instructions for the AI to consider when generating tests.
+                                            </p>
+                                        </div>
+
                                         <button
                                             type="submit"
                                             disabled={isUploading || !data.plugin_file}
@@ -922,7 +945,13 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                                     {validatedRepository && selectedBranch && (
                                         <div className="space-y-4">
                                             <div>
-                                                <label className="block text-sm font-medium text-muted-foreground mb-2">Processing Mode</label>
+                                                <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                                    Processing Mode
+                                                    {/* Debug info */}
+                                                    <span className="text-xs text-gray-500 ml-2">
+                                                        (Repo: {validatedRepository?.full_name}, Branch: {selectedBranch?.name})
+                                                    </span>
+                                                </label>
                                                 <div className="flex space-x-4">
                                                     <label className="flex items-center">
                                                         <input
@@ -950,7 +979,54 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                                             </div>
 
                                             {githubProcessingMode === 'single-file' && (
-                                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                                <div className="space-y-6">
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-muted-foreground">AI Provider</label>
+                                                            <select
+                                                                value={data.provider}
+                                                                onChange={(e) => setData('provider', e.target.value)}
+                                                                disabled={isGeneratingSingleFile}
+                                                                className="mt-1 block w-full rounded-md border border-input bg-background p-1 shadow-sm focus:border-ring focus:ring-ring disabled:opacity-50"
+                                                            >
+                                                                <option value="openai-gpt5">OpenAI GPT-5</option>
+                                                                <option value="anthropic-claude">Anthropic Claude 3.5 Sonnet</option>
+                                                                {/* Legacy support - will be removed in future version */}
+                                                                <option value="chatgpt-5">ChatGPT-5 (Legacy)</option>
+                                                                <option value="anthropic">Anthropic (Claude) (Legacy)</option>
+                                                            </select>
+                                                        </div>
+
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-muted-foreground">Test Framework</label>
+                                                            <select
+                                                                value={data.framework}
+                                                                onChange={(e) => setData('framework', e.target.value)}
+                                                                disabled={isGeneratingSingleFile}
+                                                                className="mt-1 block w-full rounded-md border border-input bg-background p-1 shadow-sm focus:border-ring focus:ring-ring disabled:opacity-50"
+                                                            >
+                                                                <option value="phpunit">PHPUnit</option>
+                                                                <option value="pest">Pest</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-muted-foreground">Custom Instructions (Optional)</label>
+                                                        <textarea
+                                                            value={data.custom_prompt}
+                                                            onChange={(e) => setData('custom_prompt', e.target.value)}
+                                                            disabled={isGeneratingSingleFile}
+                                                            placeholder="Add any specific instructions or context for test generation..."
+                                                            rows={3}
+                                                            className="mt-1 block w-full rounded-md border border-input bg-background p-2 shadow-sm focus:border-ring focus:ring-ring disabled:opacity-50 resize-none"
+                                                        />
+                                                        <p className="mt-1 text-xs text-muted-foreground">
+                                                            Provide additional context, specific testing requirements, or custom instructions for the AI to consider when generating tests.
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                                     <GitHubFileBrowser
                                                         repository={validatedRepository}
                                                         branch={selectedBranch.name}
@@ -969,6 +1045,7 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                                                         disabled={isGeneratingSingleFile}
                                                         isGenerating={isGeneratingSingleFile}
                                                     />
+                                                </div>
                                                 </div>
                                             )}
                                         </div>
@@ -1005,6 +1082,21 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
                                                         <option value="pest">Pest</option>
                                                     </select>
                                                 </div>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-medium text-muted-foreground">Custom Instructions (Optional)</label>
+                                                <textarea
+                                                    value={data.custom_prompt}
+                                                    onChange={(e) => setData('custom_prompt', e.target.value)}
+                                                    disabled={isProcessingRepository || isGenerating}
+                                                    placeholder="Add any specific instructions or context for test generation..."
+                                                    rows={3}
+                                                    className="mt-1 block w-full rounded-md border border-input bg-background p-2 shadow-sm focus:border-ring focus:ring-ring disabled:opacity-50 resize-none"
+                                                />
+                                                <p className="mt-1 text-xs text-muted-foreground">
+                                                    Provide additional context, specific testing requirements, or custom instructions for the AI to consider when generating tests.
+                                                </p>
                                             </div>
 
                                             <button
@@ -1110,14 +1202,14 @@ export default function Index({ recentConversations, recentAnalyses, availablePr
 
                             {/* Generated Tests */}
                             {generatedTests && (
-                                <div className="mb-8 rounded-md border border-blue-200 bg-blue-50 p-4">
-                                    <h4 className="mb-2 text-lg font-medium text-blue-800">Tests Generated Successfully</h4>
-                                    <p className="mb-4 text-blue-700">AI has generated comprehensive tests for your WordPress plugin.</p>
+                                <div className="mb-8 rounded-md border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/50">
+                                    <h4 className="mb-2 text-lg font-medium text-blue-800 dark:text-blue-200">Tests Generated Successfully</h4>
+                                    <p className="mb-4 text-blue-700 dark:text-blue-300">AI has generated comprehensive tests for your WordPress plugin.</p>
 
                                     <div className="flex space-x-4">
                                         <button
                                             onClick={handleDownloadTests}
-                                            className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
+                                            className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-400"
                                         >
                                             Download Tests
                                         </button>

@@ -49,8 +49,8 @@ class ThinkTestBasicTest extends TestCase
             return "test";
         }';
 
-        // This should use the mock provider since no API keys are configured
-        $result = $service->generateWordPressTests($simplePlugin);
+        // Explicitly request the mock provider
+        $result = $service->generateWordPressTests($simplePlugin, ['provider' => 'mock']);
 
         $this->assertIsArray($result);
         $this->assertTrue($result['success']);
@@ -67,6 +67,10 @@ class ThinkTestBasicTest extends TestCase
     public function test_authenticated_user_can_access_thinktest(): void
     {
         $user = User::factory()->create();
+
+        // Create required permission and assign to user
+        \Spatie\Permission\Models\Permission::create(['name' => 'generate tests', 'group_name' => 'ai-test-generation']);
+        $user->givePermissionTo('generate tests');
 
         $response = $this->actingAs($user)->get('/thinktest');
         $response->assertStatus(200);

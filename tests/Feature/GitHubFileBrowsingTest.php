@@ -7,8 +7,9 @@ use App\Services\GitHub\GitHubService;
 use App\Services\GitHub\GitHubValidationService;
 use App\Services\TestGeneration\TestGenerationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\MocksExternalApis;
 
-uses(RefreshDatabase::class);
+uses(RefreshDatabase::class, MocksExternalApis::class);
 
 beforeEach(function () {
     $this->user = User::factory()->create();
@@ -16,6 +17,9 @@ beforeEach(function () {
     $this->githubService = app(GitHubService::class);
     $this->validationService = app(GitHubValidationService::class);
     $this->testGenerationService = app(TestGenerationService::class);
+
+    // Set up API mocks to prevent external API calls
+    $this->setUpApiMocks();
 });
 
 test('github browse endpoint requires authentication', function () {

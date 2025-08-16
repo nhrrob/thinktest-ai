@@ -257,7 +257,7 @@ class GitHubValidationService
 
         // Check for invalid characters
         $invalidPatterns = [
-            '/\.\.$/',     // Cannot end with ..
+            '/\.\./',      // Cannot contain ..
             '/^\./',       // Cannot start with .
             '/\/$/',       // Cannot end with /
             '/\/\//',      // Cannot contain //

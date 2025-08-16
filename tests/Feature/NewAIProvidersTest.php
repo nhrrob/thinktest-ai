@@ -129,11 +129,107 @@ class TestPlugin {
 test('environment variables can override model selection', function () {
     // Test that OPENAI_GPT5_MODEL environment variable works
     config(['thinktest_ai.ai.providers.openai-gpt5.model' => 'gpt-5']);
-    
+
     $config = config('thinktest_ai.ai.providers.openai-gpt5');
     expect($config['model'])->toBe('gpt-5');
-    
+
     // Test fallback to Claude 3.5 if Claude 4 env var not set
     $claudeConfig = config('thinktest_ai.ai.providers.anthropic-claude');
     expect($claudeConfig['model'])->toContain('claude-3-5-sonnet');
+});
+
+test('AI provider service handles credit deduction', function () {
+    // Create user with credits
+    $creditService = new \App\Services\CreditService();
+    $creditService->addCredits($this->user->id, 10.0, 'Test credits');
+
+    $service = new AIProviderService();
+
+    // Mock the HTTP client to avoid actual API calls
+    $mockClient = Mockery::mock(\GuzzleHttp\Client::class);
+    $mockResponse = Mockery::mock(\Psr\Http\Message\ResponseInterface::class);
+    $mockBody = Mockery::mock(\Psr\Http\Message\StreamInterface::class);
+
+    $mockBody->shouldReceive('getContents')->andReturn(json_encode([
+        'choices' => [
+            ['message' => ['content' => 'Mock test code']]
+        ],
+        'usage' => ['total_tokens' => 100]
+    ]));
+
+    $mockResponse->shouldReceive('getBody')->andReturn($mockBody);
+    $mockClient->shouldReceive('post')->andReturn($mockResponse);
+
+    // Use reflection to inject mock client
+    $reflection = new ReflectionClass($service);
+    $property = $reflection->getProperty('httpClient');
+    $property->setAccessible(true);
+    $property->setValue($service, $mockClient);
+
+    // Test credit deduction
+    $pluginCode = '<?php class TestPlugin {}';
+    $result = $service->generateWordPressTests($pluginCode, ['provider' => 'openai-gpt5']);
+
+    expect($result['success'])->toBeTrue();
+
+    // Verify credits were deducted
+    $updatedBalance = $creditService->getUserBalance($this->user->id);
+    expect($updatedBalance)->toBe(8.0); // 10 - 2 (GPT-5 cost)
+});
+
+test('AI provider service handles insufficient credits', function () {
+    // Ensure user has no demo credits by using them all
+    $demoCredit = \App\Models\DemoCredit::getOrCreateForUser($this->user->id);
+    $demoCredit->update(['credits_used' => $demoCredit->credits_limit]);
+
+    // Create user with insufficient credits (anthropic-claude4-opus costs 3.0)
+    $creditService = new \App\Services\CreditService();
+    $creditService->addCredits($this->user->id, 1.0, 'Insufficient credits');
+
+    // Test the credit service directly since that's where the check happens
+    expect(fn() => $creditService->deductCreditsForUsage($this->user->id, 'anthropic-claude4-opus'))
+        ->toThrow(\RuntimeException::class, 'Insufficient credits');
+});
+
+test('AI provider service falls back to user API keys', function () {
+    // Create user API token
+    \App\Models\UserApiToken::create([
+        'user_id' => $this->user->id,
+        'provider' => 'openai',
+        'token' => 'test-api-key',
+        'is_active' => true,
+    ]);
+
+    $service = new AIProviderService();
+
+    // Mock the HTTP client
+    $mockClient = Mockery::mock(\GuzzleHttp\Client::class);
+    $mockResponse = Mockery::mock(\Psr\Http\Message\ResponseInterface::class);
+    $mockBody = Mockery::mock(\Psr\Http\Message\StreamInterface::class);
+
+    $mockBody->shouldReceive('getContents')->andReturn(json_encode([
+        'choices' => [
+            ['message' => ['content' => 'Test with user API key']]
+        ]
+    ]));
+
+    $mockResponse->shouldReceive('getBody')->andReturn($mockBody);
+    $mockClient->shouldReceive('post')->andReturn($mockResponse);
+
+    // Use reflection to inject mock client
+    $reflection = new ReflectionClass($service);
+    $property = $reflection->getProperty('httpClient');
+    $property->setAccessible(true);
+    $property->setValue($service, $mockClient);
+
+    $pluginCode = '<?php class TestPlugin {}';
+    $result = $service->generateWordPressTests($pluginCode, ['provider' => 'openai-gpt5']);
+
+    expect($result['success'])->toBeTrue();
+    expect($result['generated_tests'])->toBe('Test with user API key');
+
+    // Verify no credits were deducted (user has API key)
+    $creditService = new \App\Services\CreditService();
+    $balance = $creditService->getUserBalance($this->user->id);
+    expect($balance)->toBe(0.0); // No credits added or deducted
 });

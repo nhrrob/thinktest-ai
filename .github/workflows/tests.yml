@@ -48,5 +48,14 @@ jobs:
       - name: Generate Application Key
         run: php artisan key:generate
 
-      - name: Tests
-        run: ./vendor/bin/pest
+      - name: Run Tests with Coverage
+        run: ./vendor/bin/pest --coverage --min=80
+
+      - name: Upload Coverage Reports
+        uses: codecov/codecov-action@v3
+        if: always()
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false

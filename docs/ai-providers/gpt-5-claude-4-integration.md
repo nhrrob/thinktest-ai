@@ -184,6 +184,25 @@ This will verify:
 - Legacy provider mapping works
 - Fallback mechanisms function properly
 
+## Credit System Integration
+
+The new AI providers are fully integrated with ThinkTest AI's credit system:
+
+### Credit Costs
+- **OpenAI GPT-5**: 2.0 credits per use
+- **OpenAI GPT-5 Mini**: 1.0 credit per use
+- **Anthropic Claude 4 Opus**: 3.0 credits per use
+- **Anthropic Claude 4 Sonnet**: 2.0 credits per use
+- **Anthropic Claude 3.5 Sonnet**: 1.5 credits per use
+
+### Usage Priority
+1. **User API Keys**: If you have configured your own API keys, they will be used first (no credits deducted)
+2. **Purchased Credits**: If no API keys are available, purchased credits will be used
+3. **Demo Credits**: Free demo credits are used as a last resort for new users
+
+### Credit Purchase
+Visit `/credits` to purchase credit packages and use any AI provider without needing your own API keys.
+
 ## Support
 
 For issues with the new AI providers:
@@ -191,4 +210,5 @@ For issues with the new AI providers:
 1. Check the Laravel logs: `storage/logs/laravel.log`
 2. Verify your API key permissions with the provider
 3. Test with the mock provider to isolate configuration issues
-4. Contact support with specific error messages and logs
+4. Check your credit balance if using the credit system
+5. Contact support with specific error messages and logs

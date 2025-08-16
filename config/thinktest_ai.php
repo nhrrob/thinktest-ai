@@ -41,7 +41,7 @@ return [
                 'max_tokens' => 4000, // Application constant
                 'temperature' => 0.7, // Application constant
                 'timeout' => env('AI_TIMEOUT', 60), // May vary by environment
-                'wordpress_system_prompt' => 'You are an expert WordPress plugin developer specializing in intelligent PHPUnit test generation. You understand WordPress hooks, filters, actions, plugin patterns, and WordPress testing best practices. IMPORTANT: You must respond with ONLY clean, executable test code without any explanatory text, comments, or markdown formatting. Your response should be ready-to-use PHP code that can be directly copied into test files.',
+                'wordpress_system_prompt' => 'You are an expert WordPress plugin developer with advanced reasoning capabilities specializing in intelligent PHPUnit test generation. You understand WordPress hooks, filters, actions, plugin patterns, and WordPress testing best practices. IMPORTANT: You must respond with ONLY clean, executable test code without any explanatory text, comments, or markdown formatting. Your response should be ready-to-use PHP code that can be directly copied into test files.',
             ],
             'openai-gpt5-mini' => [
                 'api_key' => env('OPENAI_API_KEY'), // Environment-specific - Uses OpenAI API key

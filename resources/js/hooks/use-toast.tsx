@@ -62,7 +62,7 @@ export function useToast() {
                 <div
                     className={`${
                         t.visible ? 'animate-enter' : 'animate-leave'
-                    } ring-opacity-5 pointer-events-auto flex w-full max-w-md rounded-lg border border-border bg-background shadow-lg ring-1 ring-black`}
+                    } ring-opacity-5 pointer-events-auto flex w-full max-w-md rounded-lg border border-border bg-background shadow-lg ring-1 ring-border dark:ring-gray-700`}
                     style={{
                         borderLeftColor: 'hsl(25 95% 53%)', // orange-600 for rate limit
                         borderLeftWidth: '4px',
@@ -97,7 +97,7 @@ export function useToast() {
                 <div
                     className={`${
                         t.visible ? 'animate-enter' : 'animate-leave'
-                    } ring-opacity-5 pointer-events-auto flex w-full max-w-md rounded-lg border border-border bg-background shadow-lg ring-1 ring-black`}
+                    } ring-opacity-5 pointer-events-auto flex w-full max-w-md rounded-lg border border-border bg-background shadow-lg ring-1 ring-border dark:ring-gray-700`}
                     style={{
                         borderLeftColor: 'hsl(142 76% 36%)', // green-600
                         borderLeftWidth: '4px',
@@ -136,7 +136,7 @@ export function useToast() {
                 <div
                     className={`${
                         t.visible ? 'animate-enter' : 'animate-leave'
-                    } ring-opacity-5 pointer-events-auto flex w-full max-w-md rounded-lg border border-border bg-background shadow-lg ring-1 ring-black`}
+                    } ring-opacity-5 pointer-events-auto flex w-full max-w-md rounded-lg border border-border bg-background shadow-lg ring-1 ring-border dark:ring-gray-700`}
                     style={{
                         borderLeftColor: 'hsl(0 84% 60%)', // red-600
                         borderLeftWidth: '4px',
@@ -204,7 +204,7 @@ export function useToast() {
                 <div
                     className={`${
                         t.visible ? 'animate-enter' : 'animate-leave'
-                    } ring-opacity-5 pointer-events-auto flex w-full max-w-md rounded-lg border border-border bg-background shadow-lg ring-1 ring-black`}
+                    } ring-opacity-5 pointer-events-auto flex w-full max-w-md rounded-lg border border-border bg-background shadow-lg ring-1 ring-border dark:ring-gray-700`}
                     style={{
                         borderLeftColor: 'hsl(221 83% 53%)', // blue-600
                         borderLeftWidth: '4px',
@@ -238,7 +238,7 @@ export function useToast() {
                 <div
                     className={`${
                         t.visible ? 'animate-enter' : 'animate-leave'
-                    } ring-opacity-5 pointer-events-auto flex w-full max-w-md rounded-lg border border-border bg-background shadow-lg ring-1 ring-black`}
+                    } ring-opacity-5 pointer-events-auto flex w-full max-w-md rounded-lg border border-border bg-background shadow-lg ring-1 ring-border dark:ring-gray-700`}
                     style={{
                         borderLeftColor: 'hsl(var(--primary))',
                         borderLeftWidth: '4px',
